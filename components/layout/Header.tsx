@@ -1,17 +1,91 @@
-export default function Header() {
-  return (
-    <header className="h-14 border-b bg-white flex items-center px-6">
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-md bg-[rgb(14_53_113)]" />
-        <div className="leading-tight">
-          <div className="text-sm font-semibold text-[rgb(14_53_113)]">SMC</div>
-          <div className="text-xs text-[rgb(87_78_92)]">Storage Means Catalogue</div>
-        </div>
-      </div>
+"use client";
 
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+
+import { Button } from "@/components/ui/button";
+import { useUIStore } from "@/lib/stores/ui-store";
+
+export default function Header() {
+  const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated" && !!session?.user;
+  const router = useRouter();
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const initials = useMemo(() => {
+    const name = session?.user?.name || session?.user?.email || "";
+    return name
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "U";
+  }, [session]);
+
+  const handleAvatarClick = () => {
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+    setMenuOpen((open) => !open);
+  };
+
+  const handleNavigate = (href: string) => {
+    setMenuOpen(false);
+    if (pathname !== href) {
+      router.push(href);
+    }
+  };
+
+  return (
+    <header className="relative h-14 border-b bg-white flex items-center px-6">
       <div className="ml-auto flex items-center gap-3">
-        <div className="text-xs text-[rgb(87_78_92)]">Valery</div>
-        <div className="h-8 w-8 rounded-full bg-[rgb(110_148_182)]" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleSidebar}
+          aria-pressed={sidebarCollapsed}
+          className="text-[rgb(14_53_113)]"
+        >
+          {sidebarCollapsed ? "Show menu" : "Hide menu"}
+        </Button>
+        <div className="text-base font-semibold text-[rgb(14_53_113)]">
+          {session?.user?.name ?? session?.user?.email ?? "Guest"}
+        </div>
+        <button
+          type="button"
+          aria-label="Account menu"
+          onClick={handleAvatarClick}
+          className="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+          style={{
+            backgroundColor: isAuthenticated ? "#16a34a" : "#ef4444",
+          }}
+        >
+          <span className="text-sm font-semibold">👤</span>
+        </button>
+        {isAuthenticated && menuOpen ? (
+          <div className="absolute right-4 top-14 w-44 rounded-md border bg-white shadow-card">
+            <button
+              type="button"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-smc-bg cursor-pointer"
+              onClick={() => handleNavigate("/login")}
+            >
+              Login
+            </button>
+            <button
+              type="button"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-smc-bg cursor-pointer"
+              onClick={() => handleNavigate("/profile")}
+            >
+              Profile
+            </button>
+          </div>
+        ) : null}
       </div>
     </header>
   );

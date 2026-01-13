@@ -20,6 +20,7 @@
 - Tailwind + Radix over custom CSS
 - When creating pages or components, build on shadcn components first, align tokens/styles with `app/globals.css`, then extend via `tailwind.config.ts` if needed.
 - Follow existing API route patterns; add server actions only when they fit the current flow
+- Generated page content should be written in English.
 
 ## Freedom
 
