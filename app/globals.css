@@ -1,26 +1,180 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-inter: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New";
+
+  /* Brand */
+  --smc-primary: 14 53 113;
+  --smc-secondary: 0 93 112;
+  --smc-info: 110 148 182;
+
+  /* Feedback */
+  --smc-warning: 255 138 95;
+  --smc-success: 255 240 66;
+
+  /* Text */
+  --smc-text: 14 53 113;
+  --smc-text-muted: 87 78 92;
+
+  /* Surfaces (SaaS modern) */
+  --smc-bg: 246 248 252;
+  --smc-card: 255 255 255;
+  --smc-border: 224 229 238;
+
+  /* Radii / shadow */
+  --smc-radius: 18px;
+  --smc-radius-lg: 22px;
+  --smc-shadow: 0 14px 30px rgba(10, 20, 40, 0.1);
+
+  /* Spacing & layout */
+  --smc-space-1: 8px;
+  --smc-space-2: 16px;
+  --smc-space-3: 24px;
+  --smc-space-4: 32px;
+  --smc-layout-header: clamp(56px, 6vw, 64px);
+  --smc-layout-sidebar: clamp(260px, 20vw, 300px);
+  --smc-layout-footer: 48px;
+
+  --background: 220 50% 98%;
+  --foreground: 216 78% 25%;
+  --card: 0 0% 100%;
+  --card-foreground: 216 78% 25%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 216 78% 25%;
+  --primary: 216 78% 25%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 190 100% 22%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 219 29% 91%;
+  --muted-foreground: 279 8% 33%;
+  --accent: 208 33% 57%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 16 100% 69%;
+  --destructive-foreground: 222 43% 10%;
+  --border: 219 29% 91%;
+  --input: 219 29% 91%;
+  --ring: 216 78% 25%;
+  --radius: var(--smc-radius);
+}
+
+.dark {
+  --background: 220 30% 8%;
+  --foreground: 220 20% 92%;
+  --card: 220 35% 10%;
+  --card-foreground: 220 20% 92%;
+  --popover: 220 35% 10%;
+  --popover-foreground: 220 20% 92%;
+  --primary: 216 78% 60%;
+  --primary-foreground: 222 43% 10%;
+  --secondary: 190 60% 40%;
+  --secondary-foreground: 222 43% 10%;
+  --muted: 220 18% 20%;
+  --muted-foreground: 217 15% 72%;
+  --accent: 208 30% 55%;
+  --accent-foreground: 222 43% 10%;
+  --destructive: 16 90% 60%;
+  --destructive-foreground: 222 43% 10%;
+  --border: 219 20% 24%;
+  --input: 219 20% 24%;
+  --ring: 216 78% 60%;
+  --radius: var(--smc-radius);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius: var(--smc-radius);
+  --radius-sm: calc(var(--smc-radius) - 4px);
+  --radius-lg: var(--smc-radius-lg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: hsl(var(--border));
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans), var(--font-inter);
+    min-height: 100vh;
+  }
+
+  .code {
+    font-family: var(--font-mono);
+  }
+
+  h1,
+  .heading-1 {
+    font-size: clamp(32px, 3vw, 36px);
+    font-weight: 700;
+    line-height: 1.15;
+    color: rgb(var(--smc-primary));
+  }
+
+  h2,
+  .heading-2 {
+    font-size: clamp(22px, 2.5vw, 24px);
+    font-weight: 600;
+    line-height: 1.25;
+    color: rgb(var(--smc-primary));
+  }
+
+  h3,
+  .heading-3 {
+    font-size: clamp(18px, 2vw, 20px);
+    font-weight: 600;
+    line-height: 1.3;
+    color: rgb(var(--smc-primary));
+  }
+
+  .body-text {
+    font-size: clamp(15px, 1.8vw, 16px);
+    font-weight: 400;
+    line-height: 1.6;
+    color: rgb(var(--smc-text-muted));
+  }
+
+  .text-small {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: rgb(var(--smc-text-muted));
+  }
+
+  .text-caption {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: rgb(var(--smc-text-muted));
+  }
+
+  .data-mono {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: rgb(var(--smc-text-muted));
+  }
 }
