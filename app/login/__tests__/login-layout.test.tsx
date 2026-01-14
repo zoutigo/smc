@@ -6,6 +6,10 @@ jest.mock("../actions", () => ({
   loginAction: jest.fn(),
 }));
 
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}));
+
 import { LoginForm } from "../login-form";
 
 describe("Login layout", () => {

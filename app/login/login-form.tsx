@@ -1,9 +1,11 @@
 "use client";
 
-import { startTransition, useActionState, useMemo, useState } from "react";
+import { startTransition, useMemo, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,13 +17,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { loginAction, type LoginState } from "./actions";
+import type { LoginState } from "./actions";
 import { loginSchema, type LoginInput } from "./schema";
 
 const initialState: LoginState = { status: "idle" };
 
 export function LoginForm() {
-  const [state, formAction, pending] = useActionState(loginAction, initialState);
+  const [state, setState] = useState<LoginState>(initialState);
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -46,6 +49,8 @@ export function LoginForm() {
       password: "",
     },
   });
+
+  const pending = isSubmitting;
 
   const emailValue = watch("email");
   const passwordValue = watch("password");
@@ -81,13 +86,21 @@ export function LoginForm() {
     ]
   );
 
-  const onSubmit = (data: LoginInput) => {
+  const onSubmit = async (data: LoginInput) => {
     clearErrors();
-    const formData = new FormData();
-    formData.append("email", data.email);
-    formData.append("password", data.password);
-    startTransition(() => {
-      formAction(formData);
+    setState({ status: "idle" });
+    startTransition(async () => {
+      const res = await signIn("credentials", {
+        redirect: false,
+        email: data.email,
+        password: data.password,
+        callbackUrl: "/",
+      });
+      if (res && "error" in res && res.error) {
+        setState({ status: "error", message: "Invalid credentials. Please try again." });
+        return;
+      }
+      router.push("/");
     });
   };
 
@@ -232,12 +245,12 @@ export function LoginForm() {
                     {pending ? "Signing in..." : "Sign in"}
                   </Button>
                   <div className="flex items-center justify-between text-small text-muted-foreground">
-                    <button
-                      type="button"
+                    <Link
+                      href="/auth/pass-recovery"
                       className="cursor-pointer text-smc-primary underline-offset-2 hover:underline"
                     >
                       Forgot password?
-                    </button>
+                    </Link>
                     <span>
                       Don&apos;t have an account?{" "}
                       <Link href="/profile" className="text-smc-primary underline">

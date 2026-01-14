@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+# Format first so lint/type-check see final code
+npm run format:write
+
+# Run lint and type-check before allowing the commit
+npm run lint
+npm run type-check
+
+# Run unit/functional tests
+npm test -- --runInBand
+
+# Stop the commit if Prettier modified files so you can review/re-stage
+if ! git diff --quiet; then
+  echo "Prettier applied changes. Please review and re-stage files before committing." >&2
+  exit 1
+fi

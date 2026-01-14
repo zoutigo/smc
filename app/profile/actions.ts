@@ -32,8 +32,8 @@ export async function registerAction(
 
   if (!parsed.success) {
     const fieldErrors: RegisterState["fieldErrors"] = {};
-    parsed.error.errors.forEach((err) => {
-      const field = err.path[0];
+    parsed.error.issues.forEach((issue) => {
+      const field = issue.path[0];
       if (
         field === "email" ||
         field === "password" ||
@@ -42,7 +42,7 @@ export async function registerAction(
         field === "firstName" ||
         field === "lastName"
       ) {
-        fieldErrors[field] = err.message;
+        fieldErrors[field] = issue.message;
       }
     });
     return { status: "error", fieldErrors };

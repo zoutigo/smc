@@ -4,7 +4,8 @@ const ALLOWED_DOMAIN = "@opmobility.com";
 
 export const loginSchema = z.object({
   email: z
-    .string({ required_error: "Email is required." })
+    .string()
+    .min(1, "Email is required.")
     .email("Invalid email.")
     .toLowerCase()
     .trim()
@@ -12,7 +13,7 @@ export const loginSchema = z.object({
       message: `Email must end with ${ALLOWED_DOMAIN}.`,
       path: ["email"],
     }),
-  password: z.string({ required_error: "Password is required." }).min(1, "Password required."),
+  password: z.string().min(1, "Password is required.").min(1, "Password required."),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

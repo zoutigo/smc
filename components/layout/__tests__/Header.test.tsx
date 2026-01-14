@@ -26,6 +26,6 @@ describe("Header unauthenticated login icon", () => {
     expect(avatarButton.className).toContain("cursor-pointer");
     fireEvent.click(avatarButton);
 
-    expect(pushMock).toHaveBeenCalledWith("/login");
+    expect(pushMock).toHaveBeenCalledWith("/auth/login");
   });
 });

@@ -5,7 +5,8 @@ const ALLOWED_DOMAIN = "@opmobility.com";
 export const registerSchema = z
   .object({
     email: z
-      .string({ required_error: "Email is required." })
+      .string()
+      .min(1, "Email is required.")
       .email("Invalid email.")
       .toLowerCase()
       .trim()
@@ -21,17 +22,20 @@ export const registerSchema = z
       .trim()
       .min(1, "Last name is required."),
     password: z
-      .string({ required_error: "Password is required." })
+      .string()
+      .min(1, "Password is required.")
       .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/, {
         message: "At least 8 chars with uppercase, lowercase, and numbers.",
       }),
     confirmPassword: z
-      .string({ required_error: "Confirm your password." })
+      .string()
+      .min(1, "Confirm your password.")
       .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/, {
         message: "At least 8 chars with uppercase, lowercase, and numbers.",
       }),
     birthDate: z
-      .string({ required_error: "Birth date is required." })
+      .string()
+      .min(1, "Birth date is required.")
       .refine((val) => !Number.isNaN(new Date(val).getTime()), {
         message: "Birth date is invalid.",
       }),

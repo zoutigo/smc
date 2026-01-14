@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/lib/stores/ui-store";
@@ -16,20 +15,14 @@ export default function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const initials = useMemo(() => {
-    const name = session?.user?.name || session?.user?.email || "";
-    return name
-      .split(" ")
-      .filter(Boolean)
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "U";
+  // Keep a simple display name for now; initials can be reintroduced when used in UI.
+  const displayName = useMemo(() => {
+    return session?.user?.name ?? session?.user?.email ?? "Guest";
   }, [session]);
 
   const handleAvatarClick = () => {
     if (!isAuthenticated) {
-      router.push("/login");
+      router.push("/auth/login");
       return;
     }
     setMenuOpen((open) => !open);
@@ -55,7 +48,7 @@ export default function Header() {
           {sidebarCollapsed ? "Show menu" : "Hide menu"}
         </Button>
         <div className="text-base font-semibold text-[rgb(14_53_113)]">
-          {session?.user?.name ?? session?.user?.email ?? "Guest"}
+          {displayName}
         </div>
         <button
           type="button"
@@ -73,9 +66,9 @@ export default function Header() {
             <button
               type="button"
               className="w-full px-3 py-2 text-left text-sm hover:bg-smc-bg cursor-pointer"
-              onClick={() => handleNavigate("/login")}
+              onClick={() => signOut({ callbackUrl: "/auth/login" })}
             >
-              Login
+              Logout
             </button>
             <button
               type="button"

@@ -8,6 +8,8 @@
     "start": "PRISMA_CLIENT_ENGINE_TYPE=binary PRISMA_QUERY_ENGINE_TYPE=binary next start",
     "lint": "eslint",
     "test": "jest",
+    "format:write": "eslint --ext .js,.jsx,.ts,.tsx --fix .",
+    "type-check": "tsc --noEmit",
     "prisma": "prisma",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
