@@ -41,7 +41,7 @@ export function PassRecoveryForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    getValues,
     formState: { errors, dirtyFields, touchedFields, isDirty, isValid, isSubmitting, submitCount },
     clearErrors,
   } = useForm<PassRecoveryResetInput>({
@@ -59,26 +59,17 @@ export function PassRecoveryForm() {
     },
   });
 
-  const emailValue = watch("email");
-  const birthDateValue = watch("birthDate");
-  const passwordValue = watch("password");
-  const confirmPasswordValue = watch("confirmPassword");
-
-  const zodFieldErrors = useMemo(() => {
+  const zodFieldErrors = (() => {
+    const values = getValues();
     const schema = verified ? passRecoveryResetSchema : passRecoveryVerifySchema;
-    const parsed = schema.safeParse({
-      email: emailValue,
-      birthDate: birthDateValue,
-      password: passwordValue,
-      confirmPassword: confirmPasswordValue,
-    });
+    const parsed = schema.safeParse(values);
     if (parsed.success) {
       return {} as Partial<Record<keyof PassRecoveryResetInput, string[]>>;
     }
     return parsed.error.flatten().fieldErrors as Partial<
       Record<keyof PassRecoveryResetInput, string[]>
     >;
-  }, [verified, emailValue, birthDateValue, passwordValue, confirmPasswordValue]);
+  })();
 
   const combinedErrors = useMemo(
     () => ({
@@ -341,4 +332,3 @@ export function PassRecoveryForm() {
     </div>
   );
 }
-

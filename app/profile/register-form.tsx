@@ -25,7 +25,7 @@ export function RegisterForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    getValues,
     formState: {
       errors,
       dirtyFields,
@@ -50,14 +50,16 @@ export function RegisterForm() {
     },
   });
 
-  const emailValue = watch("email");
-  const firstNameValue = watch("firstName");
-  const lastNameValue = watch("lastName");
-  const passwordValue = watch("password");
-  const confirmPasswordValue = watch("confirmPassword");
-  const birthDateValue = watch("birthDate");
+  const zodFieldErrors = (() => {
+    const {
+      email: emailValue,
+      firstName: firstNameValue,
+      lastName: lastNameValue,
+      password: passwordValue,
+      confirmPassword: confirmPasswordValue,
+      birthDate: birthDateValue,
+    } = getValues();
 
-  const zodFieldErrors = useMemo(() => {
     const parsed = registerSchema.safeParse({
       email: emailValue,
       firstName: firstNameValue,
@@ -67,14 +69,7 @@ export function RegisterForm() {
       birthDate: birthDateValue,
     });
     return parsed.success ? {} : parsed.error.flatten().fieldErrors;
-  }, [
-    emailValue,
-    firstNameValue,
-    lastNameValue,
-    passwordValue,
-    confirmPasswordValue,
-    birthDateValue,
-  ]);
+  })();
 
   const combinedErrors = useMemo(
     () => ({

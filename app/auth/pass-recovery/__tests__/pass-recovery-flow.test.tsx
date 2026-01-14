@@ -4,6 +4,7 @@
 
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act } from "react";
 
 const verifyMock = jest.fn<
   Promise<{ status: "idle" | "error" | "success" }>,
@@ -42,17 +43,21 @@ describe("Pass recovery flow", () => {
 
     const { container } = render(<PassRecoveryForm />);
 
-    fireEvent.change(screen.getByLabelText(/work email/i), {
-      target: { value: "valery.mbele@opmobility.com" },
-    });
-    fireEvent.change(screen.getByLabelText(/^birth date$/i), {
-      target: { value: "1990-01-01" },
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/work email/i), {
+        target: { value: "valery.mbele@opmobility.com" },
+      });
+      fireEvent.change(screen.getByLabelText(/^birth date$/i), {
+        target: { value: "1990-01-01" },
+      });
     });
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /^verify$/i })).not.toBeDisabled()
     );
-    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    await act(async () => {
+      fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    });
 
     await waitFor(() => expect(verifyMock).toHaveBeenCalled());
     expect(await screen.findByLabelText(/new password/i)).toBeInTheDocument();

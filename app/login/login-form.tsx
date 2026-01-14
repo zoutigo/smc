@@ -29,7 +29,7 @@ export function LoginForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    getValues,
     formState: {
       errors,
       isSubmitting,
@@ -52,13 +52,11 @@ export function LoginForm() {
 
   const pending = isSubmitting;
 
-  const emailValue = watch("email");
-  const passwordValue = watch("password");
-
-  const zodFieldErrors = useMemo(() => {
+  const zodFieldErrors = (() => {
+    const { email: emailValue, password: passwordValue } = getValues();
     const parsed = loginSchema.safeParse({ email: emailValue, password: passwordValue });
     return parsed.success ? {} : parsed.error.flatten().fieldErrors;
-  }, [emailValue, passwordValue]);
+  })();
 
   const combinedErrors = useMemo(
     () => ({
