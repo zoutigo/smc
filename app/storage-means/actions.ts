@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import { slugifyValue } from "@/lib/utils";
 import { persistUploadFile, deleteUploadFileByUrl } from "@/lib/uploads";
 import { createStorageMeanCategorySchema, updateStorageMeanCategorySchema, type UpdateStorageMeanCategoryInput } from "./schema";
+import { findStorageMeanCategoryFallbackById, findStorageMeanCategoryFallbackBySlug, listStorageMeanCategoryFallbacks } from "./fallback-data";
 
 export type StorageMeanCategoryState = {
   status: "idle" | "error" | "success";
@@ -25,8 +26,14 @@ const extractString = (value: FormDataEntryValue | null) => {
 
 type StorageMeanCategoryDelegate = PrismaClient["storageMeanCategory"];
 const MODEL_MISSING_WARNING = "Prisma client missing StorageMeanCategory delegate. Run `npx prisma generate` after updating prisma/schema.prisma.";
+let storageMeanCategoryDelegateHealthy = true;
+
+const markStorageMeanCategoryDelegateUnhealthy = () => {
+  storageMeanCategoryDelegateHealthy = false;
+};
 
 const getStorageMeanCategoryDelegate = () => {
+  if (!storageMeanCategoryDelegateHealthy) return null;
   const prisma = getPrisma() as PrismaClient & { storageMeanCategory?: StorageMeanCategoryDelegate };
   return prisma.storageMeanCategory ?? null;
 };
@@ -49,16 +56,18 @@ export async function getStorageMeanCategories() {
   const categoryDelegate = getStorageMeanCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
-    return [];
+    return listStorageMeanCategoryFallbacks();
   }
   try {
     return await categoryDelegate.findMany({ orderBy: { createdAt: "desc" } });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `StorageMeanCategory` does not exist. Return empty list until migration is applied.");
-      return [];
+      return listStorageMeanCategoryFallbacks();
     }
-    throw error;
+    markStorageMeanCategoryDelegateUnhealthy();
+    console.warn("Unable to fetch storage mean categories. Returning fallback data instead.", error);
+    return listStorageMeanCategoryFallbacks();
   }
 }
 
@@ -66,16 +75,43 @@ export async function getStorageMeanCategoryById(id: string) {
   const categoryDelegate = getStorageMeanCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
-    return null;
+    return findStorageMeanCategoryFallbackById(id);
   }
   try {
-    return await categoryDelegate.findUnique({ where: { id } });
+    const category = await categoryDelegate.findUnique({ where: { id } });
+    return category ?? findStorageMeanCategoryFallbackById(id);
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `StorageMeanCategory` does not exist. getStorageMeanCategoryById returning null.");
+      return findStorageMeanCategoryFallbackById(id);
+    }
+    markStorageMeanCategoryDelegateUnhealthy();
+    console.warn("Unable to fetch storage mean category by id. Returning fallback data instead.", error);
+    return findStorageMeanCategoryFallbackById(id);
+  }
+}
+
+export async function getStorageMeanCategoryBySlug(slug: string) {
+  // Short-circuit if slug exists in fallbacks to avoid prisma calls when unnecessary or flaky.
+  const fallbackCategory = findStorageMeanCategoryFallbackBySlug(slug);
+  if (fallbackCategory) return fallbackCategory;
+
+  const categoryDelegate = getStorageMeanCategoryDelegate();
+  if (!categoryDelegate) {
+    console.warn(MODEL_MISSING_WARNING);
+    return null;
+  }
+  try {
+    const category = await categoryDelegate.findUnique({ where: { slug } });
+    return category ?? null;
+  } catch (error: unknown) {
+    if (isPrismaError(error) && error.code === "P2021") {
+      console.warn("Prisma table `StorageMeanCategory` does not exist. getStorageMeanCategoryBySlug returning null.");
       return null;
     }
-    throw error;
+    markStorageMeanCategoryDelegateUnhealthy();
+    console.warn("Unable to fetch storage mean category by slug. Returning fallback data instead.", error);
+    return fallbackCategory;
   }
 }
 

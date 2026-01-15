@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import { slugifyValue } from "@/lib/utils";
 import { persistUploadFile, deleteUploadFileByUrl } from "@/lib/uploads";
 import { createPackagingCategorySchema, updatePackagingCategorySchema, type UpdatePackagingCategoryInput } from "./schema";
+import { findPackagingCategoryFallbackById, findPackagingCategoryFallbackBySlug, listPackagingCategoryFallbacks } from "./fallback-data";
 
 export type PackagingCategoryState = {
   status: "idle" | "error" | "success";
@@ -25,8 +26,14 @@ const extractString = (value: FormDataEntryValue | null) => {
 
 type PackagingCategoryDelegate = PrismaClient["packagingCategory"];
 const MODEL_MISSING_WARNING = "Prisma client missing PackagingCategory delegate. Run `npx prisma generate` after updating prisma/schema.prisma.";
+let packagingCategoryDelegateHealthy = true;
+
+const markPackagingCategoryDelegateUnhealthy = () => {
+  packagingCategoryDelegateHealthy = false;
+};
 
 const getPackagingCategoryDelegate = () => {
+  if (!packagingCategoryDelegateHealthy) return null;
   const prisma = getPrisma() as PrismaClient & { packagingCategory?: PackagingCategoryDelegate };
   return prisma.packagingCategory ?? null;
 };
@@ -49,16 +56,18 @@ export async function getPackagingCategories() {
   const categoryDelegate = getPackagingCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
-    return [];
+    return listPackagingCategoryFallbacks();
   }
   try {
     return await categoryDelegate.findMany({ orderBy: { createdAt: "desc" } });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `PackagingCategory` does not exist. Return empty list until migration is applied.");
-      return [];
+      return listPackagingCategoryFallbacks();
     }
-    throw error;
+    markPackagingCategoryDelegateUnhealthy();
+    console.warn("Unable to fetch packaging categories. Returning fallback data instead.", error);
+    return listPackagingCategoryFallbacks();
   }
 }
 
@@ -66,16 +75,42 @@ export async function getPackagingCategoryById(id: string) {
   const categoryDelegate = getPackagingCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
-    return null;
+    return findPackagingCategoryFallbackById(id);
   }
   try {
-    return await categoryDelegate.findUnique({ where: { id } });
+    const category = await categoryDelegate.findUnique({ where: { id } });
+    return category ?? findPackagingCategoryFallbackById(id);
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `PackagingCategory` does not exist. getPackagingCategoryById returning null.");
+      return findPackagingCategoryFallbackById(id);
+    }
+    markPackagingCategoryDelegateUnhealthy();
+    console.warn("Unable to fetch packaging category by id. Returning fallback data instead.", error);
+    return findPackagingCategoryFallbackById(id);
+  }
+}
+
+export async function getPackagingCategoryBySlug(slug: string) {
+  const fallbackCategory = findPackagingCategoryFallbackBySlug(slug);
+  if (fallbackCategory) return fallbackCategory;
+
+  const categoryDelegate = getPackagingCategoryDelegate();
+  if (!categoryDelegate) {
+    console.warn(MODEL_MISSING_WARNING);
+    return null;
+  }
+  try {
+    const category = await categoryDelegate.findUnique({ where: { slug } });
+    return category ?? null;
+  } catch (error: unknown) {
+    if (isPrismaError(error) && error.code === "P2021") {
+      console.warn("Prisma table `PackagingCategory` does not exist. getPackagingCategoryBySlug returning null.");
       return null;
     }
-    throw error;
+    markPackagingCategoryDelegateUnhealthy();
+    console.warn("Unable to fetch packaging category by slug. Returning fallback data instead.", error);
+    return fallbackCategory;
   }
 }
 
