@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Pagination from "@/components/pagination/Pagination";
-import PackagingCard from "@/components/packaging-categories/PackagingCard";
-import PackagingForm from "@/components/packaging-categories/PackagingForm";
-import { deletePackagingCategoryAction, updatePackagingCategoryAction } from "@/app/packaging-categories/actions";
+import PackagingCard from "@/components/packaging-means/PackagingCard";
+import PackagingForm from "@/components/packaging-means/PackagingForm";
+import { deletePackagingCategoryAction, updatePackagingCategoryAction } from "@/app/packaging-means/actions";
 
 export const PACKAGING_CATEGORIES_PAGE_SIZE = 6;
 
@@ -78,7 +78,7 @@ export default function PackagingCategoriesPageClient({ categories }: PackagingC
     <div className="p-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-baseline gap-4">
-          <h1 className="heading-1">Packaging categories</h1>
+          <h1 className="heading-1">Packaging means</h1>
           <h3 className="text-base font-semibold text-slate-500" data-testid="packaging-count-heading">
             {totalItems}
           </h3>

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import PackagingForm from "@/components/packaging-categories/PackagingForm";
+import PackagingForm from "@/components/packaging-means/PackagingForm";
 
 const showMock = jest.fn();
 const objectUrlMock = jest.fn((blob: Blob | MediaSource) => {
@@ -16,7 +16,7 @@ jest.mock("@/components/ui/confirm-message", () => ({
   useConfirmMessage: () => ({ show: showMock }),
 }));
 
-jest.mock("@/app/packaging-categories/actions", () => ({
+jest.mock("@/app/packaging-means/actions", () => ({
   createPackagingCategoryAction: jest.fn(),
 }));
 
@@ -26,13 +26,6 @@ describe("PackagingForm", () => {
   beforeEach(() => {
     actionOverride.mockClear();
     showMock.mockClear();
-    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(() => (
-      Promise.resolve({
-        ok: true,
-        json: async () => ({ exists: false }),
-      } as Response)
-    ));
-    globalThis.fetch = fetchMock as typeof fetch;
     global.URL.createObjectURL = objectUrlMock;
     global.URL.revokeObjectURL = revokeUrlMock;
     objectUrlMock.mockClear();
@@ -40,7 +33,7 @@ describe("PackagingForm", () => {
   });
 
   it("submits the selected file", async () => {
-    render(<PackagingForm debounceMs={0} actionOverride={actionOverride} />);
+    render(<PackagingForm actionOverride={actionOverride} />);
     const user = userEvent.setup();
 
     await user.type(screen.getByLabelText(/Category name/i), "Reusable bins");
@@ -64,7 +57,7 @@ describe("PackagingForm", () => {
     const onClose = jest.fn();
     actionOverride.mockResolvedValue({ status: "success" });
 
-    render(<PackagingForm debounceMs={0} actionOverride={actionOverride} onClose={onClose} />);
+    render(<PackagingForm actionOverride={actionOverride} onClose={onClose} />);
     const user = userEvent.setup();
 
     await user.type(screen.getByLabelText(/Category name/i), "Bubble wrap");
@@ -80,7 +73,7 @@ describe("PackagingForm", () => {
   it("surfaces errors returned by the server action", async () => {
     actionOverride.mockResolvedValue({ status: "error", message: "Upload failed", fieldErrors: { name: "Duplicate" } });
 
-    render(<PackagingForm debounceMs={0} actionOverride={actionOverride} />);
+    render(<PackagingForm actionOverride={actionOverride} />);
     const user = userEvent.setup();
 
     await user.type(screen.getByLabelText(/Category name/i), "Foam");
@@ -99,7 +92,6 @@ describe("PackagingForm", () => {
     render(
       <PackagingForm
         mode="edit"
-        debounceMs={0}
         actionOverride={actionOverride}
         onSuccess={onSuccess}
         initialValues={{

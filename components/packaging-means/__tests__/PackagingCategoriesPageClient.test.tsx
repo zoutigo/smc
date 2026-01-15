@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PackagingCategory } from "@prisma/client";
-import PackagingCategoriesPageClient, { PACKAGING_CATEGORIES_PAGE_SIZE } from "@/components/packaging-categories/PackagingCategoriesPageClient";
+import PackagingCategoriesPageClient, { PACKAGING_CATEGORIES_PAGE_SIZE } from "@/components/packaging-means/PackagingCategoriesPageClient";
 
 const packagingFormPropsMock = jest.fn();
 
-jest.mock("@/app/packaging-categories/actions", () => ({
+jest.mock("@/app/packaging-means/actions", () => ({
   deletePackagingCategoryAction: jest.fn().mockResolvedValue({ status: "success" }),
   updatePackagingCategoryAction: jest.fn().mockResolvedValue({ status: "success" }),
 }));
@@ -17,7 +17,7 @@ jest.mock("next/navigation", () => {
   };
 });
 
-jest.mock("@/components/packaging-categories/PackagingCard", () => {
+jest.mock("@/components/packaging-means/PackagingCard", () => {
   const MockPackagingCard = ({ name, id, onEdit }: { name: string; id: string; onEdit?: (id: string) => void }) => (
     <div data-testid="packaging-card">
       {name}
@@ -32,7 +32,7 @@ jest.mock("@/components/packaging-categories/PackagingCard", () => {
 
 type MockPackagingFormProps = Record<string, unknown> & { mode?: string; onClose?: () => void };
 
-jest.mock("@/components/packaging-categories/PackagingForm", () => {
+jest.mock("@/components/packaging-means/PackagingForm", () => {
   const MockPackagingForm = (props: MockPackagingFormProps) => {
     packagingFormPropsMock(props);
     return (
@@ -51,6 +51,7 @@ const createCategory = (index: number, overrides: Partial<PackagingCategory> = {
   id: overrides.id ?? `${index}`,
   name: overrides.name ?? `Category ${index}`,
   description: overrides.description ?? `Description ${index}`,
+  slug: overrides.slug ?? `category-${index}`,
   imageUrl: overrides.imageUrl ?? null,
   createdAt: overrides.createdAt ?? timestamp(),
   updatedAt: overrides.updatedAt ?? timestamp(),

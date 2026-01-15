@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import PackagingCard from "@/components/packaging-categories/PackagingCard";
+import PackagingCard from "@/components/packaging-means/PackagingCard";
 
 jest.mock("@/components/ConfirmModal", () => ({
   __esModule: true,

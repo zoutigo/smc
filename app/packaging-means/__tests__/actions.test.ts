@@ -23,7 +23,7 @@ jest.mock("@/lib/uploads", () => ({
   deleteUploadFileByUrl: (...args: unknown[]) => deleteUploadFileByUrlMock(...args),
 }));
 
-import { createPackagingCategoryAction, updatePackagingCategoryAction } from "@/app/packaging-categories/actions";
+import { createPackagingCategoryAction, updatePackagingCategoryAction } from "@/app/packaging-means/actions";
 
 describe("createPackagingCategoryAction", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -58,7 +58,9 @@ describe("createPackagingCategoryAction", () => {
 
     const res = await createPackagingCategoryAction({ status: "idle" }, form as FormData);
     expect(res.status).toBe("success");
-    expect(mockedPrisma.packagingCategory.create).toHaveBeenCalled();
+    expect(mockedPrisma.packagingCategory.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ slug: "crates" }),
+    });
   });
 });
 
@@ -91,7 +93,8 @@ describe("updatePackagingCategoryAction", () => {
     expect(res.status).toBe("success");
     expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledTimes(1);
     const updateArgs = (mockedPrisma.packagingCategory.update as jest.Mock).mock.calls[0][0];
-    expect(updateArgs.data).not.toHaveProperty("imageUrl");
+    expect(updateArgs.data.slug).toBe("returnables");
+    expect(updateArgs.data.imageUrl).toBeNull();
   });
 
   it("uploads a new file and deletes the old asset", async () => {
@@ -110,5 +113,6 @@ describe("updatePackagingCategoryAction", () => {
     expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledTimes(1);
     const updateArgs = (mockedPrisma.packagingCategory.update as jest.Mock).mock.calls[0][0];
     expect(updateArgs.data.imageUrl).toBe("https://example.com/new.png");
+    expect(updateArgs.data.slug).toBe("returnables");
   });
 });

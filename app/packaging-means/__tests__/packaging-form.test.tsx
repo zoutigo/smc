@@ -8,18 +8,17 @@ import { act } from "react";
 
 const mockCreatePackagingCategoryAction = jest.fn<Promise<{ status: "success" }>, unknown[]>(async () => ({ status: "success" }));
 
-jest.mock("@/app/packaging-categories/actions", () => ({
+jest.mock("@/app/packaging-means/actions", () => ({
   __esModule: true,
   createPackagingCategoryAction: (...args: unknown[]) => mockCreatePackagingCategoryAction(...args),
 }));
 
-import PackagingForm from "@/components/packaging-categories/PackagingForm";
+import PackagingForm from "@/components/packaging-means/PackagingForm";
 import { ConfirmProvider } from "@/components/ui/confirm-message";
 
 describe("Packaging category form", () => {
   const originalCreateObjectURL = URL.createObjectURL;
   const originalRevokeObjectURL = URL.revokeObjectURL;
-  const originalFetch = global.fetch;
 
   beforeAll(() => {
     URL.createObjectURL = jest.fn(() => "blob:mock-url");
@@ -29,10 +28,6 @@ describe("Packaging category form", () => {
   afterAll(() => {
     URL.createObjectURL = originalCreateObjectURL;
     URL.revokeObjectURL = originalRevokeObjectURL;
-  });
-
-  afterEach(() => {
-    global.fetch = originalFetch;
   });
 
   it("enables submit when required fields are filled", async () => {
@@ -69,23 +64,4 @@ describe("Packaging category form", () => {
     expect(await screen.findByText(/bad name/i)).toBeInTheDocument();
   });
 
-  it("shows duplication error when validate API returns exists", async () => {
-    const mockFetch = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(() => (
-      Promise.resolve({
-        ok: true,
-        json: async () => ({ exists: true }),
-      } as unknown as Response)
-    ));
-    global.fetch = mockFetch as unknown as typeof fetch;
-    render(<ConfirmProvider><PackagingForm debounceMs={10} /></ConfirmProvider>);
-
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText(/category name/i), { target: { value: "Boxes" } });
-      fireEvent.change(screen.getByLabelText(/description/i), { target: { value: "Reusable" } });
-      await new Promise((r) => setTimeout(r, 30));
-    });
-
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByText(/already exists/i)).toBeInTheDocument());
-  });
 });

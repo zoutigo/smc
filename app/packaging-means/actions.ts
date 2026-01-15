@@ -1,8 +1,10 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
+import { slugifyValue } from "@/lib/utils";
 import { persistUploadFile, deleteUploadFileByUrl } from "@/lib/uploads";
 import { createPackagingCategorySchema, updatePackagingCategorySchema, type UpdatePackagingCategoryInput } from "./schema";
 
@@ -21,12 +23,26 @@ const extractString = (value: FormDataEntryValue | null) => {
   return trimmed.length ? trimmed : undefined;
 };
 
-type PackagingCategoryDelegate = PrismaClient["plant"];
+type PackagingCategoryDelegate = PrismaClient["packagingCategory"];
 const MODEL_MISSING_WARNING = "Prisma client missing PackagingCategory delegate. Run `npx prisma generate` after updating prisma/schema.prisma.";
 
 const getPackagingCategoryDelegate = () => {
   const prisma = getPrisma() as PrismaClient & { packagingCategory?: PackagingCategoryDelegate };
   return prisma.packagingCategory ?? null;
+};
+
+const buildSlug = (value: string) => {
+  const slug = slugifyValue(value);
+  return slug.length ? slug : `packaging-${randomUUID().slice(0, 8)}`;
+};
+
+const findSlugCollision = async (delegate: PackagingCategoryDelegate, slug: string, excludeId?: string) => {
+  return delegate.findFirst({
+    where: {
+      slug,
+      ...(excludeId ? { NOT: { id: excludeId } } : {}),
+    },
+  });
 };
 
 export async function getPackagingCategories() {
@@ -69,16 +85,8 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
     description: extractString(formData.get("description")),
   };
 
-  let imageUrl = extractString(formData.get("imageUrl"));
   const uploadCandidate = formData.get("imageFile");
-  if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
-    try {
-      const { url } = await persistUploadFile(uploadCandidate);
-      imageUrl = url;
-    } catch {
-      return { status: "error", message: "Unable to upload image" };
-    }
-  }
+  const imageUrl = extractString(formData.get("imageUrl"));
 
   const parsed = createPackagingCategorySchema.safeParse({ ...baseFields, imageUrl });
   if (!parsed.success) {
@@ -95,21 +103,33 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
   const { name, description } = parsed.data;
+  const slug = buildSlug(name);
 
   try {
-    const existing = await categoryDelegate.findFirst({ where: { name } });
+    const existing = await findSlugCollision(categoryDelegate, slug);
     if (existing) {
       return { status: "error", fieldErrors: { name: "A category with this name already exists" } };
     }
 
+    let uploadedImageUrl: string | undefined;
+    if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
+      try {
+        const { url } = await persistUploadFile(uploadCandidate);
+        uploadedImageUrl = url;
+      } catch {
+        return { status: "error", message: "Unable to upload image" };
+      }
+    }
+
     const createData: Prisma.PackagingCategoryCreateInput = {
       name,
+      slug,
       description,
-      imageUrl: parsed.data.imageUrl ?? null,
+      imageUrl: uploadedImageUrl ?? parsed.data.imageUrl ?? null,
     };
 
     await categoryDelegate.create({ data: createData });
-    try { revalidatePath("/packaging-categories"); } catch {}
+    try { revalidatePath("/packaging-means"); } catch {}
     return { status: "success" };
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
@@ -127,25 +147,12 @@ export async function updatePackagingCategoryAction(_: PackagingCategoryState, i
 
   const existingImage = extractString(formData.get("existingImageUrl"));
   const removeImage = String(formData.get("removeImage") ?? "false") === "true";
-  let imageUrl = extractString(formData.get("imageUrl"));
-
+  const imageUrl = extractString(formData.get("imageUrl"));
   const uploadCandidate = formData.get("imageFile");
-  if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
-    try {
-      const { url } = await persistUploadFile(uploadCandidate);
-      imageUrl = url;
-      if (existingImage) await deleteUploadFileByUrl(existingImage);
-    } catch {
-      return { status: "error", message: "Unable to upload image" };
-    }
-  } else if (removeImage && existingImage) {
-    await deleteUploadFileByUrl(existingImage);
-    imageUrl = undefined;
-  } else if (existingImage && !imageUrl) {
-    imageUrl = existingImage;
-  }
+  const schemaInput: Record<string, unknown> = { id, ...baseFields };
+  if (imageUrl) schemaInput.imageUrl = imageUrl;
 
-  const parsed = updatePackagingCategorySchema.safeParse({ id, ...baseFields, imageUrl });
+  const parsed = updatePackagingCategorySchema.safeParse(schemaInput);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     parsed.error.issues.forEach((issue) => {
@@ -159,24 +166,48 @@ export async function updatePackagingCategoryAction(_: PackagingCategoryState, i
   if (!categoryDelegate) {
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
-  const { name } = parsed.data as UpdatePackagingCategoryInput;
+  const parsedData = parsed.data as UpdatePackagingCategoryInput;
+  const { name } = parsedData;
 
   try {
+    let slug: string | undefined;
     if (name) {
-      const existing = await categoryDelegate.findFirst({ where: { name, NOT: { id } } });
+      slug = buildSlug(name);
+      const existing = await findSlugCollision(categoryDelegate, slug, id);
       if (existing) {
         return { status: "error", fieldErrors: { name: "A category with this name already exists" } };
       }
     }
 
-    const updatePayload = { ...parsed.data } as Record<string, unknown>;
-    if (typeof updatePayload.imageUrl === "string" && updatePayload.imageUrl.trim() === "") {
+    let nextImageUrl: string | null | undefined = parsedData.imageUrl;
+    if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
+      try {
+        const { url } = await persistUploadFile(uploadCandidate);
+        nextImageUrl = url;
+        if (existingImage) await deleteUploadFileByUrl(existingImage);
+      } catch {
+        return { status: "error", message: "Unable to upload image" };
+      }
+    } else if (removeImage && existingImage) {
+      await deleteUploadFileByUrl(existingImage);
+      nextImageUrl = null;
+    } else if (existingImage && nextImageUrl === undefined) {
+      nextImageUrl = existingImage;
+    }
+
+    const updatePayload = { ...parsedData } as Record<string, unknown>;
+    delete updatePayload.id;
+    if (slug) updatePayload.slug = slug;
+    if (nextImageUrl === null) {
+      updatePayload.imageUrl = null;
+    } else if (typeof nextImageUrl === "string") {
+      updatePayload.imageUrl = nextImageUrl;
+    } else {
       delete updatePayload.imageUrl;
     }
-    if (updatePayload.imageUrl === undefined) delete updatePayload.imageUrl;
 
     await categoryDelegate.update({ where: { id }, data: updatePayload });
-    try { revalidatePath("/packaging-categories"); } catch {}
+    try { revalidatePath("/packaging-means"); } catch {}
     return { status: "success" };
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
@@ -193,7 +224,7 @@ export async function deletePackagingCategoryAction(_: PackagingCategoryState, i
   }
   try {
     await categoryDelegate.delete({ where: { id } });
-    try { revalidatePath("/packaging-categories"); } catch {}
+    try { revalidatePath("/packaging-means"); } catch {}
     return { status: "success" };
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {

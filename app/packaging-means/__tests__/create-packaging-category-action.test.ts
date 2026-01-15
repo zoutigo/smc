@@ -1,6 +1,6 @@
 /** @jest-environment node */
 
-import { createPackagingCategoryAction } from "@/app/packaging-categories/actions";
+import { createPackagingCategoryAction } from "@/app/packaging-means/actions";
 
 const mockCreate = jest.fn();
 const mockFindFirst = jest.fn();
@@ -48,12 +48,30 @@ describe("createPackagingCategoryAction", () => {
     const result = await createPackagingCategoryAction({ status: "idle" }, fd as unknown as FormData);
 
     expect(mockPersistUploadFile).toHaveBeenCalledTimes(1);
+    expect(mockFindFirst).toHaveBeenCalledWith({ where: { slug: "insulated-boxes" } });
     expect(mockCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         name: "Insulated boxes",
+        slug: "insulated-boxes",
         imageUrl: "http://localhost:3000/api/uploads/category.png",
       }),
     });
     expect(result.status).toBe("success");
+  });
+
+  it("stops before uploading when slug already exists", async () => {
+    mockFindFirst.mockResolvedValue({ id: "existing" });
+
+    const fd = new FormData();
+    fd.append("name", "Thermal wraps");
+    fd.append("description", "Keeps products cold");
+    const file = new File([Buffer.from("image-data")], "thermal.png", { type: "image/png" });
+    fd.append("imageFile", file);
+
+    const result = await createPackagingCategoryAction({ status: "idle" }, fd as unknown as FormData);
+
+    expect(result.status).toBe("error");
+    expect(mockPersistUploadFile).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });

@@ -6,21 +6,10 @@ import { useActionState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { createPackagingCategoryAction, type PackagingCategoryState } from "@/app/packaging-categories/actions";
-import { createPackagingCategorySchema, type CreatePackagingCategoryInput } from "@/app/packaging-categories/schema";
+import { createPackagingCategoryAction, type PackagingCategoryState } from "@/app/packaging-means/actions";
+import { createPackagingCategorySchema, type CreatePackagingCategoryInput } from "@/app/packaging-means/schema";
 import { Button } from "@/components/ui/button";
 import { useConfirmMessage } from "@/components/ui/confirm-message";
-
-function debounceFn(fn: (...args: unknown[]) => unknown, wait = 300) {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  return (...args: unknown[]) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      timeout = null;
-      (fn as (...inner: unknown[]) => unknown)(...args);
-    }, wait);
-  };
-}
 
 type FormValues = {
   name: string;
@@ -35,7 +24,6 @@ interface PackagingFormProps {
   onClose?: () => void;
   onSuccess?: () => void;
   actionOverride?: (fd: FormData) => Promise<unknown>;
-  debounceMs?: number;
   initialValues?: PackagingFormInitialValues;
   mode?: "create" | "edit";
   submitLabel?: string;
@@ -46,7 +34,6 @@ export default function PackagingForm({
   onClose,
   onSuccess,
   actionOverride,
-  debounceMs,
   initialValues,
   mode = "create",
   submitLabel,
@@ -65,7 +52,7 @@ export default function PackagingForm({
     imageUrl: initialValues?.imageUrl ?? undefined,
   }), [initialValues?.name, initialValues?.description, initialValues?.imageUrl]);
 
-  const { register, handleSubmit, formState: { errors, isDirty, isSubmitting }, setError, reset, watch, resetField } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors, isDirty, isSubmitting }, setError, reset, resetField } = useForm<FormValues>({
     resolver: zodResolver(createPackagingCategorySchema),
     mode: "onChange",
     defaultValues: normalizedDefaults,
@@ -73,7 +60,6 @@ export default function PackagingForm({
 
   const { ref: imageFileFieldRef, onChange: imageFileOnChange, ...imageFileField } = register("imageFile");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const editingId = initialValues?.id;
   const successCopy = successMessage ?? (mode === "edit" ? "Category updated" : "Category created");
   const submitCopy = submitLabel ?? (mode === "edit" ? "Update category" : "Save category");
   const previewObjectUrlRef = useRef<string | null>(null);
@@ -100,8 +86,10 @@ export default function PackagingForm({
   }, [clearObjectUrl, initialValues?.imageUrl, resetField]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     reset(normalizedDefaults);
     resetImageInteractions();
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [normalizedDefaults, reset, resetImageInteractions]);
 
   useEffect(() => () => clearObjectUrl(), [clearObjectUrl]);
@@ -132,35 +120,12 @@ export default function PackagingForm({
 
   useEffect(() => {
     if (state.status === "idle") return;
+    /* eslint-disable react-hooks/set-state-in-effect */
     handleResult(state);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [state, handleResult]);
 
-  const validateDup = debounceFn(async (...args: unknown[]) => {
-    const name = typeof args[0] === "string" ? args[0] : undefined;
-    if (!name?.trim()) return;
-    try {
-      const params = new URLSearchParams({ name });
-      if (editingId) params.append("excludeId", editingId);
-      const response = await fetch(`/api/packaging-categories/validate?${params.toString()}`);
-      const data = await response.json();
-      if (data.exists) {
-        setError("name", { type: "manual", message: "A category with this name already exists" });
-      }
-    } catch {
-      // ignore errors during debounce validation
-    }
-  }, debounceMs ?? 350);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/incompatible-library
-    const subscription = watch((value: Record<string, unknown>) => {
-      const name = typeof value.name === "string" ? value.name : undefined;
-      validateDup(name);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, validateDup]);
-
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = useCallback(async (data: FormValues) => {
     const formData = new FormData();
     formData.append("name", data.name);
     formData.append("description", data.description);
@@ -189,7 +154,7 @@ export default function PackagingForm({
     startTransition(() => {
       formAction(formData);
     });
-  };
+  }, [actionOverride, formAction, handleResult, initialValues, removeExistingImage]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     imageFileOnChange?.(event);
@@ -240,9 +205,12 @@ export default function PackagingForm({
   const showRemoveButton = Boolean(previewImage || (initialValues?.imageUrl && !removeExistingImage));
   const showRestoreButton = Boolean(initialValues?.imageUrl && (removeExistingImage || isUsingLocalPreview));
   const previewLabel = isUsingLocalPreview ? "Selected image" : "Current image";
+  const onFormSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
+    void handleSubmit(onSubmit)(event);
+  }, [handleSubmit, onSubmit]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded bg-white p-4 shadow">
+    <form onSubmit={onFormSubmit} className="space-y-4 rounded bg-white p-4 shadow">
       <div>
         <label htmlFor="name" className="block text-sm font-medium">Category name</label>
         <input id="name" className="mt-1 w-full" {...register("name")} />
