@@ -6,9 +6,9 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { slugifyValue } from "@/lib/utils";
 import { persistUploadFile, deleteUploadFileByUrl } from "@/lib/uploads";
-import { createPackagingCategorySchema, updatePackagingCategorySchema, type UpdatePackagingCategoryInput } from "./schema";
+import { createStorageMeanCategorySchema, updateStorageMeanCategorySchema, type UpdateStorageMeanCategoryInput } from "./schema";
 
-export type PackagingCategoryState = {
+export type StorageMeanCategoryState = {
   status: "idle" | "error" | "success";
   message?: string;
   fieldErrors?: Record<string, string>;
@@ -23,20 +23,20 @@ const extractString = (value: FormDataEntryValue | null) => {
   return trimmed.length ? trimmed : undefined;
 };
 
-type PackagingCategoryDelegate = PrismaClient["packagingCategory"];
-const MODEL_MISSING_WARNING = "Prisma client missing PackagingCategory delegate. Run `npx prisma generate` after updating prisma/schema.prisma.";
+type StorageMeanCategoryDelegate = PrismaClient["storageMeanCategory"];
+const MODEL_MISSING_WARNING = "Prisma client missing StorageMeanCategory delegate. Run `npx prisma generate` after updating prisma/schema.prisma.";
 
-const getPackagingCategoryDelegate = () => {
-  const prisma = getPrisma() as PrismaClient & { packagingCategory?: PackagingCategoryDelegate };
-  return prisma.packagingCategory ?? null;
+const getStorageMeanCategoryDelegate = () => {
+  const prisma = getPrisma() as PrismaClient & { storageMeanCategory?: StorageMeanCategoryDelegate };
+  return prisma.storageMeanCategory ?? null;
 };
 
 const buildSlug = (value: string) => {
   const slug = slugifyValue(value);
-  return slug.length ? slug : `packaging-${randomUUID().slice(0, 8)}`;
+  return slug.length ? slug : `storage-${randomUUID().slice(0, 8)}`;
 };
 
-const findSlugCollision = async (delegate: PackagingCategoryDelegate, slug: string, excludeId?: string) => {
+const findSlugCollision = async (delegate: StorageMeanCategoryDelegate, slug: string, excludeId?: string) => {
   return delegate.findFirst({
     where: {
       slug,
@@ -45,8 +45,8 @@ const findSlugCollision = async (delegate: PackagingCategoryDelegate, slug: stri
   });
 };
 
-export async function getPackagingCategories() {
-  const categoryDelegate = getPackagingCategoryDelegate();
+export async function getStorageMeanCategories() {
+  const categoryDelegate = getStorageMeanCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
     return [];
@@ -55,15 +55,15 @@ export async function getPackagingCategories() {
     return await categoryDelegate.findMany({ orderBy: { createdAt: "desc" } });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      console.warn("Prisma table `PackagingCategory` does not exist. Return empty list until migration is applied.");
+      console.warn("Prisma table `StorageMeanCategory` does not exist. Return empty list until migration is applied.");
       return [];
     }
     throw error;
   }
 }
 
-export async function getPackagingCategoryById(id: string) {
-  const categoryDelegate = getPackagingCategoryDelegate();
+export async function getStorageMeanCategoryById(id: string) {
+  const categoryDelegate = getStorageMeanCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
     return null;
@@ -72,14 +72,14 @@ export async function getPackagingCategoryById(id: string) {
     return await categoryDelegate.findUnique({ where: { id } });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      console.warn("Prisma table `PackagingCategory` does not exist. getPackagingCategoryById returning null.");
+      console.warn("Prisma table `StorageMeanCategory` does not exist. getStorageMeanCategoryById returning null.");
       return null;
     }
     throw error;
   }
 }
 
-export async function createPackagingCategoryAction(_: PackagingCategoryState, formData: FormData): Promise<PackagingCategoryState> {
+export async function createStorageMeanCategoryAction(_: StorageMeanCategoryState, formData: FormData): Promise<StorageMeanCategoryState> {
   const baseFields = {
     name: extractString(formData.get("name")),
     description: extractString(formData.get("description")),
@@ -88,7 +88,7 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
   const uploadCandidate = formData.get("imageFile");
   const imageUrl = extractString(formData.get("imageUrl"));
 
-  const parsed = createPackagingCategorySchema.safeParse({ ...baseFields, imageUrl });
+  const parsed = createStorageMeanCategorySchema.safeParse({ ...baseFields, imageUrl });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     parsed.error.issues.forEach((issue) => {
@@ -98,7 +98,7 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
     return { status: "error", fieldErrors };
   }
 
-  const categoryDelegate = getPackagingCategoryDelegate();
+  const categoryDelegate = getStorageMeanCategoryDelegate();
   if (!categoryDelegate) {
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
@@ -121,7 +121,7 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
       }
     }
 
-    const createData: Prisma.PackagingCategoryCreateInput = {
+    const createData: Prisma.StorageMeanCategoryCreateInput = {
       name,
       slug,
       description,
@@ -129,17 +129,17 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
     };
 
     await categoryDelegate.create({ data: createData });
-    try { revalidatePath("/packaging-means"); } catch {}
+    try { revalidatePath("/storage-means"); } catch {}
     return { status: "success" };
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      return { status: "error", message: "Database schema not applied (missing PackagingCategory table). Run Prisma migrations." };
+      return { status: "error", message: "Database schema not applied (missing StorageMeanCategory table). Run Prisma migrations." };
     }
-    return { status: "error", message: "Unable to create packaging category" };
+    return { status: "error", message: "Unable to create storage mean category" };
   }
 }
 
-export async function updatePackagingCategoryAction(_: PackagingCategoryState, id: string, formData: FormData): Promise<PackagingCategoryState> {
+export async function updateStorageMeanCategoryAction(_: StorageMeanCategoryState, id: string, formData: FormData): Promise<StorageMeanCategoryState> {
   const baseFields = {
     name: extractString(formData.get("name")),
     description: extractString(formData.get("description")),
@@ -152,7 +152,7 @@ export async function updatePackagingCategoryAction(_: PackagingCategoryState, i
   const schemaInput: Record<string, unknown> = { id, ...baseFields };
   if (imageUrl) schemaInput.imageUrl = imageUrl;
 
-  const parsed = updatePackagingCategorySchema.safeParse(schemaInput);
+  const parsed = updateStorageMeanCategorySchema.safeParse(schemaInput);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     parsed.error.issues.forEach((issue) => {
@@ -162,11 +162,11 @@ export async function updatePackagingCategoryAction(_: PackagingCategoryState, i
     return { status: "error", fieldErrors };
   }
 
-  const categoryDelegate = getPackagingCategoryDelegate();
+  const categoryDelegate = getStorageMeanCategoryDelegate();
   if (!categoryDelegate) {
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
-  const parsedData = parsed.data as UpdatePackagingCategoryInput;
+  const parsedData = parsed.data as UpdateStorageMeanCategoryInput;
   const { name } = parsedData;
 
   try {
@@ -207,42 +207,42 @@ export async function updatePackagingCategoryAction(_: PackagingCategoryState, i
     }
 
     await categoryDelegate.update({ where: { id }, data: updatePayload });
-    try { revalidatePath("/packaging-means"); } catch {}
+    try { revalidatePath("/storage-means"); } catch {}
     return { status: "success" };
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      return { status: "error", message: "Database schema not applied (missing PackagingCategory table). Run Prisma migrations." };
+      return { status: "error", message: "Database schema not applied (missing StorageMeanCategory table). Run Prisma migrations." };
     }
-    return { status: "error", message: "Unable to update packaging category" };
+    return { status: "error", message: "Unable to update storage mean category" };
   }
 }
 
-export async function deletePackagingCategoryAction(_: PackagingCategoryState, id: string): Promise<PackagingCategoryState> {
-  const categoryDelegate = getPackagingCategoryDelegate();
+export async function deleteStorageMeanCategoryAction(_: StorageMeanCategoryState, id: string): Promise<StorageMeanCategoryState> {
+  const categoryDelegate = getStorageMeanCategoryDelegate();
   if (!categoryDelegate) {
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
   try {
     const existing = await categoryDelegate.findUnique({ where: { id } });
     if (!existing) {
-      return { status: "error", message: "Packaging category not found" };
+      return { status: "error", message: "Storage mean category not found" };
     }
 
     if (existing.imageUrl) {
       try {
         await deleteUploadFileByUrl(existing.imageUrl);
       } catch {
-        return { status: "error", message: "Unable to delete category image" };
+        return { status: "error", message: "Unable to delete storage category image" };
       }
     }
 
     await categoryDelegate.delete({ where: { id } });
-    try { revalidatePath("/packaging-means"); } catch {}
+    try { revalidatePath("/storage-means"); } catch {}
     return { status: "success" };
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      return { status: "error", message: "Database schema not applied (missing PackagingCategory table). Run Prisma migrations." };
+      return { status: "error", message: "Database schema not applied (missing StorageMeanCategory table). Run Prisma migrations." };
     }
-    return { status: "error", message: "Unable to delete packaging category" };
+    return { status: "error", message: "Unable to delete storage mean category" };
   }
 }

@@ -3,7 +3,6 @@ import type { $Enums } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { slugifyValue } from "../lib/utils";
-import { storageMeans, users } from "./service-seed-data.js";
 
 const prisma = new PrismaClient();
 
@@ -55,9 +54,83 @@ const packagingCategoriesSeedData = [
   },
 ];
 
-const buildSlug = (name: string) => {
+const storageMeanCategoriesSeedData = [
+  {
+    name: "Automated Hanging Shopstock",
+    description: "Robot-managed hanging aisles buffering painted subassemblies with real-time inventory tracking.",
+    imageUrl: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a",
+  },
+  {
+    name: "Manual Hanging Shopstock",
+    description: "Operator-friendly hanging rails that keep bulky trim sets within reach of assembly teams.",
+    imageUrl: "https://images.unsplash.com/photo-1479839672679-a46483c0e7c8",
+  },
+  {
+    name: "Automated Transtocker",
+    description: "High-throughput transtockers feeding cells with sequenced components under automated control.",
+    imageUrl: "https://images.unsplash.com/photo-1489515215877-9227ee91edef",
+  },
+  {
+    name: "Manual Transtocker",
+    description: "Manually dispatched transtockers supporting flexible replenishment during short runs.",
+    imageUrl: "https://images.unsplash.com/photo-1452698325353-b89e0069974b",
+  },
+  {
+    name: "High Bay Rack",
+    description: "High-bay rack structure maximizing cubic density for pallets and oversized loads.",
+    imageUrl: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606",
+  },
+  {
+    name: "ARSR (automated Storage and Retrieval Systems)",
+    description: "Automated storage and retrieval grid orchestrating deep-lane buffering for fast movers.",
+    imageUrl: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429",
+  },
+  {
+    name: "CRM (conveyor on rail Motorized)",
+    description: "Powered conveyor-on-rail network routing totes across mezzanines and paint shops.",
+    imageUrl: "https://images.unsplash.com/photo-1503387762-592deb58ef4e",
+  },
+];
+
+const usersSeedData = [
+  {
+    email: "valery@opmobility.com",
+    name: "Valery",
+    password: "ChangeMe123",
+    birthDate: new Date("1990-05-10"),
+  },
+  {
+    email: "ops@opmobility.com",
+    name: "Ops Team",
+    password: "ChangeMe123",
+    birthDate: new Date("1988-09-15"),
+  },
+];
+
+const storageMeansSeedData = [
+  {
+    name: "Cold room A1",
+    description: "Primary refrigerated storage zone",
+    status: "ACTIVE",
+    ownerEmail: "valery@example.com",
+  },
+  {
+    name: "Dry warehouse B4",
+    description: "Ambient storage for packaging",
+    status: "ACTIVE",
+    ownerEmail: "ops@example.com",
+  },
+  {
+    name: "Overflow zone C2",
+    description: "Temporary holding area",
+    status: "DRAFT",
+    ownerEmail: "ops@example.com",
+  },
+] as const;
+
+const buildSlug = (name: string, fallbackPrefix: string) => {
   const slug = slugifyValue(name);
-  return slug.length ? slug : `packaging-${randomUUID().slice(0, 8)}`;
+  return slug.length ? slug : `${fallbackPrefix}-${randomUUID().slice(0, 8)}`;
 };
 
 async function seedPackagingCategories() {
@@ -70,16 +143,32 @@ async function seedPackagingCategories() {
   await prisma.packagingCategory.createMany({
     data: packagingCategoriesSeedData.map((category) => ({
       ...category,
-      slug: buildSlug(category.name),
+      slug: buildSlug(category.name, "packaging"),
     })),
   });
   console.info(`Seeded ${packagingCategoriesSeedData.length} packaging categories.`);
 }
 
+async function seedStorageMeanCategories() {
+  const existingCount = await prisma.storageMeanCategory.count();
+  if (existingCount > 0) {
+    console.info(`Skipping storage mean category seed: ${existingCount} record(s) already present.`);
+    return;
+  }
+
+  await prisma.storageMeanCategory.createMany({
+    data: storageMeanCategoriesSeedData.map((category) => ({
+      ...category,
+      slug: buildSlug(category.name, "storage"),
+    })),
+  });
+  console.info(`Seeded ${storageMeanCategoriesSeedData.length} storage mean categories.`);
+}
+
 async function seedUsersAndStorage() {
   const userMap = new Map<string, string>();
 
-  for (const user of users) {
+  for (const user of usersSeedData) {
     const passwordHash = await bcrypt.hash(user.password, 10);
     const created = await prisma.user.upsert({
       where: { email: user.email },
@@ -94,7 +183,7 @@ async function seedUsersAndStorage() {
     userMap.set(user.email, created.id);
   }
 
-  for (const storage of storageMeans) {
+  for (const storage of storageMeansSeedData) {
     const ownerId = storage.ownerEmail ? userMap.get(storage.ownerEmail) ?? null : null;
     const status = storage.status as $Enums.StorageStatus;
     await prisma.storageMean.upsert({
@@ -117,6 +206,7 @@ async function seedUsersAndStorage() {
 async function main() {
   await seedUsersAndStorage();
   await seedPackagingCategories();
+  await seedStorageMeanCategories();
 }
 
 main()

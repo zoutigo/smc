@@ -4,6 +4,7 @@
 
 const mockedPrisma = {
   packagingCategory: {
+    findUnique: jest.fn(),
     findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -23,7 +24,7 @@ jest.mock("@/lib/uploads", () => ({
   deleteUploadFileByUrl: (...args: unknown[]) => deleteUploadFileByUrlMock(...args),
 }));
 
-import { createPackagingCategoryAction, updatePackagingCategoryAction } from "@/app/packaging-means/actions";
+import { createPackagingCategoryAction, updatePackagingCategoryAction, deletePackagingCategoryAction } from "@/app/packaging-means/actions";
 
 describe("createPackagingCategoryAction", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -114,5 +115,60 @@ describe("updatePackagingCategoryAction", () => {
     const updateArgs = (mockedPrisma.packagingCategory.update as jest.Mock).mock.calls[0][0];
     expect(updateArgs.data.imageUrl).toBe("https://example.com/new.png");
     expect(updateArgs.data.slug).toBe("returnables");
+  });
+});
+
+describe("deletePackagingCategoryAction", () => {
+  const categoryId = "22222222-2222-4222-8222-222222222222";
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    deleteUploadFileByUrlMock.mockReset();
+    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue({
+      id: categoryId,
+      imageUrl: "https://example.com/image.png",
+    });
+    (mockedPrisma.packagingCategory.delete as jest.Mock).mockResolvedValue({ id: categoryId });
+  });
+
+  it("removes the stored image before deleting the category", async () => {
+    const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
+
+    expect(deleteUploadFileByUrlMock).toHaveBeenCalledWith("https://example.com/image.png");
+    expect(mockedPrisma.packagingCategory.delete).toHaveBeenCalledWith({ where: { id: categoryId } });
+    expect(res.status).toBe("success");
+  });
+
+  it("skips image deletion when no imageUrl is present", async () => {
+    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue({
+      id: categoryId,
+      imageUrl: null,
+    });
+
+    const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
+
+    expect(deleteUploadFileByUrlMock).not.toHaveBeenCalled();
+    expect(mockedPrisma.packagingCategory.delete).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe("success");
+  });
+
+  it("returns an error when the category does not exist", async () => {
+    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue(null);
+
+    const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
+
+    expect(res.status).toBe("error");
+    expect(res.message).toMatch(/not found/i);
+    expect(mockedPrisma.packagingCategory.delete).not.toHaveBeenCalled();
+  });
+
+  it("surfaces image deletion failures", async () => {
+    deleteUploadFileByUrlMock.mockRejectedValue(new Error("fs error"));
+
+    const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
+
+    expect(res.status).toBe("error");
+    expect(res.message).toMatch(/delete category image/i);
+    expect(mockedPrisma.packagingCategory.delete).not.toHaveBeenCalled();
   });
 });
