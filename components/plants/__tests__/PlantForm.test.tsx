@@ -3,8 +3,14 @@ import userEvent from "@testing-library/user-event";
 import PlantForm from "@/components/plants/PlantForm";
 
 const showMock = jest.fn();
-const objectUrlMock = jest.fn((_: Blob | MediaSource) => "blob:preview") as jest.MockedFunction<typeof URL.createObjectURL>;
-const revokeUrlMock = jest.fn((_url: string) => undefined) as jest.MockedFunction<typeof URL.revokeObjectURL>;
+const objectUrlMock = jest.fn((blob: Blob | MediaSource) => {
+  void blob;
+  return "blob:preview";
+}) as jest.MockedFunction<typeof URL.createObjectURL>;
+const revokeUrlMock = jest.fn((url: string) => {
+  void url;
+  return undefined;
+}) as jest.MockedFunction<typeof URL.revokeObjectURL>;
 
 jest.mock("@/components/ui/confirm-message", () => ({
   useConfirmMessage: () => ({ show: showMock }),
