@@ -37,35 +37,35 @@ export default function StorageCard({ id, name, description, imageUrl, onEdit, o
   const truncatedDescription = description.length > 120 ? `${description.slice(0, 117)}…` : description;
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-[22px] border border-smc-border bg-smc-card shadow-soft">
-      <div className="relative flex items-center justify-between gap-4 bg-gradient-to-r from-smc-primary/20 via-smc-success/10 to-smc-primary/5 px-5 py-4">
-        <div className="pointer-events-none absolute inset-y-0 left-[-10%] h-[180%] w-[40%] rounded-full bg-white/30 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute inset-x-0 bottom-[-45%] h-32 bg-white/10" aria-hidden />
-        <h3 className="relative z-10 text-xl font-semibold text-slate-900 drop-shadow-sm">{name}</h3>
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-[24px] border border-smc-border/70 bg-white shadow-soft">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(248,228,182,0.18),transparent_38%)] opacity-70" aria-hidden />
+      <div className="relative overflow-hidden">
         {hasImage ? (
           <Image
             src={imageUrl!}
             alt={`${name} image`}
-            width={64}
-            height={64}
-            className="relative z-10 h-16 w-16 rounded-2xl object-cover ring-2 ring-white/60 shadow-soft"
+            width={640}
+            height={360}
+            className="h-44 w-full object-cover transition duration-500 ease-out group-hover:scale-[1.02]"
             unoptimized
           />
         ) : (
-          <div className="relative z-10 h-16 w-16 rounded-2xl bg-white/50 text-smc-primary flex items-center justify-center font-semibold uppercase shadow-soft ring-2 ring-white/60">
+          <div className="flex h-44 w-full items-center justify-center bg-gradient-to-br from-smc-primary/30 via-smc-info/10 to-white text-3xl font-semibold uppercase text-smc-primary">
             {fallback}
           </div>
         )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" aria-hidden />
       </div>
 
-      <div className="flex-1 space-y-3 px-5 py-4 text-sm text-smc-text">
+      <div className="relative flex-1 space-y-3 px-5 py-4 text-sm text-smc-text">
+        <h3 className="text-lg font-semibold text-slate-900">{name}</h3>
         <p className="leading-relaxed text-smc-text/90" data-testid="storage-description">
           {truncatedDescription}
         </p>
       </div>
 
-      <div data-testid="storage-card-footer" className="relative flex items-center justify-between border-t border-smc-border/40 bg-gradient-to-r from-white via-smc-bg/80 to-white px-4 py-3">
-        <span className="relative z-10 text-xs font-semibold tracking-[0.3em] text-smc-primary" data-testid="storage-label">
+      <div data-testid="storage-card-footer" className="relative flex items-center justify-between border-t border-smc-border/60 bg-gradient-to-r from-white via-smc-bg/70 to-white px-5 py-3">
+        <span className="relative z-10 text-[11px] font-semibold uppercase tracking-[0.35em] text-smc-primary" data-testid="storage-label">
           STORAGE
         </span>
         <div className="relative z-10 flex items-center gap-2">
@@ -73,7 +73,7 @@ export default function StorageCard({ id, name, description, imageUrl, onEdit, o
             size="icon"
             variant="ghost"
             aria-label="Edit storage mean category"
-            className="h-9 w-9 rounded-xl border border-smc-border bg-white text-smc-primary/80 hover:bg-smc-primary/10"
+            className="h-9 w-9 rounded-xl border border-smc-border bg-white text-smc-primary/80 transition hover:-translate-y-[1px] hover:bg-smc-primary/10"
             onClick={() => onEdit?.(id)}
           >
             <PencilIcon />

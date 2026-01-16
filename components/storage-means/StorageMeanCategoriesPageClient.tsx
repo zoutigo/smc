@@ -71,69 +71,90 @@ export default function StorageMeanCategoriesPageClient({ categories }: StorageM
     }
   };
 
-  const layoutClassName = cn("gap-6", showForm ? "grid lg:grid-cols-[minmax(0,1fr)_320px]" : "flex flex-col");
-  const cardsGridClassName = cn("grid gap-4 sm:grid-cols-2", showForm ? "lg:grid-cols-2" : "lg:grid-cols-3");
+  const layoutClassName = cn("gap-8", showForm ? "grid lg:grid-cols-[minmax(0,1fr)_360px]" : "grid");
+  const cardsGridClassName = cn(
+    "grid gap-6 sm:grid-cols-2",
+    showForm ? "lg:grid-cols-2" : "lg:grid-cols-3"
+  );
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-baseline gap-4">
-          <h1 className="heading-1">Storage means</h1>
-          <h3 className="text-base font-semibold text-slate-500" data-testid="storage-count-heading">
-            {totalItems}
-          </h3>
-        </div>
-        <Button onClick={handleToggle} className="self-start sm:self-auto">
-          {showForm ? "Hide form" : "Add storage category"}
-        </Button>
-      </div>
-
-      <div className={layoutClassName}>
-        <div>
-          <div data-testid="storage-cards-grid" className={cardsGridClassName}>
-            {paginatedCategories.map((category) => (
-              <StorageCard
-                key={category.id}
-                id={category.id}
-                name={category.name}
-                description={category.description}
-                imageUrl={category.imageUrl}
-                onEdit={() => handleEdit(category)}
-                onDelete={() => handleDelete(category.id)}
-              />
-            ))}
+    <div className="space-y-7">
+      <section className="overflow-hidden rounded-[28px] border border-smc-border/60 bg-gradient-to-r from-white via-smc-bg/60 to-white p-7 shadow-card">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-smc-primary/80">Storage means</p>
+            <div className="flex flex-wrap items-end gap-3">
+              <h1 className="heading-1 leading-[1.05]">Storage catalogue</h1>
+              <div className="rounded-full bg-smc-primary/10 px-3 py-1 text-xs font-semibold text-smc-primary" data-testid="storage-count-heading">
+                {totalItems} total
+              </div>
+            </div>
+            <p className="max-w-2xl text-sm text-smc-text-muted">
+              Curated storage environments with imagery-first cards for quick scanning. Desktop focused for clean, roomy layouts.
+            </p>
           </div>
-          <div className="mt-6 flex justify-center" data-testid="storage-pagination">
-            <Pagination
-              totalItems={totalItems}
-              currentPage={currentPage}
-              pageSize={STORAGE_MEAN_PAGE_SIZE}
-              onPageChange={setPage}
-            />
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <Button onClick={handleToggle} className="self-stretch sm:self-auto">
+              {showForm ? "Hide form" : "Add storage category"}
+            </Button>
+            <p className="text-xs text-smc-text-muted">Upload visuals to showcase each category.</p>
           </div>
         </div>
+      </section>
 
-        {showForm && (
-          <aside>
-            <div className="sticky top-6">
-              <StorageForm
-                key={editingCategory?.id ?? "create"}
-                onClose={handleClose}
-                onSuccess={handleFormSuccess}
-                mode={formMode}
-                submitLabel={editingCategory ? "Update storage category" : undefined}
-                successMessage={editingCategory ? "Storage category updated" : undefined}
-                initialValues={editingCategory ? {
-                  id: editingCategory.id,
-                  name: editingCategory.name,
-                  description: editingCategory.description,
-                  imageUrl: editingCategory.imageUrl ?? undefined,
-                } : undefined}
-                actionOverride={editingCategory ? ((formData) => updateStorageMeanCategoryAction({ status: "idle" }, editingCategory.id, formData)) : undefined}
+      <div className="rounded-[26px] border border-smc-border/80 bg-white/85 p-6 shadow-card ring-1 ring-white/70 backdrop-blur">
+        <div className={layoutClassName}>
+          <div className="space-y-6">
+            <div data-testid="storage-cards-grid" className={cardsGridClassName}>
+              {paginatedCategories.map((category) => (
+                <StorageCard
+                  key={category.id}
+                  id={category.id}
+                  name={category.name}
+                  description={category.description}
+                  imageUrl={category.imageUrl}
+                  onEdit={() => handleEdit(category)}
+                  onDelete={() => handleDelete(category.id)}
+                />
+              ))}
+            </div>
+            <div className="flex justify-center" data-testid="storage-pagination">
+              <Pagination
+                totalItems={totalItems}
+                currentPage={currentPage}
+                pageSize={STORAGE_MEAN_PAGE_SIZE}
+                onPageChange={setPage}
               />
             </div>
-          </aside>
-        )}
+          </div>
+
+          {showForm && (
+            <aside className="block">
+              <div className="lg:sticky lg:top-6 space-y-4 overflow-hidden rounded-2xl border border-secondary/80 ring-1 ring-secondary/50 bg-gradient-to-br from-secondary/10 via-white to-smc-bg/85 p-5 shadow-card">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-smc-primary/80">Editor</p>
+                  <h3 className="text-xl font-semibold text-smc-text">{formMode === "edit" ? "Update category" : "Create category"}</h3>
+                  <p className="text-sm text-smc-text-muted">Keep descriptions concise and imagery edge-to-edge.</p>
+                </div>
+                <StorageForm
+                  key={editingCategory?.id ?? "create"}
+                  onClose={handleClose}
+                  onSuccess={handleFormSuccess}
+                  mode={formMode}
+                  submitLabel={editingCategory ? "Update storage category" : undefined}
+                  successMessage={editingCategory ? "Storage category updated" : undefined}
+                  initialValues={editingCategory ? {
+                    id: editingCategory.id,
+                    name: editingCategory.name,
+                    description: editingCategory.description,
+                    imageUrl: editingCategory.imageUrl ?? undefined,
+                  } : undefined}
+                  actionOverride={editingCategory ? ((formData) => updateStorageMeanCategoryAction({ status: "idle" }, editingCategory.id, formData)) : undefined}
+                />
+              </div>
+            </aside>
+          )}
+        </div>
       </div>
     </div>
   );

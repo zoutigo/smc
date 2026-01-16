@@ -6,27 +6,27 @@
     "Liberation Mono", "Courier New";
 
   /* Brand */
-  --smc-primary: 14 53 113;
-  --smc-secondary: 0 93 112;
-  --smc-info: 110 148 182;
+  --smc-primary: 18 54 104;
+  --smc-secondary: 8 108 125;
+  --smc-info: 86 132 175;
 
   /* Feedback */
-  --smc-warning: 255 138 95;
-  --smc-success: 255 240 66;
+  --smc-warning: 248 163 112;
+  --smc-success: 196 172 94;
 
   /* Text */
-  --smc-text: 14 53 113;
-  --smc-text-muted: 87 78 92;
+  --smc-text: 20 36 64;
+  --smc-text-muted: 96 108 129;
 
   /* Surfaces (SaaS modern) */
-  --smc-bg: 246 248 252;
+  --smc-bg: 244 247 252;
   --smc-card: 255 255 255;
-  --smc-border: 224 229 238;
+  --smc-border: 220 228 240;
 
   /* Radii / shadow */
   --smc-radius: 18px;
   --smc-radius-lg: 22px;
-  --smc-shadow: 0 14px 30px rgba(10, 20, 40, 0.1);
+  --smc-shadow: 0 14px 30px rgba(12, 24, 56, 0.1);
 
   /* Spacing & layout */
   --smc-space-1: 8px;
@@ -37,48 +37,48 @@
   --smc-layout-sidebar: clamp(260px, 20vw, 300px);
   --smc-layout-footer: 48px;
 
-  --background: 220 50% 98%;
-  --foreground: 216 78% 25%;
+  --background: 218 45% 97%;
+  --foreground: 215 36% 18%;
   --card: 0 0% 100%;
-  --card-foreground: 216 78% 25%;
+  --card-foreground: 215 36% 20%;
   --popover: 0 0% 100%;
-  --popover-foreground: 216 78% 25%;
-  --primary: 216 78% 25%;
+  --popover-foreground: 215 36% 20%;
+  --primary: 218 57% 27%;
   --primary-foreground: 0 0% 98%;
-  --secondary: 190 100% 22%;
+  --secondary: 188 56% 34%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 219 29% 91%;
-  --muted-foreground: 279 8% 33%;
-  --accent: 208 33% 57%;
+  --muted: 218 32% 92%;
+  --muted-foreground: 220 15% 36%;
+  --accent: 41 77% 56%;
   --accent-foreground: 0 0% 98%;
   --destructive: 16 100% 69%;
   --destructive-foreground: 222 43% 10%;
-  --border: 219 29% 91%;
-  --input: 219 29% 91%;
-  --ring: 216 78% 25%;
+  --border: 218 32% 88%;
+  --input: 218 32% 88%;
+  --ring: 218 57% 27%;
   --radius: var(--smc-radius);
 }
 
 .dark {
-  --background: 220 30% 8%;
-  --foreground: 220 20% 92%;
-  --card: 220 35% 10%;
+  --background: 220 28% 8%;
+  --foreground: 220 18% 90%;
+  --card: 220 26% 10%;
   --card-foreground: 220 20% 92%;
-  --popover: 220 35% 10%;
+  --popover: 220 26% 10%;
   --popover-foreground: 220 20% 92%;
-  --primary: 216 78% 60%;
+  --primary: 218 62% 62%;
   --primary-foreground: 222 43% 10%;
-  --secondary: 190 60% 40%;
+  --secondary: 188 50% 48%;
   --secondary-foreground: 222 43% 10%;
-  --muted: 220 18% 20%;
+  --muted: 220 16% 18%;
   --muted-foreground: 217 15% 72%;
-  --accent: 208 30% 55%;
+  --accent: 41 62% 54%;
   --accent-foreground: 222 43% 10%;
-  --destructive: 16 90% 60%;
+  --destructive: 16 85% 58%;
   --destructive-foreground: 222 43% 10%;
-  --border: 219 20% 24%;
-  --input: 219 20% 24%;
-  --ring: 216 78% 60%;
+  --border: 219 18% 26%;
+  --input: 219 18% 26%;
+  --ring: 218 62% 62%;
   --radius: var(--smc-radius);
 }
 
@@ -118,7 +118,7 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-family: var(--font-sans), var(--font-inter);
-    font-size: 17px;
+    font-size: 16px;
     min-height: 100vh;
   }
 
@@ -128,44 +128,44 @@
 
   h1,
   .heading-1 {
-    font-size: clamp(36px, 3.2vw, 40px);
+    font-size: clamp(32px, 3vw, 36px);
     font-weight: 700;
-    line-height: 1.15;
-    color: rgb(var(--smc-primary));
+    line-height: 1.18;
+    color: rgb(var(--smc-text));
   }
 
   h2,
   .heading-2 {
-    font-size: clamp(26px, 2.8vw, 28px);
+    font-size: clamp(24px, 2.6vw, 26px);
     font-weight: 600;
-    line-height: 1.25;
-    color: rgb(var(--smc-primary));
+    line-height: 1.24;
+    color: rgb(var(--smc-text));
   }
 
   h3,
   .heading-3 {
-    font-size: clamp(22px, 2.4vw, 24px);
+    font-size: clamp(20px, 2.2vw, 22px);
     font-weight: 600;
     line-height: 1.3;
-    color: rgb(var(--smc-primary));
+    color: rgb(var(--smc-text));
   }
 
   .body-text {
-    font-size: clamp(18px, 2vw, 20px);
+    font-size: clamp(17px, 1.9vw, 19px);
     font-weight: 400;
-    line-height: 1.6;
+    line-height: 1.65;
     color: rgb(var(--smc-text-muted));
   }
 
   .text-small {
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 400;
     line-height: 1.5;
     color: rgb(var(--smc-text-muted));
   }
 
   .text-caption {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 500;
     line-height: 1.4;
     color: rgb(var(--smc-text-muted));

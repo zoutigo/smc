@@ -56,41 +56,61 @@ export default async function StorageMeanCategoryPage({ params }: StorageMeanCat
   const fallbackText = resolvedCategory.name.slice(0, 2).toUpperCase();
 
   return (
-    <main className="px-8 py-10">
-      <div className="mb-6">
-        <Link href="/storage-means" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-smc-primary/90")}>← Back to storage means</Link>
+    <main className="space-y-6 px-8 py-10">
+      <div className="flex items-center gap-3 text-sm text-smc-primary">
+        <Link
+          href="/storage-means"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "group inline-flex items-center gap-2 rounded-full border border-smc-border/60 bg-white/70 px-3 py-1 text-sm font-semibold text-smc-primary shadow-soft backdrop-blur hover:border-smc-primary/40 hover:bg-white"
+          )}
+        >
+          <span className="transition group-hover:-translate-x-0.5">←</span>
+          Back to storage means
+        </Link>
+        <span className="text-sm text-smc-text-muted">Category detail</span>
       </div>
 
-      <section className="grid gap-8 rounded-3xl border border-smc-border bg-white p-8 shadow-soft lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <p className="text-sm uppercase tracking-[0.3em] text-smc-primary/80">Storage mean category</p>
-            <h1 className="text-4xl font-bold text-slate-900">{resolvedCategory.name}</h1>
-            <p className="text-base text-slate-600">Slug: <span className="font-mono text-sm text-slate-500">{resolvedCategory.slug}</span></p>
+      <section className="relative overflow-hidden rounded-[30px] border border-smc-border/70 bg-gradient-to-r from-white via-smc-bg/70 to-white p-8 shadow-card lg:grid lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(248,228,182,0.14),transparent_32%),radial-gradient(circle_at_82%_0%,rgba(14,53,113,0.12),transparent_34%)]" aria-hidden />
+        <div className="relative space-y-6">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-smc-primary/80">Storage mean category</p>
+            <h1 className="heading-1 leading-[1.05] text-smc-text">{resolvedCategory.name}</h1>
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] text-smc-text ring-1 ring-smc-border/70">
+              Slug <span className="text-smc-primary">{resolvedCategory.slug}</span>
+            </p>
           </div>
-          <p className="text-lg leading-relaxed text-slate-700">{resolvedCategory.description}</p>
+          <p className="body-text max-w-3xl text-smc-text/90">{resolvedCategory.description}</p>
 
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
-            <p><span className="font-semibold text-slate-800">Created:</span> {resolvedCategory.createdAt.toLocaleDateString()}</p>
-            <p><span className="font-semibold text-slate-800">Last updated:</span> {resolvedCategory.updatedAt.toLocaleDateString()}</p>
+          <div className="grid grid-cols-2 gap-4 rounded-2xl border border-dashed border-smc-border/80 bg-white/70 p-5 text-sm text-smc-text shadow-soft">
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-smc-text-muted">Created</p>
+              <p className="text-base font-semibold text-smc-text">{resolvedCategory.createdAt.toLocaleDateString()}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-smc-text-muted">Last updated</p>
+              <p className="text-base font-semibold text-smc-text">{resolvedCategory.updatedAt.toLocaleDateString()}</p>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-smc-primary/10 via-white to-smc-primary/5 p-6">
+        <div className="relative mt-8 flex flex-col items-center justify-center rounded-3xl border border-smc-border/80 bg-gradient-to-br from-smc-primary/6 via-white to-smc-primary/10 p-4 shadow-card lg:mt-0">
           {resolvedCategory.imageUrl ? (
             <Image
               src={resolvedCategory.imageUrl}
               alt={`${resolvedCategory.name} image`}
-              width={320}
-              height={320}
-              className="h-64 w-64 rounded-2xl object-cover shadow-lg"
+              width={540}
+              height={360}
+              className="h-[320px] w-full rounded-2xl object-cover shadow-[0_20px_50px_rgba(10,26,51,0.25)]"
               priority
             />
           ) : (
-            <div className="flex h-64 w-64 items-center justify-center rounded-2xl border border-smc-border bg-white text-4xl font-semibold text-smc-primary">
+            <div className="flex h-[320px] w-full items-center justify-center rounded-2xl border border-smc-border bg-white text-5xl font-semibold uppercase tracking-wide text-smc-primary shadow-soft">
               {fallbackText}
             </div>
           )}
+          <div className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-white/60 backdrop-blur-[2px]" aria-hidden />
         </div>
       </section>
     </main>
