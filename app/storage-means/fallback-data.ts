@@ -5,9 +5,17 @@ type StorageMeanCategoryRecord = {
   name: string;
   slug: string;
   description: string;
-  imageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  image: {
+    id: string;
+    imageUrl: string;
+    plantId: null;
+    packagingCategoryId: null;
+    storageMeanCategoryId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
 };
 
 type RawStorageMeanCategory = {
@@ -59,13 +67,22 @@ const FALLBACK_TIMESTAMP = new Date("2024-01-01T00:00:00.000Z");
 const createRecord = (category: RawStorageMeanCategory, index: number): StorageMeanCategoryRecord => {
   const slugBase = slugifyValue(category.name);
   const slug = slugBase.length ? slugBase : `storage-${index + 1}`;
+  const imageId = `storage-image-${index + 1}`;
 
   return {
     id: `storage-fallback-${slug}`,
     name: category.name,
     slug,
     description: category.description,
-    imageUrl: category.imageUrl,
+    image: {
+      id: imageId,
+      imageUrl: category.imageUrl,
+      plantId: null,
+      packagingCategoryId: null,
+      storageMeanCategoryId: `storage-fallback-${slug}`,
+      createdAt: new Date(FALLBACK_TIMESTAMP),
+      updatedAt: new Date(FALLBACK_TIMESTAMP),
+    },
     createdAt: new Date(FALLBACK_TIMESTAMP),
     updatedAt: new Date(FALLBACK_TIMESTAMP),
   };
@@ -99,6 +116,13 @@ const cloneCategory = (category: StorageMeanCategoryRecord): StorageMeanCategory
   ...category,
   createdAt: new Date(category.createdAt),
   updatedAt: new Date(category.updatedAt),
+  image: category.image
+    ? {
+        ...category.image,
+        createdAt: new Date(category.image.createdAt),
+        updatedAt: new Date(category.image.updatedAt),
+      }
+    : null,
 });
 
 export function listStorageMeanCategoryFallbacks() {

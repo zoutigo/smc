@@ -79,12 +79,12 @@ describe("updatePackagingCategoryAction", () => {
     persistUploadFileMock.mockReset();
     deleteUploadFileByUrlMock.mockReset();
     (mockedPrisma.packagingCategory.findFirst as jest.Mock).mockResolvedValue(null);
+    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, image: { id: "img-1", imageUrl: "https://example.com/old.jpg" } });
     (mockedPrisma.packagingCategory.update as jest.Mock).mockResolvedValue({ id: categoryId });
   });
 
   it("removes the previous image when removeImage is true", async () => {
     const form = baseForm();
-    form.append("existingImageUrl", "https://example.com/old.jpg");
     form.append("removeImage", "true");
 
     const res = await updatePackagingCategoryAction({ status: "idle" }, categoryId, form as FormData);
@@ -95,13 +95,12 @@ describe("updatePackagingCategoryAction", () => {
     expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledTimes(1);
     const updateArgs = (mockedPrisma.packagingCategory.update as jest.Mock).mock.calls[0][0];
     expect(updateArgs.data.slug).toBe("returnables");
-    expect(updateArgs.data.imageUrl).toBeNull();
+    expect(updateArgs.data.image).toEqual({ delete: true });
   });
 
   it("uploads a new file and deletes the old asset", async () => {
     persistUploadFileMock.mockResolvedValue({ filename: "new.png", url: "https://example.com/new.png" });
     const form = baseForm();
-    form.append("existingImageUrl", "https://example.com/old.jpg");
     form.append("removeImage", "false");
     const file = new File([Buffer.from("data")], "updated.png", { type: "image/png" });
     form.append("imageFile", file);
@@ -113,7 +112,7 @@ describe("updatePackagingCategoryAction", () => {
     expect(res.status).toBe("success");
     expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledTimes(1);
     const updateArgs = (mockedPrisma.packagingCategory.update as jest.Mock).mock.calls[0][0];
-    expect(updateArgs.data.imageUrl).toBe("https://example.com/new.png");
+    expect(updateArgs.data.image).toEqual({ update: { imageUrl: "https://example.com/new.png" } });
     expect(updateArgs.data.slug).toBe("returnables");
   });
 });
@@ -126,28 +125,28 @@ describe("deletePackagingCategoryAction", () => {
     deleteUploadFileByUrlMock.mockReset();
     (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue({
       id: categoryId,
-      imageUrl: "https://example.com/image.png",
+      image: { id: "img", imageUrl: "https://example.com/image.png" },
     });
     (mockedPrisma.packagingCategory.delete as jest.Mock).mockResolvedValue({ id: categoryId });
+    (mockedPrisma.packagingCategory.update as jest.Mock).mockResolvedValue({ id: categoryId });
   });
 
   it("removes the stored image before deleting the category", async () => {
     const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
 
     expect(deleteUploadFileByUrlMock).toHaveBeenCalledWith("https://example.com/image.png");
+    expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledWith({ where: { id: categoryId }, data: { image: { delete: true } } });
     expect(mockedPrisma.packagingCategory.delete).toHaveBeenCalledWith({ where: { id: categoryId } });
     expect(res.status).toBe("success");
   });
 
   it("skips image deletion when no imageUrl is present", async () => {
-    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue({
-      id: categoryId,
-      imageUrl: null,
-    });
+    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, image: null });
 
     const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
 
     expect(deleteUploadFileByUrlMock).not.toHaveBeenCalled();
+    expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledWith({ where: { id: categoryId }, data: { image: undefined } });
     expect(mockedPrisma.packagingCategory.delete).toHaveBeenCalledTimes(1);
     expect(res.status).toBe("success");
   });

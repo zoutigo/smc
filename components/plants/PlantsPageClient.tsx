@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { Plant } from "@prisma/client";
+import type { Address, Country, Image, Plant } from "@prisma/client";
 import PlantCard from "@/components/plants/PlantCard";
 import PlantForm from "@/components/plants/PlantForm";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,12 @@ import Pagination from "@/components/pagination/Pagination";
 export const PLANTS_PAGE_SIZE = 6;
 
 interface PlantsPageClientProps {
-  plants: Plant[];
+  plants: Array<Plant & { address?: (Address & { country: Country }) | null; images: Image[] }>;
 }
 
 export default function PlantsPageClient({ plants }: PlantsPageClientProps) {
   const [showForm, setShowForm] = useState(false);
-  const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
+  const [editingPlant, setEditingPlant] = useState<(Plant & { address?: (Address & { country: Country }) | null; images: Image[] }) | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [page, setPage] = useState(1);
   const router = useRouter();
@@ -57,7 +57,7 @@ export default function PlantsPageClient({ plants }: PlantsPageClientProps) {
     router.refresh();
   };
 
-  const handleEdit = (plant: Plant) => {
+  const handleEdit = (plant: Plant & { address?: (Address & { country: Country }) | null; images: Image[] }) => {
     setEditingPlant(plant);
     setFormMode("edit");
     setShowForm(true);
@@ -101,12 +101,9 @@ export default function PlantsPageClient({ plants }: PlantsPageClientProps) {
               <PlantCard
                 key={p.id}
                 id={p.id}
-                plantName={p.plantName}
-                city={p.city}
-                country={p.country}
+                name={p.name}
                 address={p.address}
-                zipcode={p.zipcode}
-                image={p.image}
+                imageUrl={p.images?.[0]?.imageUrl}
                 onEdit={() => handleEdit(p)}
                 onDelete={() => handleDelete(p.id)}
               />
@@ -132,12 +129,9 @@ export default function PlantsPageClient({ plants }: PlantsPageClientProps) {
                 mode={formMode}
                 initialValues={editingPlant ? {
                   id: editingPlant.id,
-                  plantName: editingPlant.plantName,
-                  address: editingPlant.address ?? "",
-                  city: editingPlant.city,
-                  zipcode: editingPlant.zipcode ?? "",
-                  country: editingPlant.country,
-                  image: editingPlant.image ?? undefined,
+                  name: editingPlant.name,
+                  addressId: editingPlant.address?.id,
+                  imageUrl: editingPlant.images?.[0]?.imageUrl,
                 } : undefined}
                 submitLabel={editingPlant ? "Update plant" : undefined}
                 successMessage={editingPlant ? "Plant updated" : undefined}

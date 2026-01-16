@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { Address, Country } from "@prisma/client";
 import PlantCard from "@/components/plants/PlantCard";
 
 jest.mock("@/components/ConfirmModal", () => ({
@@ -9,13 +10,21 @@ jest.mock("@/components/ConfirmModal", () => ({
 }));
 
 describe("PlantCard", () => {
+  const country: Country = { id: "c1", name: "France", code: "FR", createdAt: new Date(), updatedAt: new Date() };
+  const address: Address & { country: Country } = {
+    id: "a1",
+    street: "10 Rue des Fleurs",
+    city: "Grenoble",
+    zipcode: "38000",
+    countryId: country.id,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    country,
+  };
   const basePlant = {
     id: "1",
-    plantName: "Grenoble",
-    city: "Grenoble",
-    country: "France",
-    address: "10 Rue des Fleurs",
-    zipcode: "38000",
+    name: "Grenoble",
+    address,
   } as const;
 
   it("renders fallback initials and layout sections when no image is provided", () => {
@@ -24,7 +33,7 @@ describe("PlantCard", () => {
     expect(screen.getByText("GR")).toBeInTheDocument();
     expect(screen.getByTestId("plant-card-header")).toHaveClass("bg-gradient-to-r");
     expect(screen.getByTestId("plant-card-footer")).toHaveClass("border-t");
-    expect(screen.getByTestId("plant-country")).toHaveTextContent("FRANCE");
+    expect(screen.getByTestId("plant-country")).toHaveTextContent("FR");
   });
 
   it("displays the uploaded image and surfaces action buttons", async () => {
@@ -34,7 +43,7 @@ describe("PlantCard", () => {
     render(
       <PlantCard
         {...basePlant}
-        image="https://example.com/plant.png"
+        imageUrl="https://example.com/plant.png"
         onEdit={handleEdit}
       />,
     );

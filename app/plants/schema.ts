@@ -1,12 +1,14 @@
 import { z } from "zod";
 
+const optionalUuid = z.preprocess(
+  (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+  z.string().uuid("Address ID must be a valid UUID").optional(),
+);
+
 export const plantBaseSchema = z.object({
-  plantName: z.string().min(1, "Plant name is required"),
-  address: z.string().optional(),
-  city: z.string().min(1, "City is required"),
-  zipcode: z.string().optional(),
-  country: z.string().min(1, "Country is required"),
-  image: z.string().url("Image must be a valid URL").optional(),
+  name: z.string().min(1, "Plant name is required"),
+  addressId: optionalUuid,
+  imageUrl: z.string().url("Image must be a valid URL").optional(),
 });
 
 export const createPlantSchema = plantBaseSchema;

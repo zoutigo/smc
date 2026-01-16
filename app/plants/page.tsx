@@ -1,11 +1,11 @@
 import React from "react";
 import { getPlants } from "./actions";
 import { ConfirmProvider } from "@/components/ui/confirm-message";
-import type { Plant } from "@prisma/client";
+import type { Address, Country, Image, Plant } from "@prisma/client";
 import PlantsPageClient from "@/components/plants/PlantsPageClient";
 
 export default async function PlantsPage() {
-  const plants = (await getPlants()) as Plant[];
+  const plants = (await getPlants()) as Array<Plant & { address?: (Address & { country: Country }) | null; images: Image[] }>;
 
   return (
     <ConfirmProvider>

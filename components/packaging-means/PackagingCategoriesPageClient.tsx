@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { PackagingCategory } from "@prisma/client";
+import type { Image, PackagingCategory } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,12 +13,12 @@ import { deletePackagingCategoryAction, updatePackagingCategoryAction } from "@/
 export const PACKAGING_CATEGORIES_PAGE_SIZE = 6;
 
 interface PackagingCategoriesPageClientProps {
-  categories: PackagingCategory[];
+  categories: Array<PackagingCategory & { image: Image | null }>;
 }
 
 export default function PackagingCategoriesPageClient({ categories }: PackagingCategoriesPageClientProps) {
   const [showForm, setShowForm] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<PackagingCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<(PackagingCategory & { image: Image | null }) | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [page, setPage] = useState(1);
   const router = useRouter();
@@ -58,7 +58,7 @@ export default function PackagingCategoriesPageClient({ categories }: PackagingC
     router.refresh();
   };
 
-  const handleEdit = (category: PackagingCategory) => {
+  const handleEdit = (category: PackagingCategory & { image: Image | null }) => {
     setEditingCategory(category);
     setFormMode("edit");
     setShowForm(true);
@@ -112,7 +112,7 @@ export default function PackagingCategoriesPageClient({ categories }: PackagingC
                   id={category.id}
                   name={category.name}
                   description={category.description}
-                  imageUrl={category.imageUrl}
+                  imageUrl={category.image?.imageUrl}
                   onEdit={() => handleEdit(category)}
                   onDelete={() => handleDelete(category.id)}
                 />
@@ -147,7 +147,7 @@ export default function PackagingCategoriesPageClient({ categories }: PackagingC
                     id: editingCategory.id,
                     name: editingCategory.name,
                     description: editingCategory.description,
-                    imageUrl: editingCategory.imageUrl ?? undefined,
+                    imageUrl: editingCategory.image?.imageUrl ?? undefined,
                   } : undefined}
                   actionOverride={editingCategory ? ((formData) => updatePackagingCategoryAction({ status: "idle" }, editingCategory.id, formData)) : undefined}
                 />

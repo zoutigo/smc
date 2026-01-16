@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Plant } from "@prisma/client";
+import type { Address, Country, Image, Plant } from "@prisma/client";
 import PlantsPageClient, { PLANTS_PAGE_SIZE } from "@/components/plants/PlantsPageClient";
 
 const plantFormPropsMock = jest.fn();
@@ -18,10 +18,10 @@ jest.mock("next/navigation", () => {
 });
 
 jest.mock("@/components/plants/PlantCard", () => {
-  const MockPlantCard = ({ plantName, id, onEdit }: { plantName: string; id: string; onEdit?: (id: string) => void }) => (
+  const MockPlantCard = ({ name, id, onEdit }: { name: string; id: string; onEdit?: (id: string) => void }) => (
     <div data-testid="plant-card">
-      {plantName}
-      <button type="button" aria-label={`edit-${plantName}`} onClick={() => onEdit?.(id)}>
+      {name}
+      <button type="button" aria-label={`edit-${name}`} onClick={() => onEdit?.(id)}>
         Edit
       </button>
     </div>
@@ -47,25 +47,24 @@ jest.mock("@/components/plants/PlantForm", () => {
 });
 
 const timestamp = () => new Date("2024-01-01T00:00:00.000Z");
-const createPlant = (index: number, overrides: Partial<Plant> = {}): Plant => ({
+const country: Country = { id: "country-1", name: "France", code: "FR", createdAt: timestamp(), updatedAt: timestamp() };
+const createPlant = (index: number, overrides: Partial<Plant & { address?: (Address & { country: Country }) | null; images?: Image[] }> = {}): Plant & { address?: (Address & { country: Country }) | null; images: Image[] } => ({
   id: overrides.id ?? `${index}`,
-  plantName: overrides.plantName ?? `Plant ${index}`,
+  name: overrides.name ?? `Plant ${index}`,
+  addressId: overrides.addressId ?? null,
   address: overrides.address ?? null,
-  city: overrides.city ?? `City ${index}`,
-  zipcode: overrides.zipcode ?? null,
-  country: overrides.country ?? `Country ${index}`,
-  image: overrides.image ?? null,
+  images: overrides.images ?? [],
   createdAt: overrides.createdAt ?? timestamp(),
   updatedAt: overrides.updatedAt ?? timestamp(),
 });
 
-const plants: Plant[] = [
-  createPlant(1, { id: "1", plantName: "Paris", city: "Paris", country: "France" }),
-  createPlant(2, { id: "2", plantName: "Berlin", city: "Berlin", country: "Germany" }),
-  createPlant(3, { id: "3", plantName: "Madrid", city: "Madrid", country: "Spain" }),
+const plants: Array<Plant & { address?: (Address & { country: Country }) | null; images: Image[] }> = [
+  createPlant(1, { id: "1", name: "Paris", address: { id: "addr-1", street: "1 street", city: "Paris", zipcode: "75000", countryId: country.id, country, createdAt: timestamp(), updatedAt: timestamp() } as Address & { country: Country } }),
+  createPlant(2, { id: "2", name: "Berlin" }),
+  createPlant(3, { id: "3", name: "Madrid" }),
 ];
 
-const buildPlants = (count: number): Plant[] =>
+const buildPlants = (count: number): Array<Plant & { address?: (Address & { country: Country }) | null; images: Image[] }> =>
   Array.from({ length: count }, (_, idx) => createPlant(idx + 1));
 
 describe("PlantsPageClient layout", () => {
@@ -102,7 +101,7 @@ describe("PlantsPageClient layout", () => {
     expect(screen.getByTestId("plant-form")).toBeInTheDocument();
     expect(plantFormPropsMock).toHaveBeenLastCalledWith(expect.objectContaining({
       mode: "edit",
-      initialValues: expect.objectContaining({ id: "1", plantName: "Paris", city: "Paris", country: "France" }),
+      initialValues: expect.objectContaining({ id: "1", name: "Paris", addressId: "addr-1" }),
     }));
   });
 

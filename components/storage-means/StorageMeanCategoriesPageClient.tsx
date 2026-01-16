@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { StorageMeanCategory } from "@prisma/client";
+import type { Image, StorageMeanCategory } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,12 +13,12 @@ import { deleteStorageMeanCategoryAction, updateStorageMeanCategoryAction } from
 export const STORAGE_MEAN_PAGE_SIZE = 6;
 
 interface StorageMeanCategoriesPageClientProps {
-  categories: StorageMeanCategory[];
+  categories: Array<StorageMeanCategory & { image: Image | null }>;
 }
 
 export default function StorageMeanCategoriesPageClient({ categories }: StorageMeanCategoriesPageClientProps) {
   const [showForm, setShowForm] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<StorageMeanCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<(StorageMeanCategory & { image: Image | null }) | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [page, setPage] = useState(1);
   const router = useRouter();
@@ -58,7 +58,7 @@ export default function StorageMeanCategoriesPageClient({ categories }: StorageM
     router.refresh();
   };
 
-  const handleEdit = (category: StorageMeanCategory) => {
+  const handleEdit = (category: StorageMeanCategory & { image: Image | null }) => {
     setEditingCategory(category);
     setFormMode("edit");
     setShowForm(true);
@@ -112,7 +112,7 @@ export default function StorageMeanCategoriesPageClient({ categories }: StorageM
                   id={category.id}
                   name={category.name}
                   description={category.description}
-                  imageUrl={category.imageUrl}
+                  imageUrl={category.image?.imageUrl}
                   onEdit={() => handleEdit(category)}
                   onDelete={() => handleDelete(category.id)}
                 />
@@ -147,7 +147,7 @@ export default function StorageMeanCategoriesPageClient({ categories }: StorageM
                     id: editingCategory.id,
                     name: editingCategory.name,
                     description: editingCategory.description,
-                    imageUrl: editingCategory.imageUrl ?? undefined,
+                    imageUrl: editingCategory.image?.imageUrl ?? undefined,
                   } : undefined}
                   actionOverride={editingCategory ? ((formData) => updateStorageMeanCategoryAction({ status: "idle" }, editingCategory.id, formData)) : undefined}
                 />

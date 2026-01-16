@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import type { Address, Country } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import ConfirmModal from "@/components/ConfirmModal";
 
@@ -22,23 +23,22 @@ const TrashIcon = () => (
   </svg>
 );
 
+type AddressWithCountry = (Address & { country: Country }) | null | undefined;
+
 type Props = {
   id: string;
-  plantName: string;
-  city: string;
-  country: string;
-  address?: string | null;
-  zipcode?: string | null;
-  image?: string | null;
+  name: string;
+  address?: AddressWithCountry;
+  imageUrl?: string | null;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 };
 
-export default function PlantCard({ id, plantName, city, country, address, zipcode, image, onEdit, onDelete }: Props) {
-  const displayAddress = address || "—";
-  const zipCity = [zipcode, city].filter(Boolean).join(" · ") || "—";
-  const countryUpper = country?.toUpperCase?.() ?? "—";
-  const hasImage = typeof image === "string" && image.trim().length > 0;
+export default function PlantCard({ id, name, address, imageUrl, onEdit, onDelete }: Props) {
+  const displayAddress = address?.street || "—";
+  const zipCity = [address?.zipcode, address?.city].filter(Boolean).join(" · ") || "—";
+  const countryUpper = address?.country?.code?.toUpperCase?.() ?? address?.country?.name?.toUpperCase?.() ?? "—";
+  const hasImage = typeof imageUrl === "string" && imageUrl.trim().length > 0;
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-[22px] border border-smc-border bg-smc-card shadow-soft">
@@ -48,11 +48,11 @@ export default function PlantCard({ id, plantName, city, country, address, zipco
       >
         <div className="pointer-events-none absolute inset-y-0 right-[-30%] h-[200%] w-[60%] rounded-full bg-white/30 blur-3xl" aria-hidden />
         <div className="pointer-events-none absolute inset-x-0 bottom-[-40%] h-32 bg-white/10" aria-hidden />
-        <h3 className="relative z-10 text-xl font-semibold text-slate-900 drop-shadow-sm">{plantName}</h3>
+        <h3 className="relative z-10 text-xl font-semibold text-slate-900 drop-shadow-sm">{name}</h3>
         {hasImage ? (
           <Image
-            src={image}
-            alt={`${plantName} image`}
+            src={imageUrl!}
+            alt={`${name} image`}
             width={64}
             height={64}
             className="relative z-10 h-16 w-16 rounded-2xl object-cover ring-2 ring-white/60 shadow-soft"
@@ -60,7 +60,7 @@ export default function PlantCard({ id, plantName, city, country, address, zipco
           />
         ) : (
           <div className="relative z-10 h-16 w-16 rounded-2xl bg-white/40 text-smc-primary flex items-center justify-center font-semibold uppercase shadow-soft ring-2 ring-white/60">
-            {plantName.slice(0, 2).toUpperCase()}
+            {name.slice(0, 2).toUpperCase()}
           </div>
         )}
       </div>
@@ -90,7 +90,7 @@ export default function PlantCard({ id, plantName, city, country, address, zipco
           </Button>
           <ConfirmModal
             title="Delete plant"
-            description={`Are you sure you want to delete ${plantName}? This action cannot be undone.`}
+            description={`Are you sure you want to delete ${name}? This action cannot be undone.`}
             confirmText="Delete"
             cancelText="Cancel"
             destructive

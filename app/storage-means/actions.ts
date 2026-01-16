@@ -59,7 +59,7 @@ export async function getStorageMeanCategories() {
     return listStorageMeanCategoryFallbacks();
   }
   try {
-    return await categoryDelegate.findMany({ orderBy: { createdAt: "desc" } });
+    return await categoryDelegate.findMany({ orderBy: { createdAt: "desc" }, include: { image: true } });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `StorageMeanCategory` does not exist. Return empty list until migration is applied.");
@@ -78,7 +78,7 @@ export async function getStorageMeanCategoryById(id: string) {
     return findStorageMeanCategoryFallbackById(id);
   }
   try {
-    const category = await categoryDelegate.findUnique({ where: { id } });
+    const category = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
     return category ?? findStorageMeanCategoryFallbackById(id);
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
@@ -102,7 +102,7 @@ export async function getStorageMeanCategoryBySlug(slug: string) {
     return null;
   }
   try {
-    const category = await categoryDelegate.findUnique({ where: { slug } });
+    const category = await categoryDelegate.findUnique({ where: { slug }, include: { image: true } });
     return category ?? null;
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
@@ -122,7 +122,16 @@ export async function createStorageMeanCategoryAction(_: StorageMeanCategoryStat
   };
 
   const uploadCandidate = formData.get("imageFile");
-  const imageUrl = extractString(formData.get("imageUrl"));
+  let imageUrl = extractString(formData.get("imageUrl"));
+
+  if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
+    try {
+      const { url } = await persistUploadFile(uploadCandidate);
+      imageUrl = url;
+    } catch {
+      return { status: "error", message: "Unable to upload image" };
+    }
+  }
 
   const parsed = createStorageMeanCategorySchema.safeParse({ ...baseFields, imageUrl });
   if (!parsed.success) {
@@ -147,21 +156,11 @@ export async function createStorageMeanCategoryAction(_: StorageMeanCategoryStat
       return { status: "error", fieldErrors: { name: "A category with this name already exists" } };
     }
 
-    let uploadedImageUrl: string | undefined;
-    if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
-      try {
-        const { url } = await persistUploadFile(uploadCandidate);
-        uploadedImageUrl = url;
-      } catch {
-        return { status: "error", message: "Unable to upload image" };
-      }
-    }
-
     const createData: Prisma.StorageMeanCategoryCreateInput = {
       name,
       slug,
       description,
-      imageUrl: uploadedImageUrl ?? parsed.data.imageUrl ?? null,
+      ...(imageUrl ? { image: { create: { imageUrl } } } : {}),
     };
 
     await categoryDelegate.create({ data: createData });
@@ -181,10 +180,18 @@ export async function updateStorageMeanCategoryAction(_: StorageMeanCategoryStat
     description: extractString(formData.get("description")),
   };
 
-  const existingImage = extractString(formData.get("existingImageUrl"));
   const removeImage = String(formData.get("removeImage") ?? "false") === "true";
-  const imageUrl = extractString(formData.get("imageUrl"));
+  let imageUrl = extractString(formData.get("imageUrl"));
   const uploadCandidate = formData.get("imageFile");
+  if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
+    try {
+      const { url } = await persistUploadFile(uploadCandidate);
+      imageUrl = url;
+    } catch {
+      return { status: "error", message: "Unable to upload image" };
+    }
+  }
+
   const schemaInput: Record<string, unknown> = { id, ...baseFields };
   if (imageUrl) schemaInput.imageUrl = imageUrl;
 
@@ -215,31 +222,42 @@ export async function updateStorageMeanCategoryAction(_: StorageMeanCategoryStat
       }
     }
 
-    let nextImageUrl: string | null | undefined = parsedData.imageUrl;
-    if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
+    const existing = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
+    if (!existing) {
+      return { status: "error", message: "Storage mean category not found" };
+    }
+
+    const currentImage = existing.image;
+    let nextImageUrl: string | null | undefined = imageUrl ?? parsedData.imageUrl;
+
+    if (uploadCandidate instanceof File && uploadCandidate.size > 0 && currentImage?.imageUrl && currentImage.imageUrl !== nextImageUrl) {
       try {
-        const { url } = await persistUploadFile(uploadCandidate);
-        nextImageUrl = url;
-        if (existingImage) await deleteUploadFileByUrl(existingImage);
+        await deleteUploadFileByUrl(currentImage.imageUrl);
       } catch {
-        return { status: "error", message: "Unable to upload image" };
+        return { status: "error", message: "Unable to delete previous image" };
       }
-    } else if (removeImage && existingImage) {
-      await deleteUploadFileByUrl(existingImage);
+    } else if (removeImage && currentImage?.imageUrl) {
+      try {
+        await deleteUploadFileByUrl(currentImage.imageUrl);
+      } catch {
+        return { status: "error", message: "Unable to delete storage category image" };
+      }
       nextImageUrl = null;
-    } else if (existingImage && nextImageUrl === undefined) {
-      nextImageUrl = existingImage;
+    } else if (currentImage?.imageUrl && nextImageUrl === undefined) {
+      nextImageUrl = currentImage.imageUrl;
     }
 
     const updatePayload = { ...parsedData } as Record<string, unknown>;
     delete updatePayload.id;
     if (slug) updatePayload.slug = slug;
-    if (nextImageUrl === null) {
-      updatePayload.imageUrl = null;
-    } else if (typeof nextImageUrl === "string") {
-      updatePayload.imageUrl = nextImageUrl;
-    } else {
-      delete updatePayload.imageUrl;
+    delete updatePayload.imageUrl;
+
+    if (removeImage && currentImage) {
+      updatePayload.image = { delete: true };
+    } else if (typeof nextImageUrl === "string" && nextImageUrl.length > 0) {
+      updatePayload.image = currentImage
+        ? { update: { imageUrl: nextImageUrl } }
+        : { create: { imageUrl: nextImageUrl } };
     }
 
     await categoryDelegate.update({ where: { id }, data: updatePayload });
@@ -259,19 +277,20 @@ export async function deleteStorageMeanCategoryAction(_: StorageMeanCategoryStat
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
   try {
-    const existing = await categoryDelegate.findUnique({ where: { id } });
+    const existing = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
     if (!existing) {
       return { status: "error", message: "Storage mean category not found" };
     }
 
-    if (existing.imageUrl) {
+    if (existing.image?.imageUrl) {
       try {
-        await deleteUploadFileByUrl(existing.imageUrl);
+        await deleteUploadFileByUrl(existing.image.imageUrl);
       } catch {
         return { status: "error", message: "Unable to delete storage category image" };
       }
     }
 
+    await categoryDelegate.update({ where: { id }, data: { image: existing.image ? { delete: true } : undefined } });
     await categoryDelegate.delete({ where: { id } });
     try { revalidatePath("/storage-means"); } catch {}
     return { status: "success" };

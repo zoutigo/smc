@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { PackagingCategory } from "@prisma/client";
+import type { Image, PackagingCategory } from "@prisma/client";
 import PackagingCategoriesPageClient, { PACKAGING_CATEGORIES_PAGE_SIZE } from "@/components/packaging-means/PackagingCategoriesPageClient";
 
 const packagingFormPropsMock = jest.fn();
@@ -52,23 +52,25 @@ jest.mock("@/components/packaging-means/PackagingForm", () => {
 });
 
 const timestamp = () => new Date("2024-01-01T00:00:00.000Z");
-const createCategory = (index: number, overrides: Partial<PackagingCategory> = {}): PackagingCategory => ({
+type CategoryWithImage = PackagingCategory & { image: Image | null };
+
+const createCategory = (index: number, overrides: Partial<CategoryWithImage> = {}): CategoryWithImage => ({
   id: overrides.id ?? `${index}`,
   name: overrides.name ?? `Category ${index}`,
   description: overrides.description ?? `Description ${index}`,
   slug: overrides.slug ?? `category-${index}`,
-  imageUrl: overrides.imageUrl ?? null,
+  image: overrides.image ?? null,
   createdAt: overrides.createdAt ?? timestamp(),
   updatedAt: overrides.updatedAt ?? timestamp(),
 });
 
-const categories: PackagingCategory[] = [
+const categories: CategoryWithImage[] = [
   createCategory(1, { id: "1", name: "Boxes" }),
   createCategory(2, { id: "2", name: "Bags" }),
   createCategory(3, { id: "3", name: "Wrapping" }),
 ];
 
-const buildCategories = (count: number): PackagingCategory[] => Array.from({ length: count }, (_, idx) => createCategory(idx + 1));
+const buildCategories = (count: number): CategoryWithImage[] => Array.from({ length: count }, (_, idx) => createCategory(idx + 1));
 
 describe("PackagingCategoriesPageClient", () => {
   beforeEach(() => {

@@ -96,9 +96,9 @@ export default async function StorageMeanCategoryPage({ params }: StorageMeanCat
         </div>
 
         <div className="relative mt-8 flex flex-col items-center justify-center rounded-3xl border border-smc-border/80 bg-gradient-to-br from-smc-primary/6 via-white to-smc-primary/10 p-4 shadow-card lg:mt-0">
-          {resolvedCategory.imageUrl ? (
+          {resolvedCategory.image?.imageUrl ? (
             <Image
-              src={resolvedCategory.imageUrl}
+              src={resolvedCategory.image.imageUrl}
               alt={`${resolvedCategory.name} image`}
               width={540}
               height={360}

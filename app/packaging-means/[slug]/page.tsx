@@ -85,9 +85,9 @@ export default async function PackagingCategoryPage({ params }: PackagingCategor
         </div>
 
         <div className="flex flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-smc-primary/10 via-white to-smc-primary/5 p-6">
-          {resolvedCategory.imageUrl ? (
+          {resolvedCategory.image?.imageUrl ? (
             <Image
-              src={resolvedCategory.imageUrl}
+              src={resolvedCategory.image.imageUrl}
               alt={`${resolvedCategory.name} image`}
               width={320}
               height={320}

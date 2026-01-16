@@ -53,7 +53,7 @@ describe("createPackagingCategoryAction", () => {
       data: expect.objectContaining({
         name: "Insulated boxes",
         slug: "insulated-boxes",
-        imageUrl: "http://localhost:3000/api/uploads/category.png",
+        image: { create: { imageUrl: "http://localhost:3000/api/uploads/category.png" } },
       }),
     });
     expect(result.status).toBe("success");

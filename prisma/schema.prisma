@@ -38,15 +38,45 @@ model StorageMean {
 
 model Plant {
   id         String   @id @default(uuid()) @db.Char(36)
-  plantName  String
-  address    String?
-  city       String
-  zipcode    String?
-  country    String
-  image      String?
+  name       String
+  addressId  String?  @db.Char(36)
+  address    Address? @relation(fields: [addressId], references: [id])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  @@unique([city, country])
+
+  images     Image[]
+}
+
+model Supplier {
+  id         String   @id @default(uuid()) @db.Char(36)
+  name       String
+  addressId  String?  @db.Char(36)
+  address    Address? @relation(fields: [addressId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Address {
+  id         String   @id @default(uuid()) @db.Char(36)
+  street    String?
+  city       String
+  zipcode    String?
+  countryId  String   @db.Char(36)
+  country    Country  @relation(fields: [countryId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  plants     Plant[]
+  suppliers  Supplier[]
+}
+
+model Country {
+  id         String   @id @default(uuid()) @db.Char(36)
+  name       String
+  code       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  addresses  Address[]
 }
 
 model PackagingCategory {
@@ -54,17 +84,74 @@ model PackagingCategory {
   name       String @default("Description of packaging category")
   slug       String @unique
   description String
-  imageUrl   String?
+  image      Image? @relation("PackagingCategoryImage")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
  
 }
+model Project {
+  id         String   @id @default(uuid()) @db.Char(36)
+  name       String @default("Description of packaging category")
+  code       String   @db.Char(5)
+  slug       String @unique
+  sop        DateTime @default(now())
+  eop        DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  parts      Part[]
+ 
+}
+
+model PartFamily {
+  id         String   @id @default(uuid()) @db.Char(36)
+  name       String @default("Bumper")
+  slug       String @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  parts      Part[]
+}
+
+model Part {
+  id         String   @id @default(uuid()) @db.Char(36)
+  name       String @default("Front Bumper Upper")
+  slug       String @unique
+  partFamilyId String  @db.Char(36)
+  partFamily   PartFamily @relation(fields: [partFamilyId], references: [id])
+  projectId   String? @db.Char(36)
+  project     Project? @relation(fields: [projectId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Image {
+  id         String   @id @default(uuid()) @db.Char(36)
+  imageUrl   String 
+  plantId    String?  @db.Char(36)
+  plant      Plant?   @relation(fields: [plantId], references: [id])
+  packagingCategoryId String? @unique @db.Char(36)
+  packagingCategory   PackagingCategory? @relation("PackagingCategoryImage", fields: [packagingCategoryId], references: [id])
+  storageMeanCategoryId String? @unique @db.Char(36)
+  storageMeanCategory   StorageMeanCategory? @relation("StorageMeanCategoryImage", fields: [storageMeanCategoryId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Flow {
+  id         String   @id @default(uuid()) @db.Char(36)
+  from       FlowStation @default(INJECTION)
+  to         FlowStation @default(PAINT)
+  slug       String @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+
 model StorageMeanCategory {
   id         String   @id @default(uuid()) @db.Char(36)
   name       String @default("Description of storage mean category")
   slug       String @unique
   description String
-  imageUrl   String?
+  image      Image? @relation("StorageMeanCategoryImage")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
  
@@ -74,6 +161,17 @@ enum StorageStatus {
   ACTIVE
   INACTIVE
   DRAFT
+}
+
+enum FlowStation {
+  INJECTION
+  PAINT
+  ASSEMBLY
+  BONDING
+  INSPECTION
+  SILS
+  CUSTOMER
+  WHAREHOUSE
 }
 
 model Account {

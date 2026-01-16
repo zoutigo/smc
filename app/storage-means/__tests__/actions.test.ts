@@ -5,6 +5,7 @@
 const mockedPrisma = {
   storageMeanCategory: {
     findUnique: jest.fn(),
+    update: jest.fn(),
     delete: jest.fn(),
   },
 };
@@ -30,8 +31,9 @@ describe("deleteStorageMeanCategoryAction", () => {
     deleteUploadFileByUrlMock.mockReset();
     (mockedPrisma.storageMeanCategory.findUnique as jest.Mock).mockResolvedValue({
       id: categoryId,
-      imageUrl: "https://example.com/storage.png",
+      image: { id: "img", imageUrl: "https://example.com/storage.png" },
     });
+    (mockedPrisma.storageMeanCategory.update as jest.Mock).mockResolvedValue({ id: categoryId });
     (mockedPrisma.storageMeanCategory.delete as jest.Mock).mockResolvedValue({ id: categoryId });
   });
 
@@ -39,16 +41,18 @@ describe("deleteStorageMeanCategoryAction", () => {
     const res = await deleteStorageMeanCategoryAction({ status: "idle" }, categoryId);
 
     expect(deleteUploadFileByUrlMock).toHaveBeenCalledWith("https://example.com/storage.png");
+    expect(mockedPrisma.storageMeanCategory.update).toHaveBeenCalledWith({ where: { id: categoryId }, data: { image: { delete: true } } });
     expect(mockedPrisma.storageMeanCategory.delete).toHaveBeenCalledWith({ where: { id: categoryId } });
     expect(res.status).toBe("success");
   });
 
   it("skips image deletion when no imageUrl is present", async () => {
-    (mockedPrisma.storageMeanCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, imageUrl: null });
+    (mockedPrisma.storageMeanCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, image: null });
 
     const res = await deleteStorageMeanCategoryAction({ status: "idle" }, categoryId);
 
     expect(deleteUploadFileByUrlMock).not.toHaveBeenCalled();
+    expect(mockedPrisma.storageMeanCategory.update).toHaveBeenCalledWith({ where: { id: categoryId }, data: { image: undefined } });
     expect(mockedPrisma.storageMeanCategory.delete).toHaveBeenCalledTimes(1);
     expect(res.status).toBe("success");
   });

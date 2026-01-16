@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { StorageMeanCategory } from "@prisma/client";
+import type { Image, StorageMeanCategory } from "@prisma/client";
 import StorageMeanCategoriesPageClient, { STORAGE_MEAN_PAGE_SIZE } from "@/components/storage-means/StorageMeanCategoriesPageClient";
 
 const storageFormPropsMock = jest.fn();
@@ -52,23 +52,25 @@ jest.mock("@/components/storage-means/StorageForm", () => {
 });
 
 const timestamp = () => new Date("2024-02-01T00:00:00.000Z");
-const createCategory = (index: number, overrides: Partial<StorageMeanCategory> = {}): StorageMeanCategory => ({
+type StorageCategoryWithImage = StorageMeanCategory & { image: Image | null };
+
+const createCategory = (index: number, overrides: Partial<StorageCategoryWithImage> = {}): StorageCategoryWithImage => ({
   id: overrides.id ?? `${index}`,
   name: overrides.name ?? `Storage ${index}`,
   description: overrides.description ?? `Description ${index}`,
   slug: overrides.slug ?? `storage-${index}`,
-  imageUrl: overrides.imageUrl ?? null,
+  image: overrides.image ?? null,
   createdAt: overrides.createdAt ?? timestamp(),
   updatedAt: overrides.updatedAt ?? timestamp(),
 });
 
-const categories: StorageMeanCategory[] = [
+const categories: StorageCategoryWithImage[] = [
   createCategory(1, { id: "1", name: "Cold room" }),
   createCategory(2, { id: "2", name: "Dry warehouse" }),
   createCategory(3, { id: "3", name: "Outdoor" }),
 ];
 
-const buildCategories = (count: number): StorageMeanCategory[] => Array.from({ length: count }, (_, idx) => createCategory(idx + 1));
+const buildCategories = (count: number): StorageCategoryWithImage[] => Array.from({ length: count }, (_, idx) => createCategory(idx + 1));
 
 describe("StorageMeanCategoriesPageClient", () => {
   beforeEach(() => {
