@@ -4,9 +4,12 @@
 
 const mockedPrisma = {
   plant: {
-    findFirst: jest.fn(),
+    findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+  },
+  image: {
+    create: jest.fn(),
   },
 };
 
@@ -29,43 +32,38 @@ describe("createPlantAction server action", () => {
 
   it("returns fieldErrors when payload invalid", async () => {
     const form = new FormData();
-    form.append("plantName", "");
+    form.append("name", "");
     const res = await createPlantAction({ status: "idle" }, form as FormData);
     expect(res.status).toBe("error");
     expect(res.fieldErrors).toBeTruthy();
   });
 
-  it("returns error when duplicate city+country", async () => {
-    const { getPrisma } = await import("@/lib/prisma");
-    const prisma = getPrisma();
-    (prisma.plant.findFirst as jest.Mock).mockResolvedValue({ id: "exists" });
-
-    const form = new FormData();
-    form.append("plantName", "P");
-    form.append("city", "Paris");
-    form.append("country", "France");
-    form.append("image", "https://example.com/a.jpg");
-
-    const res = await createPlantAction({ status: "idle" }, form as FormData);
-    expect(res.status).toBe("error");
-    expect(res.fieldErrors?.city).toMatch(/already exists/i);
-  });
-
   it("creates plant on success", async () => {
     const { getPrisma } = await import("@/lib/prisma");
     const prisma = getPrisma();
-    (prisma.plant.findFirst as jest.Mock).mockResolvedValue(null);
     (prisma.plant.create as jest.Mock).mockResolvedValue({ id: "new" });
+    (prisma.image.create as jest.Mock).mockResolvedValue({ id: "img" });
 
     const form = new FormData();
-    form.append("plantName", "P");
-    form.append("city", "Lyon");
-    form.append("country", "France");
-    form.append("image", "https://example.com/a.jpg");
+    form.append("name", "P");
+    form.append("addressId", "11111111-1111-4111-8111-111111111111");
+    form.append("imageUrl", "https://example.com/a.jpg");
 
     const res = await createPlantAction({ status: "idle" }, form as FormData);
     expect(res.status).toBe("success");
     expect(prisma.plant.create).toHaveBeenCalled();
+    expect((prisma.plant.create as jest.Mock).mock.calls[0][0].data).toMatchObject({
+      name: "P",
+      address: { connect: { id: "11111111-1111-4111-8111-111111111111" } },
+      images: {
+        create: [
+          {
+            sortOrder: 0,
+            image: { create: { imageUrl: "https://example.com/a.jpg" } },
+          },
+        ],
+      },
+    });
   });
 });
 
@@ -73,9 +71,7 @@ describe("updatePlantAction server action", () => {
   const plantId = "11111111-1111-1111-8111-111111111111";
   const baseForm = () => {
     const form = new FormData();
-    form.append("plantName", "Existing Plant");
-    form.append("city", "Paris");
-    form.append("country", "France");
+    form.append("name", "Existing Plant");
     return form;
   };
 
@@ -83,13 +79,15 @@ describe("updatePlantAction server action", () => {
     jest.clearAllMocks();
     persistUploadFileMock.mockReset();
     deleteUploadFileByUrlMock.mockReset();
-    (mockedPrisma.plant.findFirst as jest.Mock).mockResolvedValue(null);
+    (mockedPrisma.plant.findUnique as jest.Mock).mockResolvedValue({
+      id: plantId,
+      images: [{ plantId, imageId: "img-1", image: { imageUrl: "https://example.com/old.jpg" } }],
+    });
     (mockedPrisma.plant.update as jest.Mock).mockResolvedValue({ id: "plant" });
   });
 
   it("removes the previous image when removeImage is true", async () => {
     const form = baseForm();
-    form.append("existingImage", "https://example.com/old.jpg");
     form.append("removeImage", "true");
 
     const res = await updatePlantAction({ status: "idle" }, plantId, form as FormData);
@@ -99,13 +97,12 @@ describe("updatePlantAction server action", () => {
     expect(res.status).toBe("success");
     expect(mockedPrisma.plant.update).toHaveBeenCalledTimes(1);
     const updateArgs = (mockedPrisma.plant.update as jest.Mock).mock.calls[0][0];
-    expect(updateArgs.data).not.toHaveProperty("image");
+    expect(updateArgs.data.images).toEqual({ delete: { plantId_imageId: { plantId, imageId: "img-1" } } });
   });
 
   it("uploads a new file and deletes the old asset", async () => {
     persistUploadFileMock.mockResolvedValue({ filename: "new.png", url: "https://example.com/new.png" });
     const form = baseForm();
-    form.append("existingImage", "https://example.com/old.jpg");
     form.append("removeImage", "false");
     const file = new File([Buffer.from("data")], "updated.png", { type: "image/png" });
     form.append("imageFile", file);
@@ -117,6 +114,6 @@ describe("updatePlantAction server action", () => {
     expect(res.status).toBe("success");
     expect(mockedPrisma.plant.update).toHaveBeenCalledTimes(1);
     const updateArgs = (mockedPrisma.plant.update as jest.Mock).mock.calls[0][0];
-    expect(updateArgs.data.image).toBe("https://example.com/new.png");
+    expect(updateArgs.data.images).toEqual({ update: { where: { plantId_imageId: { plantId, imageId: "img-1" } }, data: { image: { update: { imageUrl: "https://example.com/new.png" } } } } });
   });
 });

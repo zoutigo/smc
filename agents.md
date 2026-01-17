@@ -36,7 +36,7 @@
 
 - Next.js 16.0.1 App Router (TypeScript) with `@/*` alias; `app/layout.tsx` wraps pages with `AuthProvider` and `ThemeProvider` (no React Query layer).
 - Prisma targets MySQL; keep generator binary targets as-is in `prisma/schema.prisma`.
-- Seed data lives in `prisma/seed.js` + `prisma/service-seed-data.js`
+- Seed data lives in `prisma/seed.ts`
 - Tests run with Jest using `tests/setup-jest.js` (default environment: node; switch to jsdom per test when rendering UI).
 
 ## Dev commands
@@ -57,4 +57,4 @@
 ## Routing & data flow
 
 - `middleware.ts` uses `auth` 
-- Prefer SSR when creating or updating pages; use client fallbacks only for dynamic portions. Centralize static fallback/seed data in `prisma/seed.js`, `prisma/service-seed-data.js`
+- Prefer SSR when creating or updating pages; use client fallbacks only for dynamic portions. Centralize static fallback/seed data in `prisma/seed.ts`

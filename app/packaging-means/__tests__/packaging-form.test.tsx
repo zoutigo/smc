@@ -6,11 +6,11 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { act } from "react";
 
-const mockCreatePackagingCategoryAction = jest.fn<Promise<{ status: "success" }>, unknown[]>(async () => ({ status: "success" }));
+const mockCreatePackagingMeanCategoryAction = jest.fn<Promise<{ status: "success" }>, unknown[]>(async () => ({ status: "success" }));
 
 jest.mock("@/app/packaging-means/actions", () => ({
   __esModule: true,
-  createPackagingCategoryAction: (...args: unknown[]) => mockCreatePackagingCategoryAction(...args),
+  createPackagingMeanCategoryAction: (...args: unknown[]) => mockCreatePackagingMeanCategoryAction(...args),
 }));
 
 import PackagingForm from "@/components/packaging-means/PackagingForm";

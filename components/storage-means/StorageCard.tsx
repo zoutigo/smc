@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import ConfirmModal from "@/components/ConfirmModal";
 
-type PackagingCardProps = {
+type StorageCardProps = {
   id: string;
   name: string;
   description: string;
@@ -31,7 +31,7 @@ const TrashIcon = () => (
   </svg>
 );
 
-export default function PackagingCard({ id, name, description, imageUrl, onEdit, onDelete }: PackagingCardProps) {
+export default function StorageCard({ id, name, description, imageUrl, onEdit, onDelete }: StorageCardProps) {
   const hasImage = typeof imageUrl === "string" && imageUrl.trim().length > 0;
   const fallback = name.slice(0, 2).toUpperCase();
   const truncatedDescription = description.length > 120 ? `${description.slice(0, 117)}…` : description;
@@ -59,27 +59,27 @@ export default function PackagingCard({ id, name, description, imageUrl, onEdit,
 
       <div className="relative flex-1 space-y-3 px-5 py-4 text-sm text-smc-text">
         <h3 className="text-lg font-semibold text-slate-900">{name}</h3>
-        <p className="leading-relaxed text-smc-text/90" data-testid="packaging-description">
+        <p className="leading-relaxed text-smc-text/90" data-testid="storage-description">
           {truncatedDescription}
         </p>
       </div>
 
-      <div data-testid="packaging-card-footer" className="relative flex items-center justify-between border-t border-smc-border/60 bg-gradient-to-r from-white via-smc-bg/70 to-white px-5 py-3">
-        <span className="relative z-10 text-[11px] font-semibold uppercase tracking-[0.35em] text-smc-primary" data-testid="packaging-label">
-          PACKAGING
+      <div data-testid="storage-card-footer" className="relative flex items-center justify-between border-t border-smc-border/60 bg-gradient-to-r from-white via-smc-bg/70 to-white px-5 py-3">
+        <span className="relative z-10 text-[11px] font-semibold uppercase tracking-[0.35em] text-smc-primary" data-testid="storage-label">
+          STORAGE
         </span>
         <div className="relative z-10 flex items-center gap-2">
           <Button
             size="icon"
             variant="ghost"
-            aria-label="Edit packaging category"
+            aria-label="Edit storage mean category"
             className="h-9 w-9 rounded-xl border border-smc-border bg-white text-smc-primary/80 transition hover:-translate-y-[1px] hover:bg-smc-primary/10"
             onClick={() => onEdit?.(id)}
           >
             <PencilIcon />
           </Button>
           <ConfirmModal
-            title="Delete category"
+            title="Delete storage category"
             description={`Are you sure you want to delete ${name}? This action cannot be undone.`}
             confirmText="Delete"
             cancelText="Cancel"
@@ -88,7 +88,7 @@ export default function PackagingCard({ id, name, description, imageUrl, onEdit,
               await onDelete?.(id);
             }}
             trigger={
-              <Button size="icon" variant="destructive" aria-label="Delete packaging category" className="h-9 w-9 rounded-xl">
+              <Button size="icon" variant="destructive" aria-label="Delete storage mean category" className="h-9 w-9 rounded-xl">
                 <TrashIcon />
               </Button>
             }

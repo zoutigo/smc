@@ -1,13 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { PackagingCategory } from "@prisma/client";
+import type { Image, PackagingMeanCategory } from "@prisma/client";
 import PackagingCategoriesPageClient, { PACKAGING_CATEGORIES_PAGE_SIZE } from "@/components/packaging-means/PackagingCategoriesPageClient";
 
 const packagingFormPropsMock = jest.fn();
+const deletePackagingMeanCategoryActionMock = jest.fn().mockResolvedValue({ status: "success" });
+const updatePackagingMeanCategoryActionMock = jest.fn().mockResolvedValue({ status: "success" });
 
 jest.mock("@/app/packaging-means/actions", () => ({
-  deletePackagingCategoryAction: jest.fn().mockResolvedValue({ status: "success" }),
-  updatePackagingCategoryAction: jest.fn().mockResolvedValue({ status: "success" }),
+  deletePackagingMeanCategoryAction: (...args: unknown[]) => deletePackagingMeanCategoryActionMock(...args),
+  updatePackagingMeanCategoryAction: (...args: unknown[]) => updatePackagingMeanCategoryActionMock(...args),
 }));
 
 jest.mock("next/navigation", () => {
@@ -18,11 +20,14 @@ jest.mock("next/navigation", () => {
 });
 
 jest.mock("@/components/packaging-means/PackagingCard", () => {
-  const MockPackagingCard = ({ name, id, onEdit }: { name: string; id: string; onEdit?: (id: string) => void }) => (
+  const MockPackagingCard = ({ name, id, onEdit, onDelete }: { name: string; id: string; onEdit?: (id: string) => void; onDelete?: (id: string) => void }) => (
     <div data-testid="packaging-card">
       {name}
       <button type="button" aria-label={`edit-${name}`} onClick={() => onEdit?.(id)}>
         Edit
+      </button>
+      <button type="button" aria-label={`delete-${name}`} onClick={() => onDelete?.(id)}>
+        Delete
       </button>
     </div>
   );
@@ -47,27 +52,31 @@ jest.mock("@/components/packaging-means/PackagingForm", () => {
 });
 
 const timestamp = () => new Date("2024-01-01T00:00:00.000Z");
-const createCategory = (index: number, overrides: Partial<PackagingCategory> = {}): PackagingCategory => ({
+type CategoryWithImage = PackagingMeanCategory & { image: Image | null };
+
+const createCategory = (index: number, overrides: Partial<CategoryWithImage> = {}): CategoryWithImage => ({
   id: overrides.id ?? `${index}`,
   name: overrides.name ?? `Category ${index}`,
   description: overrides.description ?? `Description ${index}`,
   slug: overrides.slug ?? `category-${index}`,
-  imageUrl: overrides.imageUrl ?? null,
+  image: overrides.image ?? null,
   createdAt: overrides.createdAt ?? timestamp(),
   updatedAt: overrides.updatedAt ?? timestamp(),
 });
 
-const categories: PackagingCategory[] = [
+const categories: CategoryWithImage[] = [
   createCategory(1, { id: "1", name: "Boxes" }),
   createCategory(2, { id: "2", name: "Bags" }),
   createCategory(3, { id: "3", name: "Wrapping" }),
 ];
 
-const buildCategories = (count: number): PackagingCategory[] => Array.from({ length: count }, (_, idx) => createCategory(idx + 1));
+const buildCategories = (count: number): CategoryWithImage[] => Array.from({ length: count }, (_, idx) => createCategory(idx + 1));
 
 describe("PackagingCategoriesPageClient", () => {
   beforeEach(() => {
     packagingFormPropsMock.mockClear();
+    deletePackagingMeanCategoryActionMock.mockClear();
+    updatePackagingMeanCategoryActionMock.mockClear();
   });
 
   it("shows three columns when form hidden", () => {
@@ -119,5 +128,14 @@ describe("PackagingCategoriesPageClient", () => {
     expect(screen.getAllByTestId("packaging-card")[0]).toHaveTextContent(`Category ${PACKAGING_CATEGORIES_PAGE_SIZE + 1}`);
     await user.click(screen.getByRole("button", { name: /previous/i }));
     expect(screen.getAllByTestId("packaging-card")[0]).toHaveTextContent("Category 1");
+  });
+
+  it("calls the delete action when a card requests deletion", async () => {
+    render(<PackagingCategoriesPageClient categories={categories} />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByLabelText("delete-Boxes"));
+
+    expect(deletePackagingMeanCategoryActionMock).toHaveBeenCalledWith({ status: "idle" }, "1");
   });
 });

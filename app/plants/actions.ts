@@ -14,7 +14,10 @@ const isPrismaError = (error: unknown): error is PrismaLikeError => typeof error
 export async function getPlants() {
   const prisma = getPrisma();
   try {
-    return await prisma.plant.findMany({ orderBy: { createdAt: "desc" } });
+    return await prisma.plant.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { address: { include: { country: true } }, images: { include: { image: true } } },
+    });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `Plant` does not exist. Return empty list until migration is applied.");
@@ -27,7 +30,10 @@ export async function getPlants() {
 export async function getPlantById(id: string) {
   const prisma = getPrisma();
   try {
-    return await prisma.plant.findUnique({ where: { id } });
+    return await prisma.plant.findUnique({
+      where: { id },
+      include: { address: { include: { country: true } }, images: { include: { image: true } } },
+    });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `Plant` does not exist. getPlantById returning null.");
@@ -45,14 +51,11 @@ const extractString = (value: FormDataEntryValue | null) => {
 
 export async function createPlantAction(_: PlantState, formData: FormData): Promise<PlantState> {
   const baseFields = {
-    plantName: extractString(formData.get("plantName")),
-    address: extractString(formData.get("address")),
-    city: extractString(formData.get("city")),
-    zipcode: extractString(formData.get("zipcode")),
-    country: extractString(formData.get("country")),
+    name: extractString(formData.get("plantName") ?? formData.get("name")),
+    addressId: extractString(formData.get("addressId")),
   };
 
-  let imageUrl = extractString(formData.get("image"));
+  let imageUrl = extractString(formData.get("imageUrl") ?? formData.get("image"));
   const uploadCandidate = formData.get("imageFile");
   if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
     try {
@@ -63,7 +66,7 @@ export async function createPlantAction(_: PlantState, formData: FormData): Prom
     }
   }
 
-  const parsed = createPlantSchema.safeParse({ ...baseFields, image: imageUrl });
+  const parsed = createPlantSchema.safeParse({ ...baseFields, imageUrl });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     parsed.error.issues.forEach((i) => (fieldErrors[i.path[0] as string] = i.message));
@@ -71,25 +74,28 @@ export async function createPlantAction(_: PlantState, formData: FormData): Prom
   }
 
   const prisma = getPrisma();
-  const { plantName, city, country, address, zipcode, image } = parsed.data;
+  const { name, addressId } = parsed.data;
 
   try {
-    // ensure uniqueness city + country
-    const existing = await prisma.plant.findFirst({ where: { city, country } });
-    if (existing) {
-      return { status: "error", fieldErrors: { city: "A plant already exists for this city and country" } };
-    }
+    await prisma.plant.create({
+      data: {
+        name,
+        ...(addressId ? { address: { connect: { id: addressId } } } : {}),
+        ...(imageUrl
+          ? {
+              images: {
+                create: [
+                  {
+                    sortOrder: 0,
+                    image: { create: { imageUrl } },
+                  },
+                ],
+              },
+            }
+          : {}),
+      },
+    });
 
-    const createData: Prisma.PlantCreateInput = {
-      plantName,
-      address: address ?? null,
-      city,
-      zipcode: zipcode ?? null,
-      country,
-      image: image ?? null,
-    };
-    await prisma.plant.create({ data: createData });
-    // revalidate plants listing
     try {
       revalidatePath("/plants");
     } catch {}
@@ -106,34 +112,26 @@ import type { UpdatePlantInput } from "./schema";
 
 export async function updatePlantAction(_s: PlantState, id: string, formData: FormData): Promise<PlantState> {
   const baseFields = {
-    plantName: extractString(formData.get("plantName")),
-    address: extractString(formData.get("address")),
-    city: extractString(formData.get("city")),
-    zipcode: extractString(formData.get("zipcode")),
-    country: extractString(formData.get("country")),
+    name: extractString(formData.get("plantName") ?? formData.get("name")),
+    addressId: extractString(formData.get("addressId")),
   };
 
-  const existingImage = extractString(formData.get("existingImage"));
   const removeImage = String(formData.get("removeImage") ?? "false") === "true";
-  let imageUrl = extractString(formData.get("image"));
+  const clearAddress = String(formData.get("clearAddress") ?? "false") === "true";
+  let imageUrl = extractString(formData.get("imageUrl") ?? formData.get("image"));
 
   const uploadCandidate = formData.get("imageFile");
+  const hasNewUpload = uploadCandidate instanceof File && uploadCandidate.size > 0;
   if (uploadCandidate instanceof File && uploadCandidate.size > 0) {
     try {
       const { url } = await persistUploadFile(uploadCandidate);
       imageUrl = url;
-      if (existingImage) await deleteUploadFileByUrl(existingImage);
     } catch {
       return { status: "error", message: "Unable to upload image" };
     }
-  } else if (removeImage && existingImage) {
-    await deleteUploadFileByUrl(existingImage);
-    imageUrl = undefined;
-  } else if (existingImage && !imageUrl) {
-    imageUrl = existingImage;
   }
 
-  const parsed = updatePlantSchema.safeParse({ id, ...baseFields, image: imageUrl });
+  const parsed = updatePlantSchema.safeParse({ id, ...baseFields, imageUrl });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     parsed.error.issues.forEach((i) => (fieldErrors[i.path[0] as string] = i.message));
@@ -141,20 +139,59 @@ export async function updatePlantAction(_s: PlantState, id: string, formData: Fo
   }
 
   const prisma = getPrisma();
-  const { city, country } = parsed.data as UpdatePlantInput;
+  const { addressId } = parsed.data as UpdatePlantInput;
 
   try {
-    // check uniqueness excluding self
-    const exists = await prisma.plant.findFirst({ where: { city, country, NOT: { id } } });
-    if (exists) {
-      return { status: "error", fieldErrors: { city: "A plant already exists for this city and country" } };
+    const existing = await prisma.plant.findUnique({ where: { id }, include: { images: { include: { image: true } } } });
+    if (!existing) {
+      return { status: "error", message: "Plant not found" };
     }
 
-    const updatePayload = { ...parsed.data } as Record<string, unknown>;
-    if (typeof updatePayload.image === "string" && (updatePayload.image as string).trim() === "") {
-      delete updatePayload.image;
+    const primaryImage = existing.images[0];
+
+    if (hasNewUpload && primaryImage && primaryImage.image?.imageUrl !== imageUrl) {
+      try {
+        await deleteUploadFileByUrl(primaryImage.image.imageUrl);
+      } catch {
+        return { status: "error", message: "Unable to delete previous image" };
+      }
     }
-    if (updatePayload.image === undefined) delete updatePayload.image;
+
+    if (removeImage && primaryImage) {
+      try {
+        await deleteUploadFileByUrl(primaryImage.image.imageUrl);
+      } catch {
+        return { status: "error", message: "Unable to delete image" };
+      }
+      imageUrl = undefined;
+    } else if (primaryImage && !imageUrl) {
+      imageUrl = primaryImage.image.imageUrl;
+    }
+
+    const updatePayload: Prisma.PlantUpdateInput = {
+      name: parsed.data.name,
+    };
+    if (clearAddress) {
+      updatePayload.address = { disconnect: true };
+    } else if (addressId) {
+      updatePayload.address = { connect: { id: addressId } };
+    }
+
+    if (removeImage && primaryImage) {
+      updatePayload.images = { delete: { plantId_imageId: { plantId: id, imageId: primaryImage.imageId } } };
+    } else if (imageUrl) {
+      if (primaryImage) {
+        updatePayload.images = {
+          update: {
+            where: { plantId_imageId: { plantId: id, imageId: primaryImage.imageId } },
+            data: { image: { update: { imageUrl } } },
+          },
+        };
+      } else {
+        updatePayload.images = { create: [{ sortOrder: 0, image: { create: { imageUrl } } }] };
+      }
+    }
+
     await prisma.plant.update({ where: { id }, data: updatePayload });
     try { revalidatePath("/plants"); } catch {}
     return { status: "success" };

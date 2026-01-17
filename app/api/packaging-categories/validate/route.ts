@@ -11,6 +11,6 @@ export async function GET(req: Request) {
   const prisma = getPrisma();
   const where: Record<string, unknown> = { name };
   if (excludeId) where.NOT = { id: excludeId };
-  const found = await prisma.packagingCategory.findFirst({ where });
+  const found = await prisma.packagingMeanCategory.findFirst({ where });
   return NextResponse.json({ exists: !!found });
 }

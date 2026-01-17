@@ -6,8 +6,8 @@ import { useActionState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { createPackagingMeanCategoryAction, type PackagingMeanCategoryState } from "@/app/packaging-means/actions";
-import { createPackagingMeanCategorySchema, type CreatePackagingMeanCategoryInput } from "@/app/packaging-means/schema";
+import { createStorageMeanCategoryAction, type StorageMeanCategoryState } from "@/app/storage-means/actions";
+import { createStorageMeanCategorySchema, type CreateStorageMeanCategoryInput } from "@/app/storage-means/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useConfirmMessage } from "@/components/ui/confirm-message";
@@ -19,19 +19,19 @@ type FormValues = {
   imageFile?: FileList;
 };
 
-type PackagingFormInitialValues = Partial<FormValues> & { id?: string };
+type StorageFormInitialValues = Partial<FormValues> & { id?: string };
 
-interface PackagingFormProps {
+interface StorageFormProps {
   onClose?: () => void;
   onSuccess?: () => void;
   actionOverride?: (fd: FormData) => Promise<unknown>;
-  initialValues?: PackagingFormInitialValues;
+  initialValues?: StorageFormInitialValues;
   mode?: "create" | "edit";
   submitLabel?: string;
   successMessage?: string;
 }
 
-export default function PackagingForm({
+export default function StorageForm({
   onClose,
   onSuccess,
   actionOverride,
@@ -39,10 +39,10 @@ export default function PackagingForm({
   mode = "create",
   submitLabel,
   successMessage,
-}: PackagingFormProps) {
-  const initialState: PackagingMeanCategoryState = { status: "idle" };
+}: StorageFormProps) {
+  const initialState: StorageMeanCategoryState = { status: "idle" };
   const [state, formAction, pending] = useActionState(
-    createPackagingMeanCategoryAction as unknown as (s: PackagingMeanCategoryState, fd: FormData) => Promise<PackagingMeanCategoryState>,
+    createStorageMeanCategoryAction as unknown as (s: StorageMeanCategoryState, fd: FormData) => Promise<StorageMeanCategoryState>,
     initialState,
   );
   const { show } = useConfirmMessage();
@@ -54,15 +54,15 @@ export default function PackagingForm({
   }), [initialValues?.name, initialValues?.description, initialValues?.imageUrl]);
 
   const { register, handleSubmit, formState: { errors, isDirty, isSubmitting }, setError, reset, resetField } = useForm<FormValues>({
-    resolver: zodResolver(createPackagingMeanCategorySchema),
+    resolver: zodResolver(createStorageMeanCategorySchema),
     mode: "onChange",
     defaultValues: normalizedDefaults,
   });
 
   const { ref: imageFileFieldRef, onChange: imageFileOnChange, ...imageFileField } = register("imageFile");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const successCopy = successMessage ?? (mode === "edit" ? "Category updated" : "Category created");
-  const submitCopy = submitLabel ?? (mode === "edit" ? "Update category" : "Save category");
+  const successCopy = successMessage ?? (mode === "edit" ? "Storage category updated" : "Storage category created");
+  const submitCopy = submitLabel ?? (mode === "edit" ? "Update storage category" : "Save storage category");
   const previewObjectUrlRef = useRef<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(initialValues?.imageUrl ?? null);
   const [removeExistingImage, setRemoveExistingImage] = useState(false);
@@ -95,7 +95,7 @@ export default function PackagingForm({
 
   useEffect(() => () => clearObjectUrl(), [clearObjectUrl]);
 
-  const handleResult = useCallback((res?: PackagingMeanCategoryState | null) => {
+  const handleResult = useCallback((res?: StorageMeanCategoryState | null) => {
     if (!res) return;
     if (res.status === "success") {
       show(successCopy, "success");
@@ -108,14 +108,14 @@ export default function PackagingForm({
 
     if (res.fieldErrors) {
       Object.entries(res.fieldErrors).forEach(([key, value]) =>
-        setError(key as keyof CreatePackagingMeanCategoryInput, { type: "server", message: String(value) }),
+        setError(key as keyof CreateStorageMeanCategoryInput, { type: "server", message: String(value) }),
       );
     }
 
     if (res.message) {
       show(res.message, "error");
     } else if (res.status === "error") {
-      show("Unable to submit form right now. Please try again.", "error");
+      show("Unable to submit storage form right now. Please try again.", "error");
     }
   }, [show, reset, onClose, onSuccess, setError, normalizedDefaults, successCopy, resetImageInteractions]);
 
@@ -148,7 +148,7 @@ export default function PackagingForm({
 
     if (actionOverride) {
       const overrideResult = await actionOverride(formData);
-      handleResult(overrideResult as PackagingMeanCategoryState | undefined);
+      handleResult(overrideResult as StorageMeanCategoryState | undefined);
       return;
     }
 
@@ -217,14 +217,14 @@ export default function PackagingForm({
     >
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <label htmlFor="packaging-name" className="text-sm font-semibold text-smc-text">
-            Packaging category name
+          <label htmlFor="storage-name" className="text-sm font-semibold text-smc-text">
+            Storage category name
           </label>
           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-smc-primary/80">Required</span>
         </div>
         <Input
-          id="packaging-name"
-          placeholder="e.g. Trolley"
+          id="storage-name"
+          placeholder="e.g. Refrigerated room"
           className="h-11 rounded-xl border-smc-border/70 bg-smc-bg/40 text-sm shadow-inner transition focus-visible:ring-2 focus-visible:ring-smc-primary/40"
           {...register("name")}
         />
@@ -233,16 +233,16 @@ export default function PackagingForm({
 
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <label htmlFor="packaging-description" className="text-sm font-semibold text-smc-text">
+          <label htmlFor="storage-description" className="text-sm font-semibold text-smc-text">
             Description
           </label>
           <span className="text-[11px] uppercase tracking-[0.22em] text-smc-text-muted">Tell the essentials</span>
         </div>
         <textarea
-          id="packaging-description"
+          id="storage-description"
           className="mt-1 w-full resize-none rounded-xl border border-smc-border/70 bg-smc-bg/40 px-3 py-3 text-sm leading-relaxed text-smc-text shadow-inner outline-none transition focus:ring-2 focus:ring-smc-primary/40"
           rows={4}
-          placeholder="What makes this packaging category unique?"
+          placeholder="What makes this storage category unique?"
           {...register("description")}
         />
         {errors.description && <p className="text-sm text-red-600">{errors.description.message}</p>}
@@ -259,9 +259,9 @@ export default function PackagingForm({
           </span>
         </div>
 
-        <label htmlFor="packaging-image" className="sr-only">Image upload</label>
+        <label htmlFor="storage-image" className="sr-only">Image upload</label>
         <input
-          id="packaging-image"
+          id="storage-image"
           type="file"
           accept="image/*"
           className="sr-only"
@@ -274,7 +274,7 @@ export default function PackagingForm({
         />
 
         <label
-          htmlFor="packaging-image"
+          htmlFor="storage-image"
           className="group relative block cursor-pointer overflow-hidden rounded-xl border border-dashed border-smc-border/90 bg-gradient-to-br from-white via-smc-bg/70 to-white p-3 shadow-soft transition hover:border-smc-secondary/50 hover:shadow-card"
         >
           <div className="flex items-center gap-4">
@@ -293,15 +293,15 @@ export default function PackagingForm({
             {previewImage ? (
               <Image
                 src={previewImage}
-                alt="Packaging category image preview"
+                alt="Storage category image preview"
                 width={80}
                 height={80}
                 className="h-20 w-20 rounded-xl object-cover ring-1 ring-smc-border/60"
-                data-testid="packaging-image-avatar"
+                data-testid="storage-image-avatar"
                 unoptimized
               />
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-smc-border bg-smc-bg text-[11px] uppercase tracking-[0.18em] text-smc-text-muted" data-testid="packaging-image-placeholder">
+              <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-smc-border bg-smc-bg text-[11px] uppercase tracking-[0.18em] text-smc-text-muted" data-testid="storage-image-placeholder">
                 No img
               </div>
             )}

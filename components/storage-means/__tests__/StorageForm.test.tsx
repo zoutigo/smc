@@ -1,11 +1,11 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import PackagingForm from "@/components/packaging-means/PackagingForm";
+import StorageForm from "@/components/storage-means/StorageForm";
 
 const showMock = jest.fn();
 const objectUrlMock = jest.fn((blob: Blob | MediaSource) => {
   void blob;
-  return "blob:preview";
+  return "blob:storage-preview";
 }) as jest.MockedFunction<typeof URL.createObjectURL>;
 const revokeUrlMock = jest.fn((url: string) => {
   void url;
@@ -16,11 +16,11 @@ jest.mock("@/components/ui/confirm-message", () => ({
   useConfirmMessage: () => ({ show: showMock }),
 }));
 
-jest.mock("@/app/packaging-means/actions", () => ({
-  createPackagingMeanCategoryAction: jest.fn(),
+jest.mock("@/app/storage-means/actions", () => ({
+  createStorageMeanCategoryAction: jest.fn(),
 }));
 
-describe("PackagingForm", () => {
+describe("StorageForm", () => {
   const actionOverride = jest.fn().mockResolvedValue({ status: "success" });
 
   beforeEach(() => {
@@ -32,86 +32,86 @@ describe("PackagingForm", () => {
     revokeUrlMock.mockClear();
   });
 
-  it("submits the selected file", async () => {
-    render(<PackagingForm actionOverride={actionOverride} />);
+  it("uploads a file and submits form data", async () => {
+    render(<StorageForm actionOverride={actionOverride} />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText(/Category name/i), "Reusable bins");
-    await user.type(screen.getByLabelText(/Description/i), "Durable bins for daily shipments");
+    await user.type(screen.getByLabelText(/Storage category name/i), "Cold storage");
+    await user.type(screen.getByLabelText(/Description/i), "Chilled rooms for produce");
 
     const fileInput = screen.getByLabelText(/Image upload/i) as HTMLInputElement;
-    const file = new File([Buffer.from("file")], "bins.png", { type: "image/png" });
+    const file = new File([Buffer.from("storage")], "storage.png", { type: "image/png" });
     await user.upload(fileInput, file);
 
-    await user.click(screen.getByRole("button", { name: /Save category/i }));
+    await user.click(screen.getByRole("button", { name: /Save storage category/i }));
 
     await waitFor(() => expect(actionOverride).toHaveBeenCalledTimes(1));
     const submitted = actionOverride.mock.calls[0][0] as FormData;
+    expect(submitted.get("name")).toBe("Cold storage");
     const submittedFile = submitted.get("imageFile") as File;
     expect(submittedFile).toBeInstanceOf(File);
-    expect(submittedFile.name).toBe("bins.png");
-    expect(submitted.get("name")).toBe("Reusable bins");
+    expect(submittedFile.name).toBe("storage.png");
   });
 
-  it("resets on success and closes the form", async () => {
+  it("resets after success and notifies user", async () => {
     const onClose = jest.fn();
     actionOverride.mockResolvedValue({ status: "success" });
 
-    render(<PackagingForm actionOverride={actionOverride} onClose={onClose} />);
+    render(<StorageForm actionOverride={actionOverride} onClose={onClose} />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText(/Category name/i), "Bubble wrap");
-    await user.type(screen.getByLabelText(/Description/i), "Classic bubble protection");
-    await user.click(screen.getByRole("button", { name: /Save category/i }));
+    await user.type(screen.getByLabelText(/Storage category name/i), "Dry room");
+    await user.type(screen.getByLabelText(/Description/i), "Low humidity storage");
+    await user.click(screen.getByRole("button", { name: /Save storage category/i }));
 
     await waitFor(() => expect(actionOverride).toHaveBeenCalledTimes(1));
     expect(onClose).toHaveBeenCalled();
-    expect(showMock).toHaveBeenCalledWith("Category created", "success");
-    expect((screen.getByLabelText(/Category name/i) as HTMLInputElement).value).toBe("");
+    expect(showMock).toHaveBeenCalledWith("Storage category created", "success");
+    expect((screen.getByLabelText(/Storage category name/i) as HTMLInputElement).value).toBe("");
   });
 
-  it("surfaces errors returned by the server action", async () => {
+  it("displays server errors", async () => {
     actionOverride.mockResolvedValue({ status: "error", message: "Upload failed", fieldErrors: { name: "Duplicate" } });
 
-    render(<PackagingForm actionOverride={actionOverride} />);
+    render(<StorageForm actionOverride={actionOverride} />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText(/Category name/i), "Foam");
-    await user.type(screen.getByLabelText(/Description/i), "Foam wraps");
-    await user.click(screen.getByRole("button", { name: /Save category/i }));
+    await user.type(screen.getByLabelText(/Storage category name/i), "Ambient room");
+    await user.type(screen.getByLabelText(/Description/i), "Ambient storage");
+    await user.click(screen.getByRole("button", { name: /Save storage category/i }));
 
     await waitFor(() => expect(actionOverride).toHaveBeenCalledTimes(1));
     expect(showMock).toHaveBeenCalledWith("Upload failed", "error");
     expect(screen.getByText(/Duplicate/)).toBeInTheDocument();
   });
 
-  it("prefills edit mode and restores original image", async () => {
+  it("supports edit mode and image restoration", async () => {
     const onSuccess = jest.fn();
     actionOverride.mockResolvedValue({ status: "success" });
 
     render(
-      <PackagingForm
+      <StorageForm
         mode="edit"
         actionOverride={actionOverride}
         onSuccess={onSuccess}
         initialValues={{
-          id: "cat-1",
-          name: "Existing",
-          description: "Already defined",
-          imageUrl: "https://example.com/old.png",
+          id: "storage-3",
+          name: "Freezer",
+          description: "Sub-zero storage",
+          imageUrl: "https://example.com/freezer.png",
         }}
       />,
     );
 
     const user = userEvent.setup();
-    expect(screen.getByLabelText(/Category name/i)).toHaveValue("Existing");
+    expect(screen.getByLabelText(/Storage category name/i)).toHaveValue("Freezer");
 
     await user.click(screen.getByRole("button", { name: /Remove current image/i }));
     await user.click(screen.getByRole("button", { name: /Restore original/i }));
-    await user.click(screen.getByRole("button", { name: /Update category/i }));
+    await user.click(screen.getByRole("button", { name: /Update storage category/i }));
 
     await waitFor(() => expect(actionOverride).toHaveBeenCalledTimes(1));
-    expect(showMock).toHaveBeenCalledWith("Category updated", "success");
+    expect(showMock).toHaveBeenCalledWith("Storage category updated", "success");
     expect(onSuccess).toHaveBeenCalled();
   });
 });
