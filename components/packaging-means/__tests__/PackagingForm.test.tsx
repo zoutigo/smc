@@ -17,7 +17,7 @@ jest.mock("@/components/ui/confirm-message", () => ({
 }));
 
 jest.mock("@/app/packaging-means/actions", () => ({
-  createPackagingCategoryAction: jest.fn(),
+  createPackagingMeanCategoryAction: jest.fn(),
 }));
 
 describe("PackagingForm", () => {

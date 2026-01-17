@@ -11,7 +11,7 @@ type StorageMeanCategoryRecord = {
     id: string;
     imageUrl: string;
     plantId: null;
-    packagingCategoryId: null;
+    packagingMeanCategoryId: null;
     storageMeanCategoryId: string;
     createdAt: Date;
     updatedAt: Date;
@@ -78,7 +78,7 @@ const createRecord = (category: RawStorageMeanCategory, index: number): StorageM
       id: imageId,
       imageUrl: category.imageUrl,
       plantId: null,
-      packagingCategoryId: null,
+      packagingMeanCategoryId: null,
       storageMeanCategoryId: `storage-fallback-${slug}`,
       createdAt: new Date(FALLBACK_TIMESTAMP),
       updatedAt: new Date(FALLBACK_TIMESTAMP),

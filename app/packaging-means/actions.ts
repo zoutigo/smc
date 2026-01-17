@@ -6,10 +6,10 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { slugifyValue } from "@/lib/utils";
 import { persistUploadFile, deleteUploadFileByUrl } from "@/lib/uploads";
-import { createPackagingCategorySchema, updatePackagingCategorySchema, type UpdatePackagingCategoryInput } from "./schema";
-import { findPackagingCategoryFallbackById, findPackagingCategoryFallbackBySlug, listPackagingCategoryFallbacks } from "./fallback-data";
+import { createPackagingMeanCategorySchema, updatePackagingMeanCategorySchema, type UpdatePackagingMeanCategoryInput } from "./schema";
+import { findPackagingMeanCategoryFallbackById, findPackagingMeanCategoryFallbackBySlug, listPackagingMeanCategoryFallbacks } from "./fallback-data";
 
-export type PackagingCategoryState = {
+export type PackagingMeanCategoryState = {
   status: "idle" | "error" | "success";
   message?: string;
   fieldErrors?: Record<string, string>;
@@ -24,18 +24,18 @@ const extractString = (value: FormDataEntryValue | null) => {
   return trimmed.length ? trimmed : undefined;
 };
 
-type PackagingCategoryDelegate = PrismaClient["packagingCategory"];
-const MODEL_MISSING_WARNING = "Prisma client missing PackagingCategory delegate. Run `npx prisma generate` after updating prisma/schema.prisma.";
-let packagingCategoryDelegateHealthy = true;
+type PackagingMeanCategoryDelegate = PrismaClient["packagingMeanCategory"];
+const MODEL_MISSING_WARNING = "Prisma client missing PackagingMeanCategory delegate. Run `npx prisma generate` after updating prisma/schema.prisma.";
+let packagingMeanCategoryDelegateHealthy = true;
 
-const markPackagingCategoryDelegateUnhealthy = () => {
-  packagingCategoryDelegateHealthy = false;
+const markPackagingMeanCategoryDelegateUnhealthy = () => {
+  packagingMeanCategoryDelegateHealthy = false;
 };
 
-const getPackagingCategoryDelegate = () => {
-  if (!packagingCategoryDelegateHealthy) return null;
-  const prisma = getPrisma() as PrismaClient & { packagingCategory?: PackagingCategoryDelegate };
-  return prisma.packagingCategory ?? null;
+const getPackagingMeanCategoryDelegate = () => {
+  if (!packagingMeanCategoryDelegateHealthy) return null;
+  const prisma = getPrisma() as PrismaClient & { packagingMeanCategory?: PackagingMeanCategoryDelegate };
+  return prisma.packagingMeanCategory ?? null;
 };
 
 const buildSlug = (value: string) => {
@@ -43,7 +43,7 @@ const buildSlug = (value: string) => {
   return slug.length ? slug : `packaging-${randomUUID().slice(0, 8)}`;
 };
 
-const findSlugCollision = async (delegate: PackagingCategoryDelegate, slug: string, excludeId?: string) => {
+const findSlugCollision = async (delegate: PackagingMeanCategoryDelegate, slug: string, excludeId?: string) => {
   return delegate.findFirst({
     where: {
       slug,
@@ -52,50 +52,50 @@ const findSlugCollision = async (delegate: PackagingCategoryDelegate, slug: stri
   });
 };
 
-export async function getPackagingCategories() {
-  const categoryDelegate = getPackagingCategoryDelegate();
+export async function getPackagingMeanCategories() {
+  const categoryDelegate = getPackagingMeanCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
-    return listPackagingCategoryFallbacks();
+    return listPackagingMeanCategoryFallbacks();
   }
   try {
     return await categoryDelegate.findMany({ orderBy: { createdAt: "desc" }, include: { image: true } });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      console.warn("Prisma table `PackagingCategory` does not exist. Return empty list until migration is applied.");
-      return listPackagingCategoryFallbacks();
+      console.warn("Prisma table `PackagingMeanCategory` does not exist. Return empty list until migration is applied.");
+      return listPackagingMeanCategoryFallbacks();
     }
-    markPackagingCategoryDelegateUnhealthy();
+    markPackagingMeanCategoryDelegateUnhealthy();
     console.warn("Unable to fetch packaging categories. Returning fallback data instead.", error);
-    return listPackagingCategoryFallbacks();
+    return listPackagingMeanCategoryFallbacks();
   }
 }
 
-export async function getPackagingCategoryById(id: string) {
-  const categoryDelegate = getPackagingCategoryDelegate();
+export async function getPackagingMeanCategoryById(id: string) {
+  const categoryDelegate = getPackagingMeanCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
-    return findPackagingCategoryFallbackById(id);
+    return findPackagingMeanCategoryFallbackById(id);
   }
   try {
     const category = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
-    return category ?? findPackagingCategoryFallbackById(id);
+    return category ?? findPackagingMeanCategoryFallbackById(id);
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      console.warn("Prisma table `PackagingCategory` does not exist. getPackagingCategoryById returning null.");
-      return findPackagingCategoryFallbackById(id);
+      console.warn("Prisma table `PackagingMeanCategory` does not exist. getPackagingMeanCategoryById returning null.");
+      return findPackagingMeanCategoryFallbackById(id);
     }
-    markPackagingCategoryDelegateUnhealthy();
+    markPackagingMeanCategoryDelegateUnhealthy();
     console.warn("Unable to fetch packaging category by id. Returning fallback data instead.", error);
-    return findPackagingCategoryFallbackById(id);
+    return findPackagingMeanCategoryFallbackById(id);
   }
 }
 
-export async function getPackagingCategoryBySlug(slug: string) {
-  const fallbackCategory = findPackagingCategoryFallbackBySlug(slug);
+export async function getPackagingMeanCategoryBySlug(slug: string) {
+  const fallbackCategory = findPackagingMeanCategoryFallbackBySlug(slug);
   if (fallbackCategory) return fallbackCategory;
 
-  const categoryDelegate = getPackagingCategoryDelegate();
+  const categoryDelegate = getPackagingMeanCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
     return null;
@@ -105,16 +105,16 @@ export async function getPackagingCategoryBySlug(slug: string) {
     return category ?? null;
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      console.warn("Prisma table `PackagingCategory` does not exist. getPackagingCategoryBySlug returning null.");
+      console.warn("Prisma table `PackagingMeanCategory` does not exist. getPackagingMeanCategoryBySlug returning null.");
       return null;
     }
-    markPackagingCategoryDelegateUnhealthy();
+    markPackagingMeanCategoryDelegateUnhealthy();
     console.warn("Unable to fetch packaging category by slug. Returning fallback data instead.", error);
     return fallbackCategory;
   }
 }
 
-export async function createPackagingCategoryAction(_: PackagingCategoryState, formData: FormData): Promise<PackagingCategoryState> {
+export async function createPackagingMeanCategoryAction(_: PackagingMeanCategoryState, formData: FormData): Promise<PackagingMeanCategoryState> {
   const baseFields = {
     name: extractString(formData.get("name")),
     description: extractString(formData.get("description")),
@@ -123,7 +123,7 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
   const uploadCandidate = formData.get("imageFile");
   let imageUrl = extractString(formData.get("imageUrl"));
 
-  const parsed = createPackagingCategorySchema.safeParse({ ...baseFields, imageUrl });
+  const parsed = createPackagingMeanCategorySchema.safeParse({ ...baseFields, imageUrl });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     parsed.error.issues.forEach((issue) => {
@@ -133,7 +133,7 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
     return { status: "error", fieldErrors };
   }
 
-  const categoryDelegate = getPackagingCategoryDelegate();
+  const categoryDelegate = getPackagingMeanCategoryDelegate();
   if (!categoryDelegate) {
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
@@ -155,7 +155,7 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
       }
     }
 
-    const createData: Prisma.PackagingCategoryCreateInput = {
+    const createData: Prisma.PackagingMeanCategoryCreateInput = {
       name,
       slug,
       description,
@@ -167,13 +167,13 @@ export async function createPackagingCategoryAction(_: PackagingCategoryState, f
     return { status: "success" };
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      return { status: "error", message: "Database schema not applied (missing PackagingCategory table). Run Prisma migrations." };
+      return { status: "error", message: "Database schema not applied (missing PackagingMeanCategory table). Run Prisma migrations." };
     }
     return { status: "error", message: "Unable to create packaging category" };
   }
 }
 
-export async function updatePackagingCategoryAction(_: PackagingCategoryState, id: string, formData: FormData): Promise<PackagingCategoryState> {
+export async function updatePackagingMeanCategoryAction(_: PackagingMeanCategoryState, id: string, formData: FormData): Promise<PackagingMeanCategoryState> {
   const baseFields = {
     name: extractString(formData.get("name")),
     description: extractString(formData.get("description")),
@@ -194,7 +194,7 @@ export async function updatePackagingCategoryAction(_: PackagingCategoryState, i
   const schemaInput: Record<string, unknown> = { id, ...baseFields };
   if (imageUrl) schemaInput.imageUrl = imageUrl;
 
-  const parsed = updatePackagingCategorySchema.safeParse(schemaInput);
+  const parsed = updatePackagingMeanCategorySchema.safeParse(schemaInput);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     parsed.error.issues.forEach((issue) => {
@@ -204,11 +204,11 @@ export async function updatePackagingCategoryAction(_: PackagingCategoryState, i
     return { status: "error", fieldErrors };
   }
 
-  const categoryDelegate = getPackagingCategoryDelegate();
+  const categoryDelegate = getPackagingMeanCategoryDelegate();
   if (!categoryDelegate) {
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
-  const parsedData = parsed.data as UpdatePackagingCategoryInput;
+  const parsedData = parsed.data as UpdatePackagingMeanCategoryInput;
   const { name } = parsedData;
 
   try {
@@ -264,14 +264,14 @@ export async function updatePackagingCategoryAction(_: PackagingCategoryState, i
     return { status: "success" };
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      return { status: "error", message: "Database schema not applied (missing PackagingCategory table). Run Prisma migrations." };
+      return { status: "error", message: "Database schema not applied (missing PackagingMeanCategory table). Run Prisma migrations." };
     }
     return { status: "error", message: "Unable to update packaging category" };
   }
 }
 
-export async function deletePackagingCategoryAction(_: PackagingCategoryState, id: string): Promise<PackagingCategoryState> {
-  const categoryDelegate = getPackagingCategoryDelegate();
+export async function deletePackagingMeanCategoryAction(_: PackagingMeanCategoryState, id: string): Promise<PackagingMeanCategoryState> {
+  const categoryDelegate = getPackagingMeanCategoryDelegate();
   if (!categoryDelegate) {
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
@@ -295,7 +295,7 @@ export async function deletePackagingCategoryAction(_: PackagingCategoryState, i
     return { status: "success" };
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
-      return { status: "error", message: "Database schema not applied (missing PackagingCategory table). Run Prisma migrations." };
+      return { status: "error", message: "Database schema not applied (missing PackagingMeanCategory table). Run Prisma migrations." };
     }
     return { status: "error", message: "Unable to delete packaging category" };
   }

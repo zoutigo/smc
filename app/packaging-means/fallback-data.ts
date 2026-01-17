@@ -1,6 +1,6 @@
 import { slugifyValue } from "@/lib/utils";
 
-type PackagingCategoryRecord = {
+type PackagingMeanCategoryRecord = {
   id: string;
   name: string;
   slug: string;
@@ -11,20 +11,20 @@ type PackagingCategoryRecord = {
     id: string;
     imageUrl: string;
     plantId: null;
-    packagingCategoryId: string;
+    packagingMeanCategoryId: string;
     storageMeanCategoryId: null;
     createdAt: Date;
     updatedAt: Date;
   } | null;
 };
 
-type RawPackagingCategory = {
+type RawPackagingMeanCategory = {
   name: string;
   description: string;
   imageUrl: string;
 };
 
-const RAW_PACKAGING_CATEGORIES: RawPackagingCategory[] = [
+const RAW_PACKAGING_CATEGORIES: RawPackagingMeanCategory[] = [
   {
     name: "Trolley",
     description: "Multipurpose trolley designed for quick moves between inbound docks and kitting cells.",
@@ -74,7 +74,7 @@ const RAW_PACKAGING_CATEGORIES: RawPackagingCategory[] = [
 
 const FALLBACK_TIMESTAMP = new Date("2024-01-01T00:00:00.000Z");
 
-const createRecord = (category: RawPackagingCategory, index: number): PackagingCategoryRecord => {
+const createRecord = (category: RawPackagingMeanCategory, index: number): PackagingMeanCategoryRecord => {
   const slugBase = slugifyValue(category.name);
   const slug = slugBase.length ? slugBase : `packaging-${index + 1}`;
   const imageId = `packaging-image-${index + 1}`;
@@ -88,7 +88,7 @@ const createRecord = (category: RawPackagingCategory, index: number): PackagingC
       id: imageId,
       imageUrl: category.imageUrl,
       plantId: null,
-      packagingCategoryId: `packaging-fallback-${slug}`,
+      packagingMeanCategoryId: `packaging-fallback-${slug}`,
       storageMeanCategoryId: null,
       createdAt: new Date(FALLBACK_TIMESTAMP),
       updatedAt: new Date(FALLBACK_TIMESTAMP),
@@ -98,12 +98,12 @@ const createRecord = (category: RawPackagingCategory, index: number): PackagingC
   };
 };
 
-const PACKAGING_FALLBACK_RECORDS: PackagingCategoryRecord[] = RAW_PACKAGING_CATEGORIES.map(createRecord);
+const PACKAGING_FALLBACK_RECORDS: PackagingMeanCategoryRecord[] = RAW_PACKAGING_CATEGORIES.map(createRecord);
 
 const PACKAGING_FALLBACK_BY_ID = new Map(PACKAGING_FALLBACK_RECORDS.map((category) => [category.id, category]));
 const PACKAGING_FALLBACK_BY_SLUG = new Map(PACKAGING_FALLBACK_RECORDS.map((category) => [category.slug, category]));
 
-const cloneCategory = (category: PackagingCategoryRecord): PackagingCategoryRecord => ({
+const cloneCategory = (category: PackagingMeanCategoryRecord): PackagingMeanCategoryRecord => ({
   ...category,
   createdAt: new Date(category.createdAt),
   updatedAt: new Date(category.updatedAt),
@@ -116,16 +116,16 @@ const cloneCategory = (category: PackagingCategoryRecord): PackagingCategoryReco
     : null,
 });
 
-export function listPackagingCategoryFallbacks() {
+export function listPackagingMeanCategoryFallbacks() {
   return PACKAGING_FALLBACK_RECORDS.map(cloneCategory);
 }
 
-export function findPackagingCategoryFallbackById(id: string) {
+export function findPackagingMeanCategoryFallbackById(id: string) {
   const category = PACKAGING_FALLBACK_BY_ID.get(id);
   return category ? cloneCategory(category) : null;
 }
 
-export function findPackagingCategoryFallbackBySlug(slug: string) {
+export function findPackagingMeanCategoryFallbackBySlug(slug: string) {
   const category = PACKAGING_FALLBACK_BY_SLUG.get(slug);
   return category ? cloneCategory(category) : null;
 }

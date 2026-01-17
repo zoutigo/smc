@@ -6,7 +6,7 @@ import { slugifyValue } from "../lib/utils";
 
 const prisma = new PrismaClient();
 
-const packagingCategoriesSeedData = [
+const packagingMeanCategoriesSeedData = [
   {
     name: "Trolley",
     description: "Multipurpose trolley designed for quick moves between inbound docks and kitting cells.",
@@ -81,13 +81,13 @@ const storageMeanCategoriesSeedData = [
     imageUrl: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606",
   },
   {
-    name: "ARSR (automated Storage and Retrieval Systems)",
-    description: "Automated storage and retrieval grid orchestrating deep-lane buffering for fast movers.",
+    name: "ARSR",
+    description: "Automated Storage and Retrieval Systems,  grid orchestrating deep-lane buffering for fast movers.",
     imageUrl: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429",
   },
   {
-    name: "CRM (conveyor on rail Motorized)",
-    description: "Powered conveyor-on-rail network routing totes across mezzanines and paint shops.",
+    name: "CRM",
+    description: "Conveyor on Rail Motorized. Powered conveyor-on-rail network routing totes across mezzanines and paint shops.",
     imageUrl: "https://images.unsplash.com/photo-1503387762-592deb58ef4e",
   },
 ];
@@ -462,15 +462,15 @@ async function getCountryMap(codes: Set<string>) {
   return map;
 }
 
-async function seedPackagingCategories() {
-  const existingCount = await prisma.packagingCategory.count();
+async function seedPackagingMeanCategories() {
+  const existingCount = await prisma.packagingMeanCategory.count();
   if (existingCount > 0) {
-    console.info(`Skipping packaging category seed: ${existingCount} record(s) already present.`);
+    console.info(`Skipping packaging mean category seed: ${existingCount} record(s) already present.`);
     return;
   }
 
-  for (const category of packagingCategoriesSeedData) {
-    await prisma.packagingCategory.create({
+  for (const category of packagingMeanCategoriesSeedData) {
+    await prisma.packagingMeanCategory.create({
       data: {
         name: category.name,
         description: category.description,
@@ -483,7 +483,7 @@ async function seedPackagingCategories() {
       },
     });
   }
-  console.info(`Seeded ${packagingCategoriesSeedData.length} packaging categories.`);
+  console.info(`Seeded ${packagingMeanCategoriesSeedData.length} packaging mean categories.`);
 }
 
 async function seedStorageMeanCategories() {
@@ -649,7 +649,7 @@ async function main() {
   await seedPlants();
   await seedSuppliers();
   await seedProjects();
-  await seedPackagingCategories();
+  await seedPackagingMeanCategories();
   await seedStorageMeanCategories();
 }
 

@@ -3,7 +3,7 @@
  */
 
 const mockedPrisma = {
-  packagingCategory: {
+  packagingMeanCategory: {
     findUnique: jest.fn(),
     findFirst: jest.fn(),
     create: jest.fn(),
@@ -24,48 +24,48 @@ jest.mock("@/lib/uploads", () => ({
   deleteUploadFileByUrl: (...args: unknown[]) => deleteUploadFileByUrlMock(...args),
 }));
 
-import { createPackagingCategoryAction, updatePackagingCategoryAction, deletePackagingCategoryAction } from "@/app/packaging-means/actions";
+import { createPackagingMeanCategoryAction, updatePackagingMeanCategoryAction, deletePackagingMeanCategoryAction } from "@/app/packaging-means/actions";
 
-describe("createPackagingCategoryAction", () => {
+describe("createPackagingMeanCategoryAction", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("returns fieldErrors when payload invalid", async () => {
     const form = new FormData();
     form.append("name", "");
-    const res = await createPackagingCategoryAction({ status: "idle" }, form as FormData);
+    const res = await createPackagingMeanCategoryAction({ status: "idle" }, form as FormData);
     expect(res.status).toBe("error");
     expect(res.fieldErrors).toBeTruthy();
   });
 
   it("returns error when duplicate name", async () => {
-    (mockedPrisma.packagingCategory.findFirst as jest.Mock).mockResolvedValue({ id: "exists" });
+    (mockedPrisma.packagingMeanCategory.findFirst as jest.Mock).mockResolvedValue({ id: "exists" });
 
     const form = new FormData();
     form.append("name", "Corrugate");
     form.append("description", "A category");
 
-    const res = await createPackagingCategoryAction({ status: "idle" }, form as FormData);
+    const res = await createPackagingMeanCategoryAction({ status: "idle" }, form as FormData);
     expect(res.status).toBe("error");
     expect(res.fieldErrors?.name).toMatch(/already exists/i);
   });
 
   it("creates category on success", async () => {
-    (mockedPrisma.packagingCategory.findFirst as jest.Mock).mockResolvedValue(null);
-    (mockedPrisma.packagingCategory.create as jest.Mock).mockResolvedValue({ id: "new" });
+    (mockedPrisma.packagingMeanCategory.findFirst as jest.Mock).mockResolvedValue(null);
+    (mockedPrisma.packagingMeanCategory.create as jest.Mock).mockResolvedValue({ id: "new" });
 
     const form = new FormData();
     form.append("name", "Crates");
     form.append("description", "Reinforced crates");
 
-    const res = await createPackagingCategoryAction({ status: "idle" }, form as FormData);
+    const res = await createPackagingMeanCategoryAction({ status: "idle" }, form as FormData);
     expect(res.status).toBe("success");
-    expect(mockedPrisma.packagingCategory.create).toHaveBeenCalledWith({
+    expect(mockedPrisma.packagingMeanCategory.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ slug: "crates" }),
     });
   });
 });
 
-describe("updatePackagingCategoryAction", () => {
+describe("updatePackagingMeanCategoryAction", () => {
   const categoryId = "11111111-1111-1111-8111-111111111111";
   const baseForm = () => {
     const form = new FormData();
@@ -78,22 +78,22 @@ describe("updatePackagingCategoryAction", () => {
     jest.clearAllMocks();
     persistUploadFileMock.mockReset();
     deleteUploadFileByUrlMock.mockReset();
-    (mockedPrisma.packagingCategory.findFirst as jest.Mock).mockResolvedValue(null);
-    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, image: { id: "img-1", imageUrl: "https://example.com/old.jpg" } });
-    (mockedPrisma.packagingCategory.update as jest.Mock).mockResolvedValue({ id: categoryId });
+    (mockedPrisma.packagingMeanCategory.findFirst as jest.Mock).mockResolvedValue(null);
+    (mockedPrisma.packagingMeanCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, image: { id: "img-1", imageUrl: "https://example.com/old.jpg" } });
+    (mockedPrisma.packagingMeanCategory.update as jest.Mock).mockResolvedValue({ id: categoryId });
   });
 
   it("removes the previous image when removeImage is true", async () => {
     const form = baseForm();
     form.append("removeImage", "true");
 
-    const res = await updatePackagingCategoryAction({ status: "idle" }, categoryId, form as FormData);
+    const res = await updatePackagingMeanCategoryAction({ status: "idle" }, categoryId, form as FormData);
 
     expect(deleteUploadFileByUrlMock).toHaveBeenCalledWith("https://example.com/old.jpg");
     expect(persistUploadFileMock).not.toHaveBeenCalled();
     expect(res.status).toBe("success");
-    expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledTimes(1);
-    const updateArgs = (mockedPrisma.packagingCategory.update as jest.Mock).mock.calls[0][0];
+    expect(mockedPrisma.packagingMeanCategory.update).toHaveBeenCalledTimes(1);
+    const updateArgs = (mockedPrisma.packagingMeanCategory.update as jest.Mock).mock.calls[0][0];
     expect(updateArgs.data.slug).toBe("returnables");
     expect(updateArgs.data.image).toEqual({ delete: true });
   });
@@ -105,69 +105,69 @@ describe("updatePackagingCategoryAction", () => {
     const file = new File([Buffer.from("data")], "updated.png", { type: "image/png" });
     form.append("imageFile", file);
 
-    const res = await updatePackagingCategoryAction({ status: "idle" }, categoryId, form as FormData);
+    const res = await updatePackagingMeanCategoryAction({ status: "idle" }, categoryId, form as FormData);
 
     expect(persistUploadFileMock).toHaveBeenCalledTimes(1);
     expect(deleteUploadFileByUrlMock).toHaveBeenCalledWith("https://example.com/old.jpg");
     expect(res.status).toBe("success");
-    expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledTimes(1);
-    const updateArgs = (mockedPrisma.packagingCategory.update as jest.Mock).mock.calls[0][0];
+    expect(mockedPrisma.packagingMeanCategory.update).toHaveBeenCalledTimes(1);
+    const updateArgs = (mockedPrisma.packagingMeanCategory.update as jest.Mock).mock.calls[0][0];
     expect(updateArgs.data.image).toEqual({ update: { imageUrl: "https://example.com/new.png" } });
     expect(updateArgs.data.slug).toBe("returnables");
   });
 });
 
-describe("deletePackagingCategoryAction", () => {
+describe("deletePackagingMeanCategoryAction", () => {
   const categoryId = "22222222-2222-4222-8222-222222222222";
 
   beforeEach(() => {
     jest.clearAllMocks();
     deleteUploadFileByUrlMock.mockReset();
-    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue({
+    (mockedPrisma.packagingMeanCategory.findUnique as jest.Mock).mockResolvedValue({
       id: categoryId,
       image: { id: "img", imageUrl: "https://example.com/image.png" },
     });
-    (mockedPrisma.packagingCategory.delete as jest.Mock).mockResolvedValue({ id: categoryId });
-    (mockedPrisma.packagingCategory.update as jest.Mock).mockResolvedValue({ id: categoryId });
+    (mockedPrisma.packagingMeanCategory.delete as jest.Mock).mockResolvedValue({ id: categoryId });
+    (mockedPrisma.packagingMeanCategory.update as jest.Mock).mockResolvedValue({ id: categoryId });
   });
 
   it("removes the stored image before deleting the category", async () => {
-    const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
+    const res = await deletePackagingMeanCategoryAction({ status: "idle" }, categoryId);
 
     expect(deleteUploadFileByUrlMock).toHaveBeenCalledWith("https://example.com/image.png");
-    expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledWith({ where: { id: categoryId }, data: { image: { delete: true } } });
-    expect(mockedPrisma.packagingCategory.delete).toHaveBeenCalledWith({ where: { id: categoryId } });
+    expect(mockedPrisma.packagingMeanCategory.update).toHaveBeenCalledWith({ where: { id: categoryId }, data: { image: { delete: true } } });
+    expect(mockedPrisma.packagingMeanCategory.delete).toHaveBeenCalledWith({ where: { id: categoryId } });
     expect(res.status).toBe("success");
   });
 
   it("skips image deletion when no imageUrl is present", async () => {
-    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, image: null });
+    (mockedPrisma.packagingMeanCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, image: null });
 
-    const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
+    const res = await deletePackagingMeanCategoryAction({ status: "idle" }, categoryId);
 
     expect(deleteUploadFileByUrlMock).not.toHaveBeenCalled();
-    expect(mockedPrisma.packagingCategory.update).toHaveBeenCalledWith({ where: { id: categoryId }, data: { image: undefined } });
-    expect(mockedPrisma.packagingCategory.delete).toHaveBeenCalledTimes(1);
+    expect(mockedPrisma.packagingMeanCategory.update).toHaveBeenCalledWith({ where: { id: categoryId }, data: { image: undefined } });
+    expect(mockedPrisma.packagingMeanCategory.delete).toHaveBeenCalledTimes(1);
     expect(res.status).toBe("success");
   });
 
   it("returns an error when the category does not exist", async () => {
-    (mockedPrisma.packagingCategory.findUnique as jest.Mock).mockResolvedValue(null);
+    (mockedPrisma.packagingMeanCategory.findUnique as jest.Mock).mockResolvedValue(null);
 
-    const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
+    const res = await deletePackagingMeanCategoryAction({ status: "idle" }, categoryId);
 
     expect(res.status).toBe("error");
     expect(res.message).toMatch(/not found/i);
-    expect(mockedPrisma.packagingCategory.delete).not.toHaveBeenCalled();
+    expect(mockedPrisma.packagingMeanCategory.delete).not.toHaveBeenCalled();
   });
 
   it("surfaces image deletion failures", async () => {
     deleteUploadFileByUrlMock.mockRejectedValue(new Error("fs error"));
 
-    const res = await deletePackagingCategoryAction({ status: "idle" }, categoryId);
+    const res = await deletePackagingMeanCategoryAction({ status: "idle" }, categoryId);
 
     expect(res.status).toBe("error");
     expect(res.message).toMatch(/delete category image/i);
-    expect(mockedPrisma.packagingCategory.delete).not.toHaveBeenCalled();
+    expect(mockedPrisma.packagingMeanCategory.delete).not.toHaveBeenCalled();
   });
 });

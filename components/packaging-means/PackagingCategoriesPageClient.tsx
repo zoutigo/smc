@@ -1,24 +1,24 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { Image, PackagingCategory } from "@prisma/client";
+import type { Image, PackagingMeanCategory } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Pagination from "@/components/pagination/Pagination";
 import PackagingCard from "@/components/packaging-means/PackagingCard";
 import PackagingForm from "@/components/packaging-means/PackagingForm";
-import { deletePackagingCategoryAction, updatePackagingCategoryAction } from "@/app/packaging-means/actions";
+import { deletePackagingMeanCategoryAction, updatePackagingMeanCategoryAction } from "@/app/packaging-means/actions";
 
 export const PACKAGING_CATEGORIES_PAGE_SIZE = 6;
 
 interface PackagingCategoriesPageClientProps {
-  categories: Array<PackagingCategory & { image: Image | null }>;
+  categories: Array<PackagingMeanCategory & { image: Image | null }>;
 }
 
 export default function PackagingCategoriesPageClient({ categories }: PackagingCategoriesPageClientProps) {
   const [showForm, setShowForm] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<(PackagingCategory & { image: Image | null }) | null>(null);
+  const [editingCategory, setEditingCategory] = useState<(PackagingMeanCategory & { image: Image | null }) | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [page, setPage] = useState(1);
   const router = useRouter();
@@ -54,11 +54,11 @@ export default function PackagingCategoriesPageClient({ categories }: PackagingC
   };
 
   const handleDelete = async (id: string) => {
-    await deletePackagingCategoryAction({ status: "idle" }, id);
+    await deletePackagingMeanCategoryAction({ status: "idle" }, id);
     router.refresh();
   };
 
-  const handleEdit = (category: PackagingCategory & { image: Image | null }) => {
+  const handleEdit = (category: PackagingMeanCategory & { image: Image | null }) => {
     setEditingCategory(category);
     setFormMode("edit");
     setShowForm(true);
@@ -149,7 +149,7 @@ export default function PackagingCategoriesPageClient({ categories }: PackagingC
                     description: editingCategory.description,
                     imageUrl: editingCategory.image?.imageUrl ?? undefined,
                   } : undefined}
-                  actionOverride={editingCategory ? ((formData) => updatePackagingCategoryAction({ status: "idle" }, editingCategory.id, formData)) : undefined}
+                  actionOverride={editingCategory ? ((formData) => updatePackagingMeanCategoryAction({ status: "idle" }, editingCategory.id, formData)) : undefined}
                 />
               </div>
             </aside>

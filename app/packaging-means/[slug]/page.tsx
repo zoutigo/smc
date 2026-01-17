@@ -5,21 +5,21 @@ import { notFound } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getPackagingCategories, getPackagingCategoryBySlug } from "../actions";
-import { findPackagingCategoryFallbackBySlug } from "../fallback-data";
+import { getPackagingMeanCategories, getPackagingMeanCategoryBySlug } from "../actions";
+import { findPackagingMeanCategoryFallbackBySlug } from "../fallback-data";
 
 export const revalidate = 60;
 
 type Params = { slug: string } | Promise<{ slug: string }>;
 
-type PackagingCategoryPageProps = {
+type PackagingMeanCategoryPageProps = {
   params: Params;
 };
 
 const resolveParams = async (params: Params) => (params instanceof Promise ? params : Promise.resolve(params));
 
 export async function generateStaticParams() {
-  const categories = await getPackagingCategories();
+  const categories = await getPackagingMeanCategories();
   const slugs = new Set<string>();
 
   categories
@@ -29,10 +29,10 @@ export async function generateStaticParams() {
   return Array.from(slugs).map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({ params }: PackagingCategoryPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PackagingMeanCategoryPageProps): Promise<Metadata> {
   const { slug } = await resolveParams(params);
-  const category = await getPackagingCategoryBySlug(slug);
-  const resolvedCategory = category ?? findPackagingCategoryFallbackBySlug(slug);
+  const category = await getPackagingMeanCategoryBySlug(slug);
+  const resolvedCategory = category ?? findPackagingMeanCategoryFallbackBySlug(slug);
   if (!resolvedCategory) {
     return { title: "Packaging category" };
   }
@@ -42,10 +42,10 @@ export async function generateMetadata({ params }: PackagingCategoryPageProps): 
   };
 }
 
-export default async function PackagingCategoryPage({ params }: PackagingCategoryPageProps) {
+export default async function PackagingMeanCategoryPage({ params }: PackagingMeanCategoryPageProps) {
   const { slug } = await resolveParams(params);
-  const category = await getPackagingCategoryBySlug(slug);
-  const resolvedCategory = category ?? findPackagingCategoryFallbackBySlug(slug);
+  const category = await getPackagingMeanCategoryBySlug(slug);
+  const resolvedCategory = category ?? findPackagingMeanCategoryFallbackBySlug(slug);
   if (!resolvedCategory) {
     notFound();
   }

@@ -1,6 +1,6 @@
 /** @jest-environment node */
 
-import { createPackagingCategoryAction } from "@/app/packaging-means/actions";
+import { createPackagingMeanCategoryAction } from "@/app/packaging-means/actions";
 
 const mockCreate = jest.fn();
 const mockFindFirst = jest.fn();
@@ -11,7 +11,7 @@ const mockPersistUploadFile = jest.fn().mockResolvedValue({
 
 jest.mock("@/lib/prisma", () => ({
   getPrisma: () => ({
-    packagingCategory: {
+    packagingMeanCategory: {
       findMany: jest.fn(),
       findFirst: mockFindFirst,
       create: mockCreate,
@@ -29,7 +29,7 @@ jest.mock("next/cache", () => ({
   revalidatePath: jest.fn(),
 }));
 
-describe("createPackagingCategoryAction", () => {
+describe("createPackagingMeanCategoryAction", () => {
   beforeEach(() => {
     mockCreate.mockReset();
     mockFindFirst.mockReset();
@@ -45,7 +45,7 @@ describe("createPackagingCategoryAction", () => {
     const file = new File([Buffer.from("image-data")], "insulated.png", { type: "image/png" });
     fd.append("imageFile", file);
 
-    const result = await createPackagingCategoryAction({ status: "idle" }, fd as unknown as FormData);
+    const result = await createPackagingMeanCategoryAction({ status: "idle" }, fd as unknown as FormData);
 
     expect(mockPersistUploadFile).toHaveBeenCalledTimes(1);
     expect(mockFindFirst).toHaveBeenCalledWith({ where: { slug: "insulated-boxes" } });
@@ -68,7 +68,7 @@ describe("createPackagingCategoryAction", () => {
     const file = new File([Buffer.from("image-data")], "thermal.png", { type: "image/png" });
     fd.append("imageFile", file);
 
-    const result = await createPackagingCategoryAction({ status: "idle" }, fd as unknown as FormData);
+    const result = await createPackagingMeanCategoryAction({ status: "idle" }, fd as unknown as FormData);
 
     expect(result.status).toBe("error");
     expect(mockPersistUploadFile).not.toHaveBeenCalled();

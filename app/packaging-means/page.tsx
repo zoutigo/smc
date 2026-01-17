@@ -1,11 +1,11 @@
 import React from "react";
-import type { Image, PackagingCategory } from "@prisma/client";
+import type { Image, PackagingMeanCategory } from "@prisma/client";
 import { ConfirmProvider } from "@/components/ui/confirm-message";
 import PackagingCategoriesPageClient from "@/components/packaging-means/PackagingCategoriesPageClient";
-import { getPackagingCategories } from "./actions";
+import { getPackagingMeanCategories } from "./actions";
 
 export default async function PackagingMeansPage() {
-  const categories = (await getPackagingCategories()) as Array<PackagingCategory & { image: Image | null }>;
+  const categories = (await getPackagingMeanCategories()) as Array<PackagingMeanCategory & { image: Image | null }>;
 
   return (
     <ConfirmProvider>

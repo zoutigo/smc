@@ -1,7 +1,7 @@
-import type { PackagingCategory, StorageMeanCategory } from "@prisma/client";
+import type { PackagingMeanCategory, StorageMeanCategory } from "@prisma/client";
 
 import { getStorageMeanCategories } from "@/app/storage-means/actions";
-import { getPackagingCategories } from "@/app/packaging-means/actions";
+import { getPackagingMeanCategories } from "@/app/packaging-means/actions";
 
 import SidebarClient, { type SidebarClientCategory } from "./SidebarClient";
 
@@ -17,7 +17,7 @@ const safeFetch = async <T,>(fetcher: () => Promise<T>): Promise<T> => {
 export default async function Sidebar() {
   const [storageCategories, packagingCategories] = await Promise.all([
     safeFetch(() => getStorageMeanCategories() as Promise<StorageMeanCategory[]>),
-    safeFetch(() => getPackagingCategories() as Promise<PackagingCategory[]>),
+    safeFetch(() => getPackagingMeanCategories() as Promise<PackagingMeanCategory[]>),
   ]);
 
   const sidebarStorageCategories: SidebarClientCategory[] = (storageCategories ?? [])

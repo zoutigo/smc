@@ -1,15 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Image, PackagingCategory } from "@prisma/client";
+import type { Image, PackagingMeanCategory } from "@prisma/client";
 import PackagingCategoriesPageClient, { PACKAGING_CATEGORIES_PAGE_SIZE } from "@/components/packaging-means/PackagingCategoriesPageClient";
 
 const packagingFormPropsMock = jest.fn();
-const deletePackagingCategoryActionMock = jest.fn().mockResolvedValue({ status: "success" });
-const updatePackagingCategoryActionMock = jest.fn().mockResolvedValue({ status: "success" });
+const deletePackagingMeanCategoryActionMock = jest.fn().mockResolvedValue({ status: "success" });
+const updatePackagingMeanCategoryActionMock = jest.fn().mockResolvedValue({ status: "success" });
 
 jest.mock("@/app/packaging-means/actions", () => ({
-  deletePackagingCategoryAction: (...args: unknown[]) => deletePackagingCategoryActionMock(...args),
-  updatePackagingCategoryAction: (...args: unknown[]) => updatePackagingCategoryActionMock(...args),
+  deletePackagingMeanCategoryAction: (...args: unknown[]) => deletePackagingMeanCategoryActionMock(...args),
+  updatePackagingMeanCategoryAction: (...args: unknown[]) => updatePackagingMeanCategoryActionMock(...args),
 }));
 
 jest.mock("next/navigation", () => {
@@ -52,7 +52,7 @@ jest.mock("@/components/packaging-means/PackagingForm", () => {
 });
 
 const timestamp = () => new Date("2024-01-01T00:00:00.000Z");
-type CategoryWithImage = PackagingCategory & { image: Image | null };
+type CategoryWithImage = PackagingMeanCategory & { image: Image | null };
 
 const createCategory = (index: number, overrides: Partial<CategoryWithImage> = {}): CategoryWithImage => ({
   id: overrides.id ?? `${index}`,
@@ -75,8 +75,8 @@ const buildCategories = (count: number): CategoryWithImage[] => Array.from({ len
 describe("PackagingCategoriesPageClient", () => {
   beforeEach(() => {
     packagingFormPropsMock.mockClear();
-    deletePackagingCategoryActionMock.mockClear();
-    updatePackagingCategoryActionMock.mockClear();
+    deletePackagingMeanCategoryActionMock.mockClear();
+    updatePackagingMeanCategoryActionMock.mockClear();
   });
 
   it("shows three columns when form hidden", () => {
@@ -136,6 +136,6 @@ describe("PackagingCategoriesPageClient", () => {
 
     await user.click(screen.getByLabelText("delete-Boxes"));
 
-    expect(deletePackagingCategoryActionMock).toHaveBeenCalledWith({ status: "idle" }, "1");
+    expect(deletePackagingMeanCategoryActionMock).toHaveBeenCalledWith({ status: "idle" }, "1");
   });
 });

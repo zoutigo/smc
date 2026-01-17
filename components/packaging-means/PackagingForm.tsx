@@ -6,8 +6,8 @@ import { useActionState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { createPackagingCategoryAction, type PackagingCategoryState } from "@/app/packaging-means/actions";
-import { createPackagingCategorySchema, type CreatePackagingCategoryInput } from "@/app/packaging-means/schema";
+import { createPackagingMeanCategoryAction, type PackagingMeanCategoryState } from "@/app/packaging-means/actions";
+import { createPackagingMeanCategorySchema, type CreatePackagingMeanCategoryInput } from "@/app/packaging-means/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useConfirmMessage } from "@/components/ui/confirm-message";
@@ -40,9 +40,9 @@ export default function PackagingForm({
   submitLabel,
   successMessage,
 }: PackagingFormProps) {
-  const initialState: PackagingCategoryState = { status: "idle" };
+  const initialState: PackagingMeanCategoryState = { status: "idle" };
   const [state, formAction, pending] = useActionState(
-    createPackagingCategoryAction as unknown as (s: PackagingCategoryState, fd: FormData) => Promise<PackagingCategoryState>,
+    createPackagingMeanCategoryAction as unknown as (s: PackagingMeanCategoryState, fd: FormData) => Promise<PackagingMeanCategoryState>,
     initialState,
   );
   const { show } = useConfirmMessage();
@@ -54,7 +54,7 @@ export default function PackagingForm({
   }), [initialValues?.name, initialValues?.description, initialValues?.imageUrl]);
 
   const { register, handleSubmit, formState: { errors, isDirty, isSubmitting }, setError, reset, resetField } = useForm<FormValues>({
-    resolver: zodResolver(createPackagingCategorySchema),
+    resolver: zodResolver(createPackagingMeanCategorySchema),
     mode: "onChange",
     defaultValues: normalizedDefaults,
   });
@@ -95,7 +95,7 @@ export default function PackagingForm({
 
   useEffect(() => () => clearObjectUrl(), [clearObjectUrl]);
 
-  const handleResult = useCallback((res?: PackagingCategoryState | null) => {
+  const handleResult = useCallback((res?: PackagingMeanCategoryState | null) => {
     if (!res) return;
     if (res.status === "success") {
       show(successCopy, "success");
@@ -108,7 +108,7 @@ export default function PackagingForm({
 
     if (res.fieldErrors) {
       Object.entries(res.fieldErrors).forEach(([key, value]) =>
-        setError(key as keyof CreatePackagingCategoryInput, { type: "server", message: String(value) }),
+        setError(key as keyof CreatePackagingMeanCategoryInput, { type: "server", message: String(value) }),
       );
     }
 
@@ -148,7 +148,7 @@ export default function PackagingForm({
 
     if (actionOverride) {
       const overrideResult = await actionOverride(formData);
-      handleResult(overrideResult as PackagingCategoryState | undefined);
+      handleResult(overrideResult as PackagingMeanCategoryState | undefined);
       return;
     }
 
