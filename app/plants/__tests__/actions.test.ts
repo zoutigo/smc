@@ -55,8 +55,15 @@ describe("createPlantAction server action", () => {
     expect((prisma.plant.create as jest.Mock).mock.calls[0][0].data).toMatchObject({
       name: "P",
       address: { connect: { id: "11111111-1111-4111-8111-111111111111" } },
+      images: {
+        create: [
+          {
+            sortOrder: 0,
+            image: { create: { imageUrl: "https://example.com/a.jpg" } },
+          },
+        ],
+      },
     });
-    expect(prisma.image.create).toHaveBeenCalledWith({ data: { imageUrl: "https://example.com/a.jpg", plant: { connect: { id: "new" } } } });
   });
 });
 
@@ -74,7 +81,7 @@ describe("updatePlantAction server action", () => {
     deleteUploadFileByUrlMock.mockReset();
     (mockedPrisma.plant.findUnique as jest.Mock).mockResolvedValue({
       id: plantId,
-      images: [{ id: "img-1", imageUrl: "https://example.com/old.jpg" }],
+      images: [{ plantId, imageId: "img-1", image: { imageUrl: "https://example.com/old.jpg" } }],
     });
     (mockedPrisma.plant.update as jest.Mock).mockResolvedValue({ id: "plant" });
   });
@@ -90,7 +97,7 @@ describe("updatePlantAction server action", () => {
     expect(res.status).toBe("success");
     expect(mockedPrisma.plant.update).toHaveBeenCalledTimes(1);
     const updateArgs = (mockedPrisma.plant.update as jest.Mock).mock.calls[0][0];
-    expect(updateArgs.data.images).toEqual({ delete: { id: "img-1" } });
+    expect(updateArgs.data.images).toEqual({ delete: { plantId_imageId: { plantId, imageId: "img-1" } } });
   });
 
   it("uploads a new file and deletes the old asset", async () => {
@@ -107,6 +114,6 @@ describe("updatePlantAction server action", () => {
     expect(res.status).toBe("success");
     expect(mockedPrisma.plant.update).toHaveBeenCalledTimes(1);
     const updateArgs = (mockedPrisma.plant.update as jest.Mock).mock.calls[0][0];
-    expect(updateArgs.data.images).toEqual({ update: { where: { id: "img-1" }, data: { imageUrl: "https://example.com/new.png" } } });
+    expect(updateArgs.data.images).toEqual({ update: { where: { plantId_imageId: { plantId, imageId: "img-1" } }, data: { image: { update: { imageUrl: "https://example.com/new.png" } } } } });
   });
 });

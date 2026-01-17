@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import Pagination from "@/components/pagination/Pagination";
 import StorageCard from "@/components/storage-means/StorageCard";
 import StorageForm from "@/components/storage-means/StorageForm";
+import { useConfirmMessage } from "@/components/ui/confirm-message";
 import { deleteStorageMeanCategoryAction, updateStorageMeanCategoryAction } from "@/app/storage-means/actions";
 
 export const STORAGE_MEAN_PAGE_SIZE = 6;
@@ -17,6 +18,7 @@ interface StorageMeanCategoriesPageClientProps {
 }
 
 export default function StorageMeanCategoriesPageClient({ categories }: StorageMeanCategoriesPageClientProps) {
+  const { show } = useConfirmMessage();
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<(StorageMeanCategory & { image: Image | null }) | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
@@ -54,8 +56,13 @@ export default function StorageMeanCategoriesPageClient({ categories }: StorageM
   };
 
   const handleDelete = async (id: string) => {
-    await deleteStorageMeanCategoryAction({ status: "idle" }, id);
-    router.refresh();
+    const res = await deleteStorageMeanCategoryAction({ status: "idle" }, id);
+    if (res?.status === "success") {
+      show("Storage category deleted", "success");
+      router.refresh();
+      return;
+    }
+    show(res?.message ?? "Unable to delete storage category", "error");
   };
 
   const handleEdit = (category: StorageMeanCategory & { image: Image | null }) => {

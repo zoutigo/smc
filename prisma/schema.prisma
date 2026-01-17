@@ -1,160 +1,299 @@
 generator client {
   provider   = "prisma-client-js"
-engineType = "binary"
+  engineType = "binary"
 }
 
 datasource db {
-  provider = "mysql"
-  url = env("DATABASE_URL")
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model User {
-  id        String         @id @default(uuid()) @db.Char(36)
-  email     String         @unique
+  id           String   @id @default(uuid()) @db.Char(36)
+  email        String   @unique
   passwordHash String
-  birthDate   DateTime
-  name      String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  birthDate    DateTime
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  storageMeans StorageMean[]
-  accounts     Account[]
-  sessions     Session[]
+  accounts Account[]
+  sessions Session[]
 }
 
 model StorageMean {
   id          String        @id @default(uuid()) @db.Char(36)
   name        String
+  price       Int           @default(0)
   description String?
   status      StorageStatus @default(ACTIVE)
-  ownerId     String?       @db.Char(36)
-  owner       User?         @relation(fields: [ownerId], references: [id])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  sop         DateTime      @default(now())
+  eop         DateTime      @default(dbgenerated("DATE_ADD(NOW(), INTERVAL 10 YEAR)"))
 
-  @@unique([name])
+  supplierId String?   @db.Char(36)
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  plantId String  @db.Char(36)
+  plant   Plant   @relation(fields: [plantId], references: [id])
+
+  flowId String? @db.Char(36)
+  flow   Flow?   @relation(fields: [flowId], references: [id])
+
+  storageMeanCategoryId String?            @db.Char(36)
+  storageMeanCategory   StorageMeanCategory? @relation(fields: [storageMeanCategoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  manualTranstocker StorageMeanManualTranstocker?
+  autoTranstocker   StorageMeanAutoTranstocker?
+
+  // images via pivot
+  images StorageMeanImage[]
+
+  @@unique([plantId, name, storageMeanCategoryId])
+  @@index([plantId])
+  @@index([storageMeanCategoryId])
 }
 
 model Plant {
-  id         String   @id @default(uuid()) @db.Char(36)
-  name       String
-  addressId  String?  @db.Char(36)
-  address    Address? @relation(fields: [addressId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String
+  addressId String?  @db.Char(36)
+  address   Address? @relation(fields: [addressId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  images     Image[]
+  // images via pivot
+  images PlantImage[]
+
+  storageMeans StorageMean[]
 }
 
 model Supplier {
-  id         String   @id @default(uuid()) @db.Char(36)
-  name       String
-  addressId  String?  @db.Char(36)
-  address    Address? @relation(fields: [addressId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String
+  addressId String?  @db.Char(36)
+  address   Address? @relation(fields: [addressId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  storageMeans StorageMean[]
 }
 
 model Address {
-  id         String   @id @default(uuid()) @db.Char(36)
+  id        String   @id @default(uuid()) @db.Char(36)
   street    String?
-  city       String
-  zipcode    String?
-  countryId  String   @db.Char(36)
-  country    Country  @relation(fields: [countryId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  city      String
+  zipcode   String?
+  countryId String   @db.Char(36)
+  country   Country  @relation(fields: [countryId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  plants     Plant[]
-  suppliers  Supplier[]
+  plants    Plant[]
+  suppliers Supplier[]
 }
 
 model Country {
-  id         String   @id @default(uuid()) @db.Char(36)
-  name       String
-  code       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  addresses  Address[]
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String
+  code      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addresses Address[]
 }
 
-
 model Project {
-  id         String   @id @default(uuid()) @db.Char(36)
-  name       String @default("Description of packaging category")
-  code       String   @db.Char(5)
-  slug       String @unique
-  sop        DateTime @default(now())
-  eop        DateTime @default(now())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  parts      Part[]
- 
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String
+  code      String?  @db.Char(5)
+  slug      String   @unique
+  sop       DateTime @default(now())
+  eop       DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parts Part[]
 }
 
 model PartFamily {
-  id         String   @id @default(uuid()) @db.Char(36)
-  name       String @default("Bumper")
-  slug       String @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  parts      Part[]
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String   @default("Bumper")
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parts Part[]
 }
 
 model Part {
-  id         String   @id @default(uuid()) @db.Char(36)
-  name       String @default("Front Bumper Upper")
-  slug       String @unique
-  partFamilyId String  @db.Char(36)
+  id           String     @id @default(uuid()) @db.Char(36)
+  name         String     @default("Front Bumper Upper")
+  slug         String     @unique
+  partFamilyId String     @db.Char(36)
   partFamily   PartFamily @relation(fields: [partFamilyId], references: [id])
-  projectId   String? @db.Char(36)
-  project     Project? @relation(fields: [projectId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  projectId    String?    @db.Char(36)
+  project      Project?   @relation(fields: [projectId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Image {
-  id                   String                @id @default(uuid()) @db.Char(36)
-  imageUrl             String
-  plantId              String?               @db.Char(36)
-  plant                Plant?                @relation(fields: [plantId], references: [id])
-  packagingMeanCategoryId String?            @unique @db.Char(36)
-  packagingMeanCategory   PackagingMeanCategory? @relation("PackagingMeanCategoryImage", fields: [packagingMeanCategoryId], references: [id])
-  storageMeanCategoryId   String?            @unique @db.Char(36)
-  storageMeanCategory     StorageMeanCategory? @relation("StorageMeanCategoryImage", fields: [storageMeanCategoryId], references: [id])
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  id        String   @id @default(uuid()) @db.Char(36)
+  imageUrl  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relations via pivots
+  storageMeanLinks StorageMeanImage[]
+  plantLinks       PlantImage[]
+
+  storageMeanCategoryLink   StorageMeanCategoryImage?
+  packagingMeanCategoryLink PackagingMeanCategoryImage?
+}
+
+model StorageMeanImage {
+  storageMeanId String @db.Char(36)
+  imageId       String @db.Char(36)
+  sortOrder     Int    @default(0)
+
+  storageMean StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
+  image       Image       @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@id([storageMeanId, imageId])
+  @@index([imageId])
+  @@index([storageMeanId, sortOrder])
+}
+
+model PlantImage {
+  plantId   String @db.Char(36)
+  imageId   String @db.Char(36)
+  sortOrder Int    @default(0)
+
+  plant Plant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@id([plantId, imageId])
+  @@index([imageId])
+  @@index([plantId, sortOrder])
+}
+
+model StorageMeanCategoryImage {
+  storageMeanCategoryId String @unique @db.Char(36)
+  imageId               String @unique @db.Char(36)
+
+  storageMeanCategory StorageMeanCategory @relation(fields: [storageMeanCategoryId], references: [id], onDelete: Cascade)
+  image             Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+}
+
+model PackagingMeanCategoryImage {
+  packagingMeanCategoryId String @unique @db.Char(36)
+  imageId                 String @unique @db.Char(36)
+
+  packagingMeanCategory PackagingMeanCategory @relation(fields: [packagingMeanCategoryId], references: [id], onDelete: Cascade)
+  image               Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
 }
 
 model Flow {
-  id         String   @id @default(uuid()) @db.Char(36)
-  from       FlowStation @default(INJECTION)
-  to         FlowStation @default(PAINT)
-  slug       String @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
+  id        String      @id @default(uuid()) @db.Char(36)
+  from      FlowStation @default(INJECTION)
+  to        FlowStation @default(PAINT)
+  slug      String      @unique
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
+  storageMeans StorageMean[]
+
+  @@unique([from, to])
+}
 
 model StorageMeanCategory {
-  id         String   @id @default(uuid()) @db.Char(36)
-  name       String @default("Description of storage mean category")
-  slug       String @unique
+  id          String   @id @default(uuid()) @db.Char(36)
+  name        String   @default("Description of storage mean category")
+  slug        String   @unique
   description String
-  image      Image? @relation("StorageMeanCategoryImage")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
- 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 1 image via pivot
+  image StorageMeanCategoryImage?
+
+  storageMeans StorageMean[]
 }
+
 model PackagingMeanCategory {
   id          String   @id @default(uuid()) @db.Char(36)
   name        String   @default("Description of packaging category")
   slug        String   @unique
   description String
-  image       Image?   @relation("PackagingMeanCategoryImage")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // 1 image via pivot
+  image PackagingMeanCategoryImage?
+}
+
+model Lane {
+  id        String   @id @default(uuid()) @db.Char(36)
+  length    Int      @default(0)
+  width     Int      @default(0)
+  height    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  manualLinks StorageMeanManualTranstockerLane[]
+  autoLinks   StorageMeanAutoTranstockerLane[]
+
+  @@unique([length, width, height])
+}
+
+model StorageMeanManualTranstocker {
+  storageMeanId String @id @db.Char(36)
+  storageMean   StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
+
+  emptyReturnLanes Int @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  lanes StorageMeanManualTranstockerLane[]
+}
+
+model StorageMeanAutoTranstocker {
+  storageMeanId String @id @db.Char(36)
+  storageMean   StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
+
+  emptyReturnLanes Int @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  lanes StorageMeanAutoTranstockerLane[]
+}
+
+model StorageMeanManualTranstockerLane {
+  transtockerId String @db.Char(36)
+  laneId        String @db.Char(36)
+  quantity      Int    @default(0)
+
+  transtocker StorageMeanManualTranstocker @relation(fields: [transtockerId], references: [storageMeanId], onDelete: Cascade)
+  lane        Lane @relation(fields: [laneId], references: [id])
+
+  @@id([transtockerId, laneId])
+  @@index([laneId])
+}
+
+model StorageMeanAutoTranstockerLane {
+  transtockerId String @db.Char(36)
+  laneId        String @db.Char(36)
+  quantity      Int    @default(0)
+
+  transtocker StorageMeanAutoTranstocker @relation(fields: [transtockerId], references: [storageMeanId], onDelete: Cascade)
+  lane        Lane @relation(fields: [laneId], references: [id])
+
+  @@id([transtockerId, laneId])
+  @@index([laneId])
 }
 
 enum StorageStatus {
@@ -171,21 +310,21 @@ enum FlowStation {
   INSPECTION
   SILS
   CUSTOMER
-  WHAREHOUSE
+  WAREHOUSE
 }
 
 model Account {
-  id                       String   @id @default(uuid()) @db.Char(36)
-  userId                   String   @db.Char(36)
+  id                       String  @id @default(uuid()) @db.Char(36)
+  userId                   String  @db.Char(36)
   type                     String
   provider                 String
   providerAccountId        String
-  refresh_token            String?  @db.Text
-  access_token             String?  @db.Text
+  refresh_token            String? @db.Text
+  access_token             String? @db.Text
   expires_at               Int?
   token_type               String?
   scope                    String?
-  id_token                 String?  @db.Text
+  id_token                 String? @db.Text
   session_state            String?
   refresh_token_expires_in Int?
 

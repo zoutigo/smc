@@ -12,13 +12,15 @@ import Pagination from "@/components/pagination/Pagination";
 
 export const PLANTS_PAGE_SIZE = 6;
 
+type PlantWithRelations = Plant & { address?: (Address & { country: Country }) | null; images: Array<{ image: Image }> };
+
 interface PlantsPageClientProps {
-  plants: Array<Plant & { address?: (Address & { country: Country }) | null; images: Image[] }>;
+  plants: PlantWithRelations[];
 }
 
 export default function PlantsPageClient({ plants }: PlantsPageClientProps) {
   const [showForm, setShowForm] = useState(false);
-  const [editingPlant, setEditingPlant] = useState<(Plant & { address?: (Address & { country: Country }) | null; images: Image[] }) | null>(null);
+  const [editingPlant, setEditingPlant] = useState<PlantWithRelations | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [page, setPage] = useState(1);
   const router = useRouter();
@@ -57,7 +59,7 @@ export default function PlantsPageClient({ plants }: PlantsPageClientProps) {
     router.refresh();
   };
 
-  const handleEdit = (plant: Plant & { address?: (Address & { country: Country }) | null; images: Image[] }) => {
+  const handleEdit = (plant: PlantWithRelations) => {
     setEditingPlant(plant);
     setFormMode("edit");
     setShowForm(true);
@@ -103,7 +105,7 @@ export default function PlantsPageClient({ plants }: PlantsPageClientProps) {
                 id={p.id}
                 name={p.name}
                 address={p.address}
-                imageUrl={p.images?.[0]?.imageUrl}
+                imageUrl={p.images?.[0]?.image?.imageUrl}
                 onEdit={() => handleEdit(p)}
                 onDelete={() => handleDelete(p.id)}
               />
@@ -131,7 +133,7 @@ export default function PlantsPageClient({ plants }: PlantsPageClientProps) {
                   id: editingPlant.id,
                   name: editingPlant.name,
                   addressId: editingPlant.address?.id,
-                  imageUrl: editingPlant.images?.[0]?.imageUrl,
+                  imageUrl: editingPlant.images?.[0]?.image?.imageUrl,
                 } : undefined}
                 submitLabel={editingPlant ? "Update plant" : undefined}
                 successMessage={editingPlant ? "Plant updated" : undefined}

@@ -48,7 +48,10 @@ jest.mock("@/components/plants/PlantForm", () => {
 
 const timestamp = () => new Date("2024-01-01T00:00:00.000Z");
 const country: Country = { id: "country-1", name: "France", code: "FR", createdAt: timestamp(), updatedAt: timestamp() };
-const createPlant = (index: number, overrides: Partial<Plant & { address?: (Address & { country: Country }) | null; images?: Image[] }> = {}): Plant & { address?: (Address & { country: Country }) | null; images: Image[] } => ({
+const createPlant = (
+  index: number,
+  overrides: Partial<Plant & { address?: (Address & { country: Country }) | null; images?: Array<{ image: Image }> }> = {},
+): Plant & { address?: (Address & { country: Country }) | null; images: Array<{ image: Image }> } => ({
   id: overrides.id ?? `${index}`,
   name: overrides.name ?? `Plant ${index}`,
   addressId: overrides.addressId ?? null,
@@ -58,13 +61,18 @@ const createPlant = (index: number, overrides: Partial<Plant & { address?: (Addr
   updatedAt: overrides.updatedAt ?? timestamp(),
 });
 
-const plants: Array<Plant & { address?: (Address & { country: Country }) | null; images: Image[] }> = [
-  createPlant(1, { id: "1", name: "Paris", address: { id: "addr-1", street: "1 street", city: "Paris", zipcode: "75000", countryId: country.id, country, createdAt: timestamp(), updatedAt: timestamp() } as Address & { country: Country } }),
+const plants: Array<Plant & { address?: (Address & { country: Country }) | null; images: Array<{ image: Image }> }> = [
+  createPlant(1, {
+    id: "1",
+    name: "Paris",
+    address: { id: "addr-1", street: "1 street", city: "Paris", zipcode: "75000", countryId: country.id, country, createdAt: timestamp(), updatedAt: timestamp() } as Address & { country: Country },
+    images: [{ image: { id: "img-1", imageUrl: "https://example.com/paris.png", createdAt: timestamp(), updatedAt: timestamp() } }],
+  }),
   createPlant(2, { id: "2", name: "Berlin" }),
   createPlant(3, { id: "3", name: "Madrid" }),
 ];
 
-const buildPlants = (count: number): Array<Plant & { address?: (Address & { country: Country }) | null; images: Image[] }> =>
+const buildPlants = (count: number): Array<Plant & { address?: (Address & { country: Country }) | null; images: Array<{ image: Image }> }> =>
   Array.from({ length: count }, (_, idx) => createPlant(idx + 1));
 
 describe("PlantsPageClient layout", () => {

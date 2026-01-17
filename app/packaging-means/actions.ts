@@ -26,14 +26,8 @@ const extractString = (value: FormDataEntryValue | null) => {
 
 type PackagingMeanCategoryDelegate = PrismaClient["packagingMeanCategory"];
 const MODEL_MISSING_WARNING = "Prisma client missing PackagingMeanCategory delegate. Run `npx prisma generate` after updating prisma/schema.prisma.";
-let packagingMeanCategoryDelegateHealthy = true;
-
-const markPackagingMeanCategoryDelegateUnhealthy = () => {
-  packagingMeanCategoryDelegateHealthy = false;
-};
 
 const getPackagingMeanCategoryDelegate = () => {
-  if (!packagingMeanCategoryDelegateHealthy) return null;
   const prisma = getPrisma() as PrismaClient & { packagingMeanCategory?: PackagingMeanCategoryDelegate };
   return prisma.packagingMeanCategory ?? null;
 };
@@ -59,13 +53,19 @@ export async function getPackagingMeanCategories() {
     return listPackagingMeanCategoryFallbacks();
   }
   try {
-    return await categoryDelegate.findMany({ orderBy: { createdAt: "desc" }, include: { image: true } });
+    const categories = await categoryDelegate.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { image: { include: { image: true } } },
+    });
+    return categories.map((category) => ({
+      ...category,
+      image: category.image?.image ?? null,
+    }));
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `PackagingMeanCategory` does not exist. Return empty list until migration is applied.");
       return listPackagingMeanCategoryFallbacks();
     }
-    markPackagingMeanCategoryDelegateUnhealthy();
     console.warn("Unable to fetch packaging categories. Returning fallback data instead.", error);
     return listPackagingMeanCategoryFallbacks();
   }
@@ -78,14 +78,17 @@ export async function getPackagingMeanCategoryById(id: string) {
     return findPackagingMeanCategoryFallbackById(id);
   }
   try {
-    const category = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
-    return category ?? findPackagingMeanCategoryFallbackById(id);
+    const category = await categoryDelegate.findUnique({
+      where: { id },
+      include: { image: { include: { image: true } } },
+    });
+    const flattened = category ? { ...category, image: category.image?.image ?? null } : null;
+    return flattened ?? findPackagingMeanCategoryFallbackById(id);
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `PackagingMeanCategory` does not exist. getPackagingMeanCategoryById returning null.");
       return findPackagingMeanCategoryFallbackById(id);
     }
-    markPackagingMeanCategoryDelegateUnhealthy();
     console.warn("Unable to fetch packaging category by id. Returning fallback data instead.", error);
     return findPackagingMeanCategoryFallbackById(id);
   }
@@ -101,14 +104,16 @@ export async function getPackagingMeanCategoryBySlug(slug: string) {
     return null;
   }
   try {
-    const category = await categoryDelegate.findUnique({ where: { slug }, include: { image: true } });
-    return category ?? null;
+    const category = await categoryDelegate.findUnique({
+      where: { slug },
+      include: { image: { include: { image: true } } },
+    });
+    return category ? { ...category, image: category.image?.image ?? null } : null;
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `PackagingMeanCategory` does not exist. getPackagingMeanCategoryBySlug returning null.");
       return null;
     }
-    markPackagingMeanCategoryDelegateUnhealthy();
     console.warn("Unable to fetch packaging category by slug. Returning fallback data instead.", error);
     return fallbackCategory;
   }
@@ -159,7 +164,17 @@ export async function createPackagingMeanCategoryAction(_: PackagingMeanCategory
       name,
       slug,
       description,
-      ...(imageUrl ? { image: { create: { imageUrl } } } : {}),
+      ...(imageUrl
+        ? {
+            image: {
+              create: {
+                image: {
+                  create: { imageUrl },
+                },
+              },
+            },
+          }
+        : {}),
     };
 
     await categoryDelegate.create({ data: createData });
@@ -221,12 +236,15 @@ export async function updatePackagingMeanCategoryAction(_: PackagingMeanCategory
       }
     }
 
-    const existing = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
+    const existing = await categoryDelegate.findUnique({
+      where: { id },
+      include: { image: { include: { image: true } } },
+    });
     if (!existing) {
       return { status: "error", message: "Packaging category not found" };
     }
 
-    const currentImage = existing.image;
+    const currentImage = existing.image?.image;
     let nextImageUrl: string | null | undefined = imageUrl ?? parsedData.imageUrl;
 
     if (uploadCandidate instanceof File && uploadCandidate.size > 0 && currentImage?.imageUrl && currentImage.imageUrl !== nextImageUrl) {
@@ -251,12 +269,12 @@ export async function updatePackagingMeanCategoryAction(_: PackagingMeanCategory
     if (slug) updatePayload.slug = slug;
     delete updatePayload.imageUrl;
 
-    if (removeImage && currentImage) {
+    if (removeImage && existing.image) {
       updatePayload.image = { delete: true };
     } else if (typeof nextImageUrl === "string" && nextImageUrl.length > 0) {
-      updatePayload.image = currentImage
-        ? { update: { imageUrl: nextImageUrl } }
-        : { create: { imageUrl: nextImageUrl } };
+      updatePayload.image = existing.image
+        ? { update: { image: { update: { imageUrl: nextImageUrl } } } }
+        : { create: { image: { create: { imageUrl: nextImageUrl } } } };
     }
 
     await categoryDelegate.update({ where: { id }, data: updatePayload });
@@ -276,14 +294,14 @@ export async function deletePackagingMeanCategoryAction(_: PackagingMeanCategory
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
   try {
-    const existing = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
+    const existing = await categoryDelegate.findUnique({ where: { id }, include: { image: { include: { image: true } } } });
     if (!existing) {
       return { status: "error", message: "Packaging category not found" };
     }
 
-    if (existing.image?.imageUrl) {
+    if (existing.image?.image?.imageUrl) {
       try {
-        await deleteUploadFileByUrl(existing.image.imageUrl);
+        await deleteUploadFileByUrl(existing.image.image.imageUrl);
       } catch {
         return { status: "error", message: "Unable to delete category image" };
       }

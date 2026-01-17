@@ -16,7 +16,7 @@ export async function getPlants() {
   try {
     return await prisma.plant.findMany({
       orderBy: { createdAt: "desc" },
-      include: { address: { include: { country: true } }, images: true },
+      include: { address: { include: { country: true } }, images: { include: { image: true } } },
     });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
@@ -32,7 +32,7 @@ export async function getPlantById(id: string) {
   try {
     return await prisma.plant.findUnique({
       where: { id },
-      include: { address: { include: { country: true } }, images: true },
+      include: { address: { include: { country: true } }, images: { include: { image: true } } },
     });
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
@@ -77,16 +77,24 @@ export async function createPlantAction(_: PlantState, formData: FormData): Prom
   const { name, addressId } = parsed.data;
 
   try {
-    const created = await prisma.plant.create({
+    await prisma.plant.create({
       data: {
         name,
         ...(addressId ? { address: { connect: { id: addressId } } } : {}),
+        ...(imageUrl
+          ? {
+              images: {
+                create: [
+                  {
+                    sortOrder: 0,
+                    image: { create: { imageUrl } },
+                  },
+                ],
+              },
+            }
+          : {}),
       },
     });
-
-    if (imageUrl) {
-      await prisma.image.create({ data: { imageUrl, plant: { connect: { id: created.id } } } });
-    }
 
     try {
       revalidatePath("/plants");
@@ -134,16 +142,16 @@ export async function updatePlantAction(_s: PlantState, id: string, formData: Fo
   const { addressId } = parsed.data as UpdatePlantInput;
 
   try {
-    const existing = await prisma.plant.findUnique({ where: { id }, include: { images: true } });
+    const existing = await prisma.plant.findUnique({ where: { id }, include: { images: { include: { image: true } } } });
     if (!existing) {
       return { status: "error", message: "Plant not found" };
     }
 
     const primaryImage = existing.images[0];
 
-    if (hasNewUpload && primaryImage && primaryImage.imageUrl !== imageUrl) {
+    if (hasNewUpload && primaryImage && primaryImage.image?.imageUrl !== imageUrl) {
       try {
-        await deleteUploadFileByUrl(primaryImage.imageUrl);
+        await deleteUploadFileByUrl(primaryImage.image.imageUrl);
       } catch {
         return { status: "error", message: "Unable to delete previous image" };
       }
@@ -151,13 +159,13 @@ export async function updatePlantAction(_s: PlantState, id: string, formData: Fo
 
     if (removeImage && primaryImage) {
       try {
-        await deleteUploadFileByUrl(primaryImage.imageUrl);
+        await deleteUploadFileByUrl(primaryImage.image.imageUrl);
       } catch {
         return { status: "error", message: "Unable to delete image" };
       }
       imageUrl = undefined;
     } else if (primaryImage && !imageUrl) {
-      imageUrl = primaryImage.imageUrl;
+      imageUrl = primaryImage.image.imageUrl;
     }
 
     const updatePayload: Prisma.PlantUpdateInput = {
@@ -170,12 +178,17 @@ export async function updatePlantAction(_s: PlantState, id: string, formData: Fo
     }
 
     if (removeImage && primaryImage) {
-      updatePayload.images = { delete: { id: primaryImage.id } };
+      updatePayload.images = { delete: { plantId_imageId: { plantId: id, imageId: primaryImage.imageId } } };
     } else if (imageUrl) {
       if (primaryImage) {
-        updatePayload.images = { update: { where: { id: primaryImage.id }, data: { imageUrl } } };
+        updatePayload.images = {
+          update: {
+            where: { plantId_imageId: { plantId: id, imageId: primaryImage.imageId } },
+            data: { image: { update: { imageUrl } } },
+          },
+        };
       } else {
-        updatePayload.images = { create: [{ imageUrl }] };
+        updatePayload.images = { create: [{ sortOrder: 0, image: { create: { imageUrl } } }] };
       }
     }
 

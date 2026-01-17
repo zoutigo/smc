@@ -112,20 +112,44 @@ const storageMeansSeedData = [
     name: "Cold room A1",
     description: "Primary refrigerated storage zone",
     status: "ACTIVE",
-    ownerEmail: "valery@example.com",
+    price: 12000,
+    plantName: "Detroit Assembly",
+    supplierName: "North Steel",
+    flowSlug: "injection-to-paint",
+    sop: new Date("2026-01-01"),
+    eop: new Date("2036-01-01"),
+    storageMeanCategoryName: "High Bay Rack",
   },
   {
     name: "Dry warehouse B4",
     description: "Ambient storage for packaging",
     status: "ACTIVE",
-    ownerEmail: "ops@example.com",
+    price: 8000,
+    plantName: "Montreal Plastics",
+    supplierName: "Maple Resin",
+    flowSlug: "paint-to-assembly",
+    sop: new Date("2026-06-01"),
+    eop: new Date("2036-06-01"),
+    storageMeanCategoryName: "Manual Transtocker",
   },
   {
     name: "Overflow zone C2",
     description: "Temporary holding area",
     status: "DRAFT",
-    ownerEmail: "ops@example.com",
+    price: 4000,
+    plantName: "Barcelona Assembly",
+    supplierName: "Catalunya Metals",
+    flowSlug: "assembly-to-warehouse",
+    sop: new Date("2026-09-01"),
+    eop: new Date("2036-09-01"),
+    storageMeanCategoryName: "Automated Transtocker",
   },
+] as const;
+
+const flowSeedData = [
+  { slug: "injection-to-paint", from: "INJECTION", to: "PAINT" },
+  { slug: "paint-to-assembly", from: "PAINT", to: "ASSEMBLY" },
+  { slug: "assembly-to-warehouse", from: "ASSEMBLY", to: "WAREHOUSE" },
 ] as const;
 
 const plantSeedData = [
@@ -470,52 +494,109 @@ async function seedPackagingMeanCategories() {
   }
 
   for (const category of packagingMeanCategoriesSeedData) {
-    await prisma.packagingMeanCategory.create({
+    const created = await prisma.packagingMeanCategory.create({
       data: {
         name: category.name,
         description: category.description,
         slug: buildSlug(category.name, "packaging"),
-        image: {
-          create: {
-            imageUrl: category.imageUrl,
-          },
-        },
       },
     });
+
+    if (category.imageUrl) {
+      const image = await prisma.image.create({
+        data: {
+          imageUrl: category.imageUrl,
+        },
+      });
+      await prisma.packagingMeanCategoryImage.create({
+        data: {
+          packagingMeanCategoryId: created.id,
+          imageId: image.id,
+        },
+      });
+    }
   }
   console.info(`Seeded ${packagingMeanCategoriesSeedData.length} packaging mean categories.`);
 }
 
 async function seedStorageMeanCategories() {
-  const existingCount = await prisma.storageMeanCategory.count();
-  if (existingCount > 0) {
-    console.info(`Skipping storage mean category seed: ${existingCount} record(s) already present.`);
-    return;
-  }
-
   for (const category of storageMeanCategoriesSeedData) {
-    await prisma.storageMeanCategory.create({
+    const slug = buildSlug(category.name, "storage");
+    const existing = await prisma.storageMeanCategory.findUnique({
+      where: { slug },
+      include: { image: { include: { image: true } } },
+    });
+
+    if (existing) {
+      await prisma.storageMeanCategory.update({
+        where: { id: existing.id },
+        data: {
+          description: category.description,
+        },
+      });
+      if (!existing.image && category.imageUrl) {
+        const image = await prisma.image.create({
+          data: {
+            imageUrl: category.imageUrl,
+          },
+        });
+        await prisma.storageMeanCategoryImage.create({
+          data: {
+            storageMeanCategoryId: existing.id,
+            imageId: image.id,
+          },
+        });
+      }
+      continue;
+    }
+
+    const created = await prisma.storageMeanCategory.create({
       data: {
         name: category.name,
         description: category.description,
-        slug: buildSlug(category.name, "storage"),
-        image: {
-          create: {
-            imageUrl: category.imageUrl,
-          },
-        },
+        slug,
       },
     });
+
+    if (category.imageUrl) {
+      const image = await prisma.image.create({
+        data: {
+          imageUrl: category.imageUrl,
+        },
+      });
+      await prisma.storageMeanCategoryImage.create({
+        data: {
+          storageMeanCategoryId: created.id,
+          imageId: image.id,
+        },
+      });
+    }
   }
-  console.info(`Seeded ${storageMeanCategoriesSeedData.length} storage mean categories.`);
+  console.info(`Seeded/updated ${storageMeanCategoriesSeedData.length} storage mean categories.`);
 }
 
-async function seedUsersAndStorage() {
-  const userMap = new Map<string, string>();
+async function seedFlows() {
+  const existingCount = await prisma.flow.count();
+  if (existingCount > 0) {
+    console.info(`Skipping flow seed: ${existingCount} record(s) already present.`);
+    return;
+  }
 
+  await prisma.flow.createMany({
+    data: flowSeedData.map((flow) => ({
+      slug: flow.slug,
+      from: flow.from as $Enums.FlowStation,
+      to: flow.to as $Enums.FlowStation,
+    })),
+  });
+
+  console.info(`Seeded ${flowSeedData.length} flows.`);
+}
+
+async function seedUsers() {
   for (const user of usersSeedData) {
     const passwordHash = await bcrypt.hash(user.password, 10);
-    const created = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { email: user.email },
       update: { name: user.name, passwordHash, birthDate: user.birthDate },
       create: {
@@ -523,26 +604,6 @@ async function seedUsersAndStorage() {
         name: user.name,
         passwordHash,
         birthDate: user.birthDate,
-      },
-    });
-    userMap.set(user.email, created.id);
-  }
-
-  for (const storage of storageMeansSeedData) {
-    const ownerId = storage.ownerEmail ? userMap.get(storage.ownerEmail) ?? null : null;
-    const status = storage.status as $Enums.StorageStatus;
-    await prisma.storageMean.upsert({
-      where: { name: storage.name },
-      update: {
-        description: storage.description,
-        status,
-        ownerId,
-      },
-      create: {
-        name: storage.name,
-        description: storage.description,
-        status,
-        ownerId,
       },
     });
   }
@@ -615,6 +676,71 @@ async function seedSuppliers() {
   console.info(`Seeded ${supplierSeedData.length} suppliers with addresses.`);
 }
 
+async function seedStorageMeans() {
+  const plantMap = new Map<string, string>();
+  const plants = await prisma.plant.findMany({ select: { id: true, name: true } });
+  plants.forEach((plant) => plantMap.set(plant.name, plant.id));
+
+  const supplierMap = new Map<string, string>();
+  const suppliers = await prisma.supplier.findMany({ select: { id: true, name: true } });
+  suppliers.forEach((supplier) => supplierMap.set(supplier.name, supplier.id));
+
+  const flowMap = new Map<string, string>();
+  const flows = await prisma.flow.findMany({ select: { id: true, slug: true } });
+  flows.forEach((flow) => flowMap.set(flow.slug, flow.id));
+
+  const storageMeanCategoryMap = new Map<string, string>();
+  const storageMeanCategories = await prisma.storageMeanCategory.findMany({ select: { id: true, name: true } });
+  storageMeanCategories.forEach((category) => storageMeanCategoryMap.set(category.name, category.id));
+
+  for (const storage of storageMeansSeedData) {
+    const status = storage.status as $Enums.StorageStatus;
+    const plantId = plantMap.get(storage.plantName);
+    const flowId = flowMap.get(storage.flowSlug);
+    const supplierId = storage.supplierName ? supplierMap.get(storage.supplierName) ?? null : null;
+    const storageMeanCategoryId = storageMeanCategoryMap.get(storage.storageMeanCategoryName);
+
+    if (!plantId) throw new Error(`Missing plant for storage mean seed: ${storage.plantName}`);
+    if (!flowId) throw new Error(`Missing flow for storage mean seed: ${storage.flowSlug}`);
+    if (!storageMeanCategoryId) throw new Error(`Missing storage mean category for storage mean seed: ${storage.storageMeanCategoryName}`);
+
+    await prisma.storageMean.upsert({
+      where: {
+        plantId_name_storageMeanCategoryId: {
+          plantId,
+          name: storage.name,
+          storageMeanCategoryId,
+        },
+      },
+      update: {
+        description: storage.description,
+        status,
+        price: storage.price,
+        plantId,
+        flowId,
+        supplierId,
+        sop: storage.sop,
+        eop: storage.eop,
+        storageMeanCategoryId,
+      },
+      create: {
+        name: storage.name,
+        description: storage.description,
+        status,
+        price: storage.price,
+        plantId,
+        flowId,
+        supplierId,
+        sop: storage.sop,
+        eop: storage.eop,
+        storageMeanCategoryId,
+      },
+    });
+  }
+
+  console.info(`Upserted ${storageMeansSeedData.length} storage means.`);
+}
+
 async function seedProjects() {
   const projectCount = await prisma.project.count();
   if (projectCount > 0) {
@@ -645,12 +771,14 @@ async function seedCountries() {
 
 async function main() {
   await seedCountries();
-  await seedUsersAndStorage();
   await seedPlants();
   await seedSuppliers();
+  await seedFlows();
+  await seedUsers();
+  await seedStorageMeanCategories();
+  await seedStorageMeans();
   await seedProjects();
   await seedPackagingMeanCategories();
-  await seedStorageMeanCategories();
 }
 
 main()

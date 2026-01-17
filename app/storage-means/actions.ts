@@ -26,14 +26,8 @@ const extractString = (value: FormDataEntryValue | null) => {
 
 type StorageMeanCategoryDelegate = PrismaClient["storageMeanCategory"];
 const MODEL_MISSING_WARNING = "Prisma client missing StorageMeanCategory delegate. Run `npx prisma generate` after updating prisma/schema.prisma.";
-let storageMeanCategoryDelegateHealthy = true;
-
-const markStorageMeanCategoryDelegateUnhealthy = () => {
-  storageMeanCategoryDelegateHealthy = false;
-};
 
 const getStorageMeanCategoryDelegate = () => {
-  if (!storageMeanCategoryDelegateHealthy) return null;
   const prisma = getPrisma() as PrismaClient & { storageMeanCategory?: StorageMeanCategoryDelegate };
   return prisma.storageMeanCategory ?? null;
 };
@@ -59,13 +53,19 @@ export async function getStorageMeanCategories() {
     return listStorageMeanCategoryFallbacks();
   }
   try {
-    return await categoryDelegate.findMany({ orderBy: { createdAt: "desc" }, include: { image: true } });
+    const categories = await categoryDelegate.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { image: { include: { image: true } } },
+    });
+    return categories.map((category) => ({
+      ...category,
+      image: category.image?.image ?? null,
+    }));
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `StorageMeanCategory` does not exist. Return empty list until migration is applied.");
       return listStorageMeanCategoryFallbacks();
     }
-    markStorageMeanCategoryDelegateUnhealthy();
     console.warn("Unable to fetch storage mean categories. Returning fallback data instead.", error);
     return listStorageMeanCategoryFallbacks();
   }
@@ -78,14 +78,17 @@ export async function getStorageMeanCategoryById(id: string) {
     return findStorageMeanCategoryFallbackById(id);
   }
   try {
-    const category = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
-    return category ?? findStorageMeanCategoryFallbackById(id);
+    const category = await categoryDelegate.findUnique({
+      where: { id },
+      include: { image: { include: { image: true } } },
+    });
+    const flattened = category ? { ...category, image: category.image?.image ?? null } : null;
+    return flattened ?? findStorageMeanCategoryFallbackById(id);
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `StorageMeanCategory` does not exist. getStorageMeanCategoryById returning null.");
       return findStorageMeanCategoryFallbackById(id);
     }
-    markStorageMeanCategoryDelegateUnhealthy();
     console.warn("Unable to fetch storage mean category by id. Returning fallback data instead.", error);
     return findStorageMeanCategoryFallbackById(id);
   }
@@ -102,14 +105,16 @@ export async function getStorageMeanCategoryBySlug(slug: string) {
     return null;
   }
   try {
-    const category = await categoryDelegate.findUnique({ where: { slug }, include: { image: true } });
-    return category ?? null;
+    const category = await categoryDelegate.findUnique({
+      where: { slug },
+      include: { image: { include: { image: true } } },
+    });
+    return category ? { ...category, image: category.image?.image ?? null } : null;
   } catch (error: unknown) {
     if (isPrismaError(error) && error.code === "P2021") {
       console.warn("Prisma table `StorageMeanCategory` does not exist. getStorageMeanCategoryBySlug returning null.");
       return null;
     }
-    markStorageMeanCategoryDelegateUnhealthy();
     console.warn("Unable to fetch storage mean category by slug. Returning fallback data instead.", error);
     return fallbackCategory;
   }
@@ -160,7 +165,17 @@ export async function createStorageMeanCategoryAction(_: StorageMeanCategoryStat
       name,
       slug,
       description,
-      ...(imageUrl ? { image: { create: { imageUrl } } } : {}),
+      ...(imageUrl
+        ? {
+            image: {
+              create: {
+                image: {
+                  create: { imageUrl },
+                },
+              },
+            },
+          }
+        : {}),
     };
 
     await categoryDelegate.create({ data: createData });
@@ -222,12 +237,15 @@ export async function updateStorageMeanCategoryAction(_: StorageMeanCategoryStat
       }
     }
 
-    const existing = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
+    const existing = await categoryDelegate.findUnique({
+      where: { id },
+      include: { image: { include: { image: true } } },
+    });
     if (!existing) {
       return { status: "error", message: "Storage mean category not found" };
     }
 
-    const currentImage = existing.image;
+    const currentImage = existing.image?.image;
     let nextImageUrl: string | null | undefined = imageUrl ?? parsedData.imageUrl;
 
     if (uploadCandidate instanceof File && uploadCandidate.size > 0 && currentImage?.imageUrl && currentImage.imageUrl !== nextImageUrl) {
@@ -252,12 +270,12 @@ export async function updateStorageMeanCategoryAction(_: StorageMeanCategoryStat
     if (slug) updatePayload.slug = slug;
     delete updatePayload.imageUrl;
 
-    if (removeImage && currentImage) {
+    if (removeImage && existing.image) {
       updatePayload.image = { delete: true };
     } else if (typeof nextImageUrl === "string" && nextImageUrl.length > 0) {
-      updatePayload.image = currentImage
-        ? { update: { imageUrl: nextImageUrl } }
-        : { create: { imageUrl: nextImageUrl } };
+      updatePayload.image = existing.image
+        ? { update: { image: { update: { imageUrl: nextImageUrl } } } }
+        : { create: { image: { create: { imageUrl: nextImageUrl } } } };
     }
 
     await categoryDelegate.update({ where: { id }, data: updatePayload });
@@ -277,14 +295,14 @@ export async function deleteStorageMeanCategoryAction(_: StorageMeanCategoryStat
     return { status: "error", message: MODEL_MISSING_WARNING };
   }
   try {
-    const existing = await categoryDelegate.findUnique({ where: { id }, include: { image: true } });
+    const existing = await categoryDelegate.findUnique({ where: { id }, include: { image: { include: { image: true } } } });
     if (!existing) {
       return { status: "error", message: "Storage mean category not found" };
     }
 
-    if (existing.image?.imageUrl) {
+    if (existing.image?.image?.imageUrl) {
       try {
-        await deleteUploadFileByUrl(existing.image.imageUrl);
+        await deleteUploadFileByUrl(existing.image.image.imageUrl);
       } catch {
         return { status: "error", message: "Unable to delete storage category image" };
       }
@@ -295,8 +313,13 @@ export async function deleteStorageMeanCategoryAction(_: StorageMeanCategoryStat
     try { revalidatePath("/storage-means"); } catch {}
     return { status: "success" };
   } catch (error: unknown) {
-    if (isPrismaError(error) && error.code === "P2021") {
-      return { status: "error", message: "Database schema not applied (missing StorageMeanCategory table). Run Prisma migrations." };
+    if (isPrismaError(error)) {
+      if (error.code === "P2021") {
+        return { status: "error", message: "Database schema not applied (missing StorageMeanCategory table). Run Prisma migrations." };
+      }
+      if (error.code === "P2003") {
+        return { status: "error", message: "Cannot delete: this category is still linked to storage means. Reassign or remove them first." };
+      }
     }
     return { status: "error", message: "Unable to delete storage mean category" };
   }

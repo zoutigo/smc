@@ -53,9 +53,10 @@ describe("createPlantAction", () => {
       data: expect.objectContaining({
         name: "Paris Plant",
         address: { connect: { id: "11111111-1111-4111-8111-111111111111" } },
+        images: { create: [{ sortOrder: 0, image: { create: { imageUrl: "http://localhost:3000/api/uploads/plant.png" } } }] },
       }),
     });
-    expect(mockImageCreate).toHaveBeenCalledWith({ data: { imageUrl: "http://localhost:3000/api/uploads/plant.png", plant: { connect: { id: "new-plant" } } } });
+    expect(mockImageCreate).not.toHaveBeenCalled();
     expect(result.status).toBe("success");
   });
 });

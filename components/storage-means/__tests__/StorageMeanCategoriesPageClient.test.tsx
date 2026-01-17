@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Image, StorageMeanCategory } from "@prisma/client";
 import StorageMeanCategoriesPageClient, { STORAGE_MEAN_PAGE_SIZE } from "@/components/storage-means/StorageMeanCategoriesPageClient";
+import { ConfirmProvider } from "@/components/ui/confirm-message";
 
 const storageFormPropsMock = jest.fn();
 const deleteStorageMeanCategoryActionMock = jest.fn().mockResolvedValue({ status: "success" });
@@ -79,8 +80,10 @@ describe("StorageMeanCategoriesPageClient", () => {
     updateStorageMeanCategoryActionMock.mockClear();
   });
 
+  const renderWithProvider = (ui: React.ReactNode) => render(<ConfirmProvider>{ui}</ConfirmProvider>);
+
   it("shows three columns when form is hidden", () => {
-    render(<StorageMeanCategoriesPageClient categories={categories} />);
+    renderWithProvider(<StorageMeanCategoriesPageClient categories={categories} />);
     const grid = screen.getByTestId("storage-cards-grid");
     expect(grid).toHaveClass("lg:grid-cols-3");
     expect(screen.queryByTestId("storage-form")).not.toBeInTheDocument();
@@ -88,7 +91,7 @@ describe("StorageMeanCategoriesPageClient", () => {
   });
 
   it("toggles form visibility and reduces grid columns", async () => {
-    render(<StorageMeanCategoriesPageClient categories={categories} />);
+    renderWithProvider(<StorageMeanCategoriesPageClient categories={categories} />);
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: /Add storage category/i }));
@@ -99,7 +102,7 @@ describe("StorageMeanCategoriesPageClient", () => {
   });
 
   it("enters edit mode with initial values", async () => {
-    render(<StorageMeanCategoriesPageClient categories={categories} />);
+    renderWithProvider(<StorageMeanCategoriesPageClient categories={categories} />);
     const user = userEvent.setup();
 
     await user.click(screen.getByLabelText("edit-Cold room"));
@@ -113,14 +116,14 @@ describe("StorageMeanCategoriesPageClient", () => {
 
   it("limits cards per page", () => {
     const many = buildCategories(STORAGE_MEAN_PAGE_SIZE + 2);
-    render(<StorageMeanCategoriesPageClient categories={many} />);
+    renderWithProvider(<StorageMeanCategoriesPageClient categories={many} />);
 
     expect(screen.getAllByTestId("storage-card")).toHaveLength(STORAGE_MEAN_PAGE_SIZE);
   });
 
   it("navigates between pages", async () => {
     const many = buildCategories(STORAGE_MEAN_PAGE_SIZE + 3);
-    render(<StorageMeanCategoriesPageClient categories={many} />);
+    renderWithProvider(<StorageMeanCategoriesPageClient categories={many} />);
     const user = userEvent.setup();
 
     expect(screen.getAllByTestId("storage-card")[0]).toHaveTextContent("Storage 1");
@@ -131,7 +134,7 @@ describe("StorageMeanCategoriesPageClient", () => {
   });
 
   it("calls the delete action when a card requests deletion", async () => {
-    render(<StorageMeanCategoriesPageClient categories={categories} />);
+    renderWithProvider(<StorageMeanCategoriesPageClient categories={categories} />);
     const user = userEvent.setup();
 
     await user.click(screen.getByLabelText("delete-Cold room"));

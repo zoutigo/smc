@@ -27,7 +27,12 @@ jest.mock("@/lib/uploads", () => ({
 import { createPackagingMeanCategoryAction, updatePackagingMeanCategoryAction, deletePackagingMeanCategoryAction } from "@/app/packaging-means/actions";
 
 describe("createPackagingMeanCategoryAction", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    persistUploadFileMock.mockReset();
+    deleteUploadFileByUrlMock.mockReset();
+    persistUploadFileMock.mockResolvedValue({ url: "https://cdn.example.com/new.png" });
+  });
 
   it("returns fieldErrors when payload invalid", async () => {
     const form = new FormData();
@@ -63,6 +68,28 @@ describe("createPackagingMeanCategoryAction", () => {
       data: expect.objectContaining({ slug: "crates" }),
     });
   });
+
+  it("uploads an image when provided", async () => {
+    (mockedPrisma.packagingMeanCategory.findFirst as jest.Mock).mockResolvedValue(null);
+    (mockedPrisma.packagingMeanCategory.create as jest.Mock).mockResolvedValue({ id: "new" });
+
+    const form = new FormData();
+    form.append("name", "Kits");
+    form.append("description", "Kitting gear");
+    form.append("imageFile", new File([Buffer.from("data")], "kits.png", { type: "image/png" }));
+
+    const res = await createPackagingMeanCategoryAction({ status: "idle" }, form as FormData);
+
+    expect(res.status).toBe("success");
+    expect(persistUploadFileMock).toHaveBeenCalledTimes(1);
+    expect(mockedPrisma.packagingMeanCategory.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        name: "Kits",
+        description: "Kitting gear",
+        image: { create: { image: { create: { imageUrl: "https://cdn.example.com/new.png" } } } },
+      }),
+    }));
+  });
 });
 
 describe("updatePackagingMeanCategoryAction", () => {
@@ -79,7 +106,7 @@ describe("updatePackagingMeanCategoryAction", () => {
     persistUploadFileMock.mockReset();
     deleteUploadFileByUrlMock.mockReset();
     (mockedPrisma.packagingMeanCategory.findFirst as jest.Mock).mockResolvedValue(null);
-    (mockedPrisma.packagingMeanCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, image: { id: "img-1", imageUrl: "https://example.com/old.jpg" } });
+    (mockedPrisma.packagingMeanCategory.findUnique as jest.Mock).mockResolvedValue({ id: categoryId, image: { id: "img-1", image: { imageUrl: "https://example.com/old.jpg" } } });
     (mockedPrisma.packagingMeanCategory.update as jest.Mock).mockResolvedValue({ id: categoryId });
   });
 
@@ -112,7 +139,7 @@ describe("updatePackagingMeanCategoryAction", () => {
     expect(res.status).toBe("success");
     expect(mockedPrisma.packagingMeanCategory.update).toHaveBeenCalledTimes(1);
     const updateArgs = (mockedPrisma.packagingMeanCategory.update as jest.Mock).mock.calls[0][0];
-    expect(updateArgs.data.image).toEqual({ update: { imageUrl: "https://example.com/new.png" } });
+    expect(updateArgs.data.image).toEqual({ update: { image: { update: { imageUrl: "https://example.com/new.png" } } } });
     expect(updateArgs.data.slug).toBe("returnables");
   });
 });
@@ -125,7 +152,7 @@ describe("deletePackagingMeanCategoryAction", () => {
     deleteUploadFileByUrlMock.mockReset();
     (mockedPrisma.packagingMeanCategory.findUnique as jest.Mock).mockResolvedValue({
       id: categoryId,
-      image: { id: "img", imageUrl: "https://example.com/image.png" },
+      image: { id: "img", image: { imageUrl: "https://example.com/image.png" } },
     });
     (mockedPrisma.packagingMeanCategory.delete as jest.Mock).mockResolvedValue({ id: categoryId });
     (mockedPrisma.packagingMeanCategory.update as jest.Mock).mockResolvedValue({ id: categoryId });
