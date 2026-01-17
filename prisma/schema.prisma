@@ -29,7 +29,7 @@ model StorageMean {
   description String?
   status      StorageStatus @default(ACTIVE)
   sop         DateTime      @default(now())
-  eop         DateTime      @default(dbgenerated("DATE_ADD(NOW(), INTERVAL 10 YEAR)"))
+  eop         DateTime      @default(now())
 
   supplierId String?   @db.Char(36)
   supplier   Supplier? @relation(fields: [supplierId], references: [id])
