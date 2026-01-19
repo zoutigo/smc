@@ -5,6 +5,7 @@ import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/components/providers/session-provider";
+import { ConfirmProvider } from "@/components/ui/confirm-message";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
@@ -21,14 +22,16 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${mono.variable}`}>
       <body className="min-h-screen bg-smc-bg text-smc-primary">
         <AuthProvider>
-          <Header />
-          <div className="flex min-h-[calc(100vh-56px-48px)]">
-            <Sidebar />
-            <div className="flex flex-1 flex-col">
-              <main className="flex-1 px-6 py-6">{children}</main>
+          <ConfirmProvider>
+            <Header />
+            <div className="flex min-h-[calc(100vh-56px-48px)]">
+              <Sidebar />
+              <div className="flex flex-1 flex-col">
+                <main className="flex-1 px-6 py-6">{children}</main>
+              </div>
             </div>
-          </div>
-          <Footer />
+            <Footer />
+          </ConfirmProvider>
         </AuthProvider>
       </body>
     </html>

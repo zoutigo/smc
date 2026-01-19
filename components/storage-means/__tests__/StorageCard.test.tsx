@@ -33,6 +33,7 @@ describe("StorageCard", () => {
         {...baseCategory}
         imageUrl="https://example.com/storage.png"
         onEdit={onEdit}
+        href="/storage-means/refrigerated-room"
       />,
     );
 
@@ -41,5 +42,11 @@ describe("StorageCard", () => {
     await user.click(screen.getByLabelText(/Edit storage mean category/i));
     expect(onEdit).toHaveBeenCalledWith("storage-1");
     expect(screen.getByLabelText(/Delete storage mean category/i)).toBeInTheDocument();
+  });
+
+  it("renders a view link when href is provided", () => {
+    render(<StorageCard {...baseCategory} href="/storage-means/refrigerated-room" />);
+    const viewLink = screen.getByLabelText(/view storage mean category/i);
+    expect(viewLink).toHaveAttribute("href", "/storage-means/refrigerated-room");
   });
 });
