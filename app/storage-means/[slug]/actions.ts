@@ -24,6 +24,7 @@ const storageMeanSchema = z.object({
   flowId: z.string().uuid().optional().nullable(),
   supplierId: z.string().uuid().optional().nullable(),
   imageUrl: z.string().url().optional(),
+  plcType: z.string().min(2).optional(),
 });
 
 const laneSchema = z.object({
@@ -78,9 +79,10 @@ async function syncLanesForCategory(params: {
   categorySlug: string;
   storageMeanId: string;
   lanes: Array<{ length: number; width: number; height: number; quantity: number }>;
+  plcType?: string;
   prisma: PrismaClient;
 }) {
-  const { categorySlug, storageMeanId, lanes, prisma } = params;
+  const { categorySlug, storageMeanId, lanes, prisma, plcType } = params;
   const isManual = categorySlug === "manual-transtocker";
   const isAuto = categorySlug === "auto-transtocker";
   if (!isManual && !isAuto) return;
@@ -112,8 +114,8 @@ async function syncLanesForCategory(params: {
   if (isAuto) {
     await prisma.storageMeanAutoTranstocker.upsert({
       where: { storageMeanId },
-      create: { storageMeanId, emptyReturnLanes: 0 },
-      update: {},
+      create: { storageMeanId, emptyReturnLanes: 0, plcType: plcType ?? "siemens" },
+      update: plcType ? { plcType } : {},
     });
     await prisma.storageMeanAutoTranstockerLane.deleteMany({ where: { transtockerId: storageMeanId } });
     for (const lane of lanes) {
@@ -138,6 +140,7 @@ export async function createStorageMeanAction(_: StorageMeanActionState, formDat
     flowId: extractString(formData.get("flowId")),
     supplierId: extractString(formData.get("supplierId")),
     categoryId: extractString(formData.get("categoryId")),
+    plcType: extractString(formData.get("plcType")),
   };
 
   const parsed = storageMeanSchema.safeParse(payload);
@@ -179,6 +182,7 @@ export async function createStorageMeanAction(_: StorageMeanActionState, formDat
       categorySlug,
       storageMeanId: created.id,
       lanes: parsedLanes.data,
+      plcType: parsed.data.plcType ?? undefined,
       prisma,
     });
 
@@ -207,6 +211,7 @@ export async function updateStorageMeanAction(_: StorageMeanActionState, formDat
     flowId: extractString(formData.get("flowId")),
     supplierId: extractString(formData.get("supplierId")),
     categoryId: extractString(formData.get("categoryId")),
+    plcType: extractString(formData.get("plcType")),
   };
 
   const parsed = storageMeanSchema.extend({ id: z.string().uuid() }).safeParse(payload);
@@ -256,6 +261,7 @@ export async function updateStorageMeanAction(_: StorageMeanActionState, formDat
       categorySlug,
       storageMeanId: parsed.data.id,
       lanes: parsedLanes.data,
+      plcType: parsed.data.plcType ?? undefined,
       prisma,
     });
 

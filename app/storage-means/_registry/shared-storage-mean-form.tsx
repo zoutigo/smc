@@ -1,6 +1,6 @@
 "use client";
 
-import React, { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import React, { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 import type { StorageMean } from "@prisma/client";
 import { useRouter } from "next/navigation";
@@ -32,8 +32,17 @@ import { MeanMultistepForm, type StepItem } from "@/components/forms/MeanMultist
 
 type StorageMeanWithRelations = StorageMean & {
   manualTranstocker?: { lanes: Array<{ lane: { length: number; width: number; height: number }; quantity: number }> };
-  autoTranstocker?: { lanes: Array<{ lane: { length: number; width: number; height: number }; quantity: number }> };
+  autoTranstocker?: { plcType?: string; lanes: Array<{ lane: { length: number; width: number; height: number }; quantity: number }> };
   images?: Array<{ imageId: string; image: { imageUrl: string } }>;
+};
+
+export type StepKey = "preparation" | "basics" | "lanes" | "images" | "summary";
+
+export type StepConfigItem = {
+  key: StepKey;
+  label?: string;
+  description?: ReactNode;
+  guidance?: ReactNode;
 };
 
 type BaseFormProps = {
@@ -45,6 +54,7 @@ type BaseFormProps = {
   flows: Array<{ id: string; from: string; to: string; slug: string }>;
   countries: Array<{ id: string; name: string }>;
   suppliers: Array<{ id: string; name: string }>;
+  stepConfig?: StepConfigItem[];
 };
 
 const stepOneSchema = storageMeanBasicsSchema;
@@ -61,7 +71,7 @@ const stepTwoSchema = z
   .min(1, "Add at least one lane");
 const stepThreeSchema = z.array(z.instanceof(File));
 
-export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageMean, plants, flows, countries, suppliers }: BaseFormProps) {
+export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageMean, plants, flows, countries, suppliers, stepConfig }: BaseFormProps) {
   const router = useRouter();
   const initialState: StorageMeanActionState = { status: "idle" };
   const [state, formAction, pending] = useActionState(
@@ -70,11 +80,14 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
   );
 
   const store = useCreateStorageMeanStore();
+  const resolvedSlug = categorySlug === "automated-transtocker" ? "auto-transtocker" : categorySlug;
+  const isAuto = resolvedSlug === "auto-transtocker";
   const isEdit = mode === "edit";
   const heroTitle = `${categorySlug.replace(/-/g, " ")} ${isEdit ? "Update" : "Creation"}`;
   const heroSubtitle = isEdit
     ? "Review existing data, adjust what changed, and save."
     : "Provide details to create this storage mean.";
+  let totalSteps = stepConfig?.length && stepConfig.length > 0 ? stepConfig.length : 5;
   const resetStore = useCreateStorageMeanStore((s) => s.reset);
   const [stepError, setStepError] = useState<string | null>(null);
   const [plantsList, setPlantsList] = useState(plants);
@@ -83,7 +96,7 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
   const { show } = useConfirmMessage();
   const handledSuccess = useRef(false);
   const redirectTimeout = useRef<NodeJS.Timeout | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; description?: string; price?: string; sop?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; description?: string; price?: string; sop?: string; plcType?: string }>({});
 
   useEffect(() => {
     if (state.status === "success" && !handledSuccess.current) {
@@ -139,6 +152,7 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
         sop,
         flowId: storageMean.flowId ?? "",
         exists,
+        plcType: storageMean.autoTranstocker?.plcType ?? "",
         lanes,
         images: [],
         existingImages:
@@ -152,7 +166,9 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
   }, [mode, resetStore, storageMean]);
 
   const handleBasicsNext = () => {
-    const result = stepOneSchema.safeParse({
+    const plcSchema = isAuto ? z.string().min(2, "PLC brand is required") : z.string().optional();
+    const basicsSchema = stepOneSchema.extend({ plcType: plcSchema });
+    const result = basicsSchema.safeParse({
       name: store.name,
       description: store.description,
       plantId: store.plantId,
@@ -161,6 +177,7 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
       flowId: store.flowId,
       supplierId: store.supplierId || undefined,
       exists: store.exists,
+      plcType: store.plcType || "",
     });
     if (!result.success) {
       setStepError(result.error.issues[0]?.message ?? "Please fill all required fields");
@@ -190,7 +207,7 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
   };
 
   const handleSubmit = async (formData: FormData) => {
-    if (store.step < 5) return;
+    if (store.step < totalSteps) return;
     const imageFiles = store.images;
     const imageValidation = stepThreeSchema.safeParse(imageFiles);
     const totalImages = store.existingImages.length + imageFiles.length;
@@ -208,6 +225,7 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
     formData.set("sop", store.sop);
     if (store.flowId) formData.set("flowId", store.flowId);
     if (store.supplierId) formData.set("supplierId", store.supplierId);
+    if (isAuto && store.plcType) formData.set("plcType", store.plcType);
     formData.set("status", "DRAFT");
     formData.set("lanes", JSON.stringify(store.lanes));
     if (store.removedImageIds.length) {
@@ -278,7 +296,7 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
     </div>
   );
 
-  const steps: StepItem[] = [
+  const defaultSteps: StepItem[] = [
     {
       key: "preparation",
       label: "Preparation",
@@ -374,6 +392,24 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
               flows={flowsList}
               onCreated={(flow) => setFlowsList((prev) => [...prev, flow])}
             />
+            {isAuto ? (
+              <div>
+                <label className="block text-sm font-semibold text-smc-text">PLC Brand</label>
+                <input
+                  type="text"
+                  value={store.plcType || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    store.updateField("plcType", val);
+                    const parsed = z.string().min(2, "PLC brand is required").safeParse(val);
+                    setFieldErrors((prev) => ({ ...prev, plcType: parsed.success ? undefined : parsed.error.issues[0]?.message }));
+                  }}
+                  placeholder="e.g. Siemens"
+                  className="mt-1 w-full rounded-lg border border-smc-border/80 px-3 py-2"
+                />
+                {fieldErrors.plcType ? <p className="text-sm text-red-600">{fieldErrors.plcType}</p> : null}
+              </div>
+            ) : null}
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <SopInput
@@ -623,17 +659,22 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
             <div>
               <span className="font-semibold">Plant:</span> {plantsList.find((p) => p.id === store.plantId)?.name || "—"}
             </div>
+          <div>
+            <span className="font-semibold">Flow:</span> {flowsList.find((f) => f.id === store.flowId)?.slug || "—"}
+          </div>
+          <div>
+            <span className="font-semibold">Supplier:</span> {suppliersList.find((s) => s.id === store.supplierId)?.name || "—"}
+          </div>
+          {isAuto ? (
             <div>
-              <span className="font-semibold">Flow:</span> {flowsList.find((f) => f.id === store.flowId)?.slug || "—"}
+              <span className="font-semibold">PLC Brand:</span> {store.plcType || "—"}
             </div>
-            <div>
-              <span className="font-semibold">Supplier:</span> {suppliersList.find((s) => s.id === store.supplierId)?.name || "—"}
-            </div>
-            <div>
-              <span className="font-semibold">SOP:</span> {store.sop || "—"}
-            </div>
-            <div>
-              <span className="font-semibold">Exists:</span> {store.exists}
+          ) : null}
+          <div>
+            <span className="font-semibold">SOP:</span> {store.sop || "—"}
+          </div>
+          <div>
+            <span className="font-semibold">Exists:</span> {store.exists}
             </div>
           </div>
           <div>
@@ -695,6 +736,28 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
       guidance: guidanceSummary,
     },
   ];
+
+  const stepsByKey = defaultSteps.reduce<Record<string, StepItem>>((acc, step) => {
+    acc[step.key] = step;
+    return acc;
+  }, {});
+
+  const steps = stepConfig?.length
+    ? stepConfig
+        .map((cfg) => {
+          const base = stepsByKey[cfg.key];
+          if (!base) return null;
+          return {
+            ...base,
+            label: cfg.label ?? base.label,
+            description: cfg.description ?? base.description,
+            guidance: cfg.guidance ?? base.guidance,
+          };
+        })
+        .filter(Boolean) as StepItem[]
+    : defaultSteps;
+
+  totalSteps = steps.length || totalSteps;
 
   return (
     <form

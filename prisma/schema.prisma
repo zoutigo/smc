@@ -264,7 +264,7 @@ model StorageMeanManualTranstocker {
 model StorageMeanAutoTranstocker {
   storageMeanId String @id @db.Char(36)
   storageMean   StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
-
+  plcType          String @default("siemens")
   emptyReturnLanes Int @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

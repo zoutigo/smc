@@ -65,4 +65,17 @@ export const storageMeanRegistry = {
   },
 } satisfies Record<"manual-transtocker" | "auto-transtocker", StorageMeanRegistryEntry>;
 
+const storageMeanSlugAliases: Record<string, keyof typeof storageMeanRegistry> = {
+  "automated-transtocker": "auto-transtocker",
+};
+
 export type StorageMeanCategorySlug = keyof typeof storageMeanRegistry;
+
+export const resolveStorageMeanSlug = (slug: string): StorageMeanCategorySlug | undefined => {
+  if (!slug) return undefined;
+  const direct = slug as StorageMeanCategorySlug;
+  if (storageMeanRegistry[direct]) return direct;
+  const aliased = storageMeanSlugAliases[slug];
+  if (aliased && storageMeanRegistry[aliased]) return aliased;
+  return undefined;
+};

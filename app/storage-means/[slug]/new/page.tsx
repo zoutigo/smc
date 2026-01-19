@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { storageMeanRegistry } from "../../_registry/storageMean.registry";
+import { storageMeanRegistry, resolveStorageMeanSlug } from "../../_registry/storageMean.registry";
 import { getPrisma } from "@/lib/prisma";
 import { ConfirmProvider } from "@/components/ui/confirm-message";
 
@@ -14,7 +14,10 @@ export default async function NewStorageMeanPage({ params }: { params: Params })
   const category = await prisma.storageMeanCategory.findUnique({ where: { slug } });
   if (!category) return notFound();
 
-  const entry = (storageMeanRegistry as Record<string, (typeof storageMeanRegistry)[keyof typeof storageMeanRegistry]>)[category.slug];
+  const resolvedSlug = resolveStorageMeanSlug(category.slug);
+  if (!resolvedSlug) return notFound();
+
+  const entry = storageMeanRegistry[resolvedSlug];
   if (!entry) return notFound();
 
   const Form = entry.Form;

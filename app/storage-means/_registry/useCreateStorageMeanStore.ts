@@ -16,6 +16,7 @@ type State = {
   sop: string;
   flowId?: string;
   supplierId?: string;
+  plcType?: string;
   exists: "existing" | "project";
   lanes: Lane[];
   images: File[];
@@ -50,6 +51,7 @@ const initialState: State = {
   images: [],
   existingImages: [],
   removedImageIds: [],
+  plcType: "",
 };
 
 export const useCreateStorageMeanStore = create<State & Actions>((set) => ({
