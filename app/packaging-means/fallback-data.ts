@@ -26,18 +26,18 @@ type RawPackagingMeanCategory = {
 
 const RAW_PACKAGING_CATEGORIES: RawPackagingMeanCategory[] = [
   {
-    name: "Trolley",
-    description: "Multipurpose trolley designed for quick moves between inbound docks and kitting cells.",
+    name: "Utility Cart",
+    description: "Multipurpose cart designed for quick moves between inbound docks and kitting cells.",
     imageUrl: "https://images.unsplash.com/photo-1502877338535-766e1452684a",
   },
   {
-    name: "Kitting Trolley",
-    description: "Ergonomic trolley optimized for staging components near assembly lines.",
+    name: "Kitting Cart",
+    description: "Ergonomic cart optimized for staging components near assembly lines.",
     imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
   },
   {
-    name: "Picking Trolley",
-    description: "Narrow footprint trolley used for high-frequency picking runs.",
+    name: "Picking Cart",
+    description: "Narrow footprint cart used for high-frequency picking runs.",
     imageUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
   },
   {

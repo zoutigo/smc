@@ -114,17 +114,18 @@ export default function StorageMeanCategoriesPageClient({ categories }: StorageM
           <div className="space-y-6">
             <div data-testid="storage-cards-grid" className={cardsGridClassName}>
               {paginatedCategories.map((category) => (
-                <StorageCard
-                  key={category.id}
-                  id={category.id}
-                  name={category.name}
-                  description={category.description}
-                  imageUrl={category.image?.imageUrl}
-                  onEdit={() => handleEdit(category)}
-                  onDelete={() => handleDelete(category.id)}
-                />
-              ))}
-            </div>
+              <StorageCard
+                key={category.id}
+                id={category.id}
+                name={category.name}
+                description={category.description}
+                imageUrl={category.image?.imageUrl}
+                href={`/storage-means/${category.slug}`}
+                onEdit={() => handleEdit(category)}
+                onDelete={() => handleDelete(category.id)}
+              />
+            ))}
+          </div>
             <div className="flex justify-center" data-testid="storage-pagination">
               <Pagination
                 totalItems={totalItems}

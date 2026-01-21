@@ -34,13 +34,13 @@ model StorageMean {
   supplierId String?   @db.Char(36)
   supplier   Supplier? @relation(fields: [supplierId], references: [id])
 
-  plantId String  @db.Char(36)
-  plant   Plant   @relation(fields: [plantId], references: [id])
+  plantId String @db.Char(36)
+  plant   Plant  @relation(fields: [plantId], references: [id])
 
   flowId String? @db.Char(36)
   flow   Flow?   @relation(fields: [flowId], references: [id])
 
-  storageMeanCategoryId String?            @db.Char(36)
+  storageMeanCategoryId String?              @db.Char(36)
   storageMeanCategory   StorageMeanCategory? @relation(fields: [storageMeanCategoryId], references: [id])
 
   createdAt DateTime @default(now())
@@ -57,6 +57,40 @@ model StorageMean {
   @@index([storageMeanCategoryId])
 }
 
+model PackagingMean {
+  id                 String          @id @default(uuid()) @db.Char(36)
+  name               String
+  price              Int             @default(0)
+  description        String?
+  width              Int
+  length             Int
+  height             Int
+  numberOfPackagings Int             @default(1)
+  status             PackagingStatus @default(ACTIVE)
+  sop                DateTime        @default(now())
+  eop                DateTime        @default(now())
+  supplierId         String?         @db.Char(36)
+  supplier           Supplier?       @relation(fields: [supplierId], references: [id])
+  plantId            String          @db.Char(36)
+  plant              Plant           @relation(fields: [plantId], references: [id])
+  flowId             String?         @db.Char(36)
+  flow               Flow?           @relation(fields: [flowId], references: [id])
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  packagingMeanCategoryId String                @db.Char(36)
+  packagingMeanCategory   PackagingMeanCategory @relation(fields: [packagingMeanCategoryId], references: [id])
+
+  // pivot
+  images      PackagingMeanImage[]
+  parts       PackagingMeanPart[]
+  accessories PackagingMeanAccessory[]
+
+  @@unique([plantId, name, packagingMeanCategoryId])
+  @@index([plantId])
+  @@index([flowId])
+}
+
 model Plant {
   id        String   @id @default(uuid()) @db.Char(36)
   name      String
@@ -65,10 +99,11 @@ model Plant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // images via pivot
-  images PlantImage[]
-
-  storageMeans StorageMean[]
+  // via pivot
+  images         PlantImage[]
+  packagingMeans PackagingMean[]
+  storageMeans   StorageMean[]
+  accessories    Accessory[]
 }
 
 model Supplier {
@@ -79,7 +114,9 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  storageMeans StorageMean[]
+  storageMeans   StorageMean[]
+  packagingMeans PackagingMean[]
+  accessories    Accessory[]
 }
 
 model Address {
@@ -132,13 +169,40 @@ model PartFamily {
 model Part {
   id           String     @id @default(uuid()) @db.Char(36)
   name         String     @default("Front Bumper Upper")
-  slug         String     @unique
+  slug         String
   partFamilyId String     @db.Char(36)
   partFamily   PartFamily @relation(fields: [partFamilyId], references: [id])
-  projectId    String?    @db.Char(36)
-  project      Project?   @relation(fields: [projectId], references: [id])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+
+  projectId String?  @db.Char(36)
+  project   Project? @relation(fields: [projectId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // pivot
+  packagingMeans PackagingMeanPart[]
+  accessories    PartAccessory[]
+
+  @@unique([projectId, slug])
+}
+
+model PackagingMeanPart {
+  packagingMeanId String @db.Char(36)
+  partId          String @db.Char(36)
+
+  // optionnels mais utiles
+  partsPerPackaging  Int     @default(1)
+  levelsPerPackaging Int?
+  verticalPitch      Int?
+  horizontalPitch    Int?
+  notes              String?
+
+  packagingMean PackagingMean @relation(fields: [packagingMeanId], references: [id], onDelete: Cascade)
+  part          Part          @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@id([packagingMeanId, partId])
+  @@index([partId])
+  @@index([packagingMeanId])
 }
 
 model Image {
@@ -148,8 +212,9 @@ model Image {
   updatedAt DateTime @updatedAt
 
   // relations via pivots
-  storageMeanLinks StorageMeanImage[]
-  plantLinks       PlantImage[]
+  storageMeanLinks   StorageMeanImage[]
+  packagingMeanLinks PackagingMeanImage[]
+  plantLinks         PlantImage[]
 
   storageMeanCategoryLink   StorageMeanCategoryImage?
   packagingMeanCategoryLink PackagingMeanCategoryImage?
@@ -166,6 +231,19 @@ model StorageMeanImage {
   @@id([storageMeanId, imageId])
   @@index([imageId])
   @@index([storageMeanId, sortOrder])
+}
+
+model PackagingMeanImage {
+  packagingMeanId String @db.Char(36)
+  imageId         String @db.Char(36)
+  sortOrder       Int    @default(0)
+
+  packagingMean PackagingMean @relation(fields: [packagingMeanId], references: [id], onDelete: Cascade)
+  image         Image         @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@id([packagingMeanId, imageId])
+  @@index([imageId])
+  @@index([packagingMeanId, sortOrder])
 }
 
 model PlantImage {
@@ -186,7 +264,7 @@ model StorageMeanCategoryImage {
   imageId               String @unique @db.Char(36)
 
   storageMeanCategory StorageMeanCategory @relation(fields: [storageMeanCategoryId], references: [id], onDelete: Cascade)
-  image             Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  image               Image               @relation(fields: [imageId], references: [id], onDelete: Cascade)
 }
 
 model PackagingMeanCategoryImage {
@@ -194,7 +272,7 @@ model PackagingMeanCategoryImage {
   imageId                 String @unique @db.Char(36)
 
   packagingMeanCategory PackagingMeanCategory @relation(fields: [packagingMeanCategoryId], references: [id], onDelete: Cascade)
-  image               Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  image                 Image                 @relation(fields: [imageId], references: [id], onDelete: Cascade)
 }
 
 model Flow {
@@ -205,7 +283,8 @@ model Flow {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  storageMeans StorageMean[]
+  storageMeans   StorageMean[]
+  packagingMeans PackagingMean[]
 
   @@unique([from, to])
 }
@@ -233,7 +312,8 @@ model PackagingMeanCategory {
   updatedAt   DateTime @updatedAt
 
   // 1 image via pivot
-  image PackagingMeanCategoryImage?
+  image          PackagingMeanCategoryImage?
+  packagingMeans PackagingMean[]
 }
 
 model Lane {
@@ -251,10 +331,10 @@ model Lane {
 }
 
 model StorageMeanManualTranstocker {
-  storageMeanId String @id @db.Char(36)
+  storageMeanId String      @id @db.Char(36)
   storageMean   StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
 
-  emptyReturnLanes Int @default(0)
+  emptyReturnLanes Int      @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -262,12 +342,12 @@ model StorageMeanManualTranstocker {
 }
 
 model StorageMeanAutoTranstocker {
-  storageMeanId String @id @db.Char(36)
-  storageMean   StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
-
-  emptyReturnLanes Int @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  storageMeanId    String      @id @db.Char(36)
+  storageMean      StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
+  plcType          String      @default("siemens")
+  emptyReturnLanes Int         @default(0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   lanes StorageMeanAutoTranstockerLane[]
 }
@@ -278,7 +358,7 @@ model StorageMeanManualTranstockerLane {
   quantity      Int    @default(0)
 
   transtocker StorageMeanManualTranstocker @relation(fields: [transtockerId], references: [storageMeanId], onDelete: Cascade)
-  lane        Lane @relation(fields: [laneId], references: [id])
+  lane        Lane                         @relation(fields: [laneId], references: [id])
 
   @@id([transtockerId, laneId])
   @@index([laneId])
@@ -290,13 +370,75 @@ model StorageMeanAutoTranstockerLane {
   quantity      Int    @default(0)
 
   transtocker StorageMeanAutoTranstocker @relation(fields: [transtockerId], references: [storageMeanId], onDelete: Cascade)
-  lane        Lane @relation(fields: [laneId], references: [id])
+  lane        Lane                       @relation(fields: [laneId], references: [id])
 
   @@id([transtockerId, laneId])
   @@index([laneId])
 }
 
+model Accessory {
+  id          String  @id @default(uuid()) @db.Char(36)
+  name        String
+  slug        String
+  description String?
+
+  plantId String @db.Char(36)
+  plant   Plant  @relation(fields: [plantId], references: [id])
+
+  supplierId String?   @db.Char(36)
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  unitPrice Int      @default(0) // ou Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  partLinks      PartAccessory[]
+  packagingLinks PackagingMeanAccessory[]
+
+  @@unique([plantId, slug])
+  @@index([plantId])
+  @@index([supplierId])
+}
+
+model PartAccessory {
+  partId      String @db.Char(36)
+  accessoryId String @db.Char(36)
+
+  qtyPerPart Int     @default(1)
+  notes      String?
+
+  part      Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+  accessory Accessory @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+
+  @@id([partId, accessoryId])
+}
+
+model PackagingMeanAccessory {
+  packagingMeanId String @db.Char(36)
+  accessoryId     String @db.Char(36)
+
+  // ✅ quantité par packaging (ex: 1 cover par palette)
+  qtyPerPackaging Int @default(1)
+
+  // si besoin (prix override pour ce packaging)
+  unitPriceOverride Int?
+
+  notes String?
+
+  packagingMean PackagingMean @relation(fields: [packagingMeanId], references: [id], onDelete: Cascade)
+  accessory     Accessory     @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+
+  @@id([packagingMeanId, accessoryId])
+  @@index([accessoryId])
+}
+
 enum StorageStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+}
+
+enum PackagingStatus {
   ACTIVE
   INACTIVE
   DRAFT
