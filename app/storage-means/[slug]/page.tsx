@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
+import { CustomButton } from "@/components/ui/custom-button";
 import { cn } from "@/lib/utils";
 import { getPrisma } from "@/lib/prisma";
 import { getStorageMeanCategories, getStorageMeanCategoryBySlug } from "../actions";
@@ -121,12 +122,10 @@ export default async function StorageMeanCategoryPage({ params }: StorageMeanCat
             <h2 className="heading-3 text-smc-text">Storage means in this category</h2>
             <p className="text-sm text-smc-text-muted">Browse all manual transtockers below.</p>
           </div>
-          <Link
+          <CustomButton
             href={`/storage-means/${slug}/new`}
-            className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
-          >
-            {`Create ${resolvedCategory.name}`}
-          </Link>
+            text={`Create ${resolvedCategory.name}`}
+          />
         </div>
 
         {storageMeans.length === 0 ? (

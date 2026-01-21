@@ -53,7 +53,7 @@ export function SupplierInput({
         {label} {required ? <span className="text-red-600">*</span> : null}
       </label>
       <select
-        className="mt-1 w-full rounded-lg border border-smc-border/80 px-3 py-2"
+        className="mt-1 w-full rounded-lg border border-smc-border/80 bg-smc-bg/60 px-3 py-2"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -91,7 +91,7 @@ export function SupplierInput({
               if (e.key === "Enter") e.preventDefault();
             }}
             placeholder="New supplier name"
-            className="w-full rounded-lg border border-smc-border/70 px-2 py-1 text-sm"
+            className="w-full rounded-lg border border-smc-border/70 bg-smc-bg/60 px-2 py-1 text-sm"
           />
           <input
             type="text"
@@ -105,10 +105,10 @@ export function SupplierInput({
               if (e.key === "Enter") e.preventDefault();
             }}
             placeholder="City"
-            className="w-full rounded-lg border border-smc-border/70 px-2 py-1 text-sm"
+            className="w-full rounded-lg border border-smc-border/70 bg-smc-bg/60 px-2 py-1 text-sm"
           />
           <select
-            className="w-full rounded-lg border border-smc-border/70 px-2 py-1 text-sm"
+            className="w-full rounded-lg border border-smc-border/70 bg-smc-bg/60 px-2 py-1 text-sm"
             value={newSupplierCountryId}
             onChange={(e) => {
               const next = e.target.value;

@@ -1,0 +1,62 @@
+/**
+ * @jest-environment jsdom
+ */
+
+import { render, screen } from "@testing-library/react";
+import CategoryPage from "@/app/packaging-means/[slug]/page";
+
+jest.mock("@/app/packaging-means/actions", () => ({
+  getPackagingMeanCategories: jest.fn().mockResolvedValue([]),
+  getPackagingMeanCategoryBySlug: jest.fn().mockResolvedValue({
+    id: "cat-1",
+    name: "Utility Cart",
+    slug: "utility-cart",
+    description: "desc",
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
+    image: null,
+  }),
+}));
+
+jest.mock("@/app/packaging-means/fallback-data", () => ({
+  findPackagingMeanCategoryFallbackBySlug: jest.fn().mockReturnValue(null),
+}));
+
+jest.mock("next/navigation", () => ({
+  notFound: jest.fn(),
+}));
+
+jest.mock("@/lib/prisma", () => ({
+  getPrisma: () => ({
+    packagingMean: {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: "pkg-1",
+          name: "Test cart",
+          description: "desc",
+          updatedAt: new Date("2024-01-02"),
+          sop: new Date("2024-01-01"),
+          price: 1200,
+          status: "ACTIVE",
+          plant: { name: "Plant A" },
+          flow: { slug: "flow-a" },
+        },
+      ]),
+    },
+  }),
+}));
+
+describe("Packaging category page", () => {
+  it("affiche le bouton de création vers /packaging-means/[slug]/new", async () => {
+    render(await CategoryPage({ params: { slug: "utility-cart" } }));
+    const ctas = screen.getAllByRole("link", { name: /create utility cart/i });
+    expect(ctas[0]).toHaveAttribute("href", "/packaging-means/utility-cart/new");
+  });
+
+  it("affiche la liste des packaging means", async () => {
+    render(await CategoryPage({ params: { slug: "utility-cart" } }));
+    expect(screen.getByText(/test cart/i)).toBeInTheDocument();
+    expect(screen.getByText(/Plant A/)).toBeInTheDocument();
+    expect(screen.getByText(/flow-a/i)).toBeInTheDocument();
+  });
+});

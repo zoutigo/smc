@@ -103,7 +103,7 @@ export function ImageInput({
         <div className="flex flex-wrap gap-3">
           {existingImages.map((img) => (
             <div key={img.id} className="relative flex h-20 w-28 items-center justify-center overflow-hidden rounded-lg border border-smc-border/70 bg-white">
-              <Image src={img.url} alt="Existing image" fill className="object-cover" sizes="112px" />
+              <Image src={img.url} alt="Existing image" fill className="object-cover" sizes="112px" unoptimized />
               {onRemoveExisting ? (
                 <button
                   type="button"

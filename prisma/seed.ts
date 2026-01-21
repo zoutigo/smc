@@ -7,18 +7,18 @@ const prisma = new PrismaClient();
 
 const packagingMeanCategoriesSeedData = [
   {
-    name: "Trolley",
-    description: "Multipurpose trolley designed for quick moves between inbound docks and kitting cells.",
+    name: "Utility Cart",
+    description: "Multipurpose cart designed for quick moves between inbound docks and kitting cells.",
     imageUrl: "https://images.unsplash.com/photo-1502877338535-766e1452684a",
   },
   {
-    name: "Kitting Trolley",
-    description: "Ergonomic trolley optimized for staging components near assembly lines.",
+    name: "Kitting Cart",
+    description: "Ergonomic cart optimized for staging components near assembly lines.",
     imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
   },
   {
-    name: "Picking Trolley",
-    description: "Narrow footprint trolley used for high-frequency picking runs.",
+    name: "Picking Cart",
+    description: "Narrow footprint cart used for high-frequency picking runs.",
     imageUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
   },
   {
@@ -42,12 +42,12 @@ const packagingMeanCategoriesSeedData = [
     imageUrl: "https://images.unsplash.com/photo-1560464024-54c5c887c1bf",
   },
   {
-    name: "Plastic box",
+    name: "Plastic Box",
     description: "Durable plastic totes for closed-loop shuttles between suppliers and plant.",
     imageUrl: "https://images.unsplash.com/photo-1454165205744-3b78555e5572",
   },
   {
-    name: "High density Tower",
+    name: "High Density Tower",
     description: "Automated tower providing dense storage for small packaging assets.",
     imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa",
   },
@@ -787,6 +787,204 @@ async function seedPackagingMeanCategories() {
   console.info(`Seeded ${packagingMeanCategoriesSeedData.length} packaging mean categories.`);
 }
 
+const partFamilySeedNames = ["Bumper", "Tailgate", "Console", "Dashboard", "Door Panel", "Roof Rack", "Seat Frame", "Fascia", "Hood", "Trunk Lid"];
+
+async function seedPartFamilies() {
+  for (const name of partFamilySeedNames) {
+    const slug = buildSlug(name, "family");
+    await prisma.partFamily.upsert({
+      where: { slug },
+      create: {
+        name,
+        slug,
+      },
+      update: {
+        name,
+      },
+    });
+  }
+  console.info(`Seeded/ensured ${partFamilySeedNames.length} part families.`);
+}
+
+const accessorySeedData = [
+  { name: "Protective Cover", description: "Reusable weather cover", plantName: "Detroit Assembly", supplierName: "North Steel", unitPrice: 25 },
+  { name: "Strap Kit", description: "Ratchet straps set", plantName: "Montreal Plastics", supplierName: "Maple Resin", unitPrice: 18 },
+  { name: "Foam Insert", description: "Custom foam for fragile parts", plantName: "Queretaro Trim", supplierName: "Aztec Fasteners", unitPrice: 12 },
+  { name: "Label Holder", description: "Magnetic label frame", plantName: "Barcelona Assembly", supplierName: "Catalunya Metals", unitPrice: 8 },
+  { name: "Divider Set", description: "Adjustable dividers", plantName: "Lyon Composites", supplierName: "Rhone Textiles", unitPrice: 15 },
+  { name: "Wheel Chock", description: "Rubber chock for carts", plantName: "Stuttgart Paint", supplierName: "Neckar Plast", unitPrice: 10 },
+  { name: "Anti-Slip Mat", description: "Grip mat for trays", plantName: "Sao Paulo Molding", supplierName: "Paulista Coatings", unitPrice: 7 },
+  { name: "Lid Clamp", description: "Clamp for plastic boxes", plantName: "Nagoya Plastics", supplierName: "Chubu Springs", unitPrice: 9 },
+  { name: "Sensor Tag", description: "RFID tag holder", plantName: "Sydney Kitting", supplierName: "Harbour Composites", unitPrice: 14 },
+  { name: "Corner Protector", description: "Edge protector set", plantName: "Shanghai Stamping", supplierName: "Pudong Fasteners", unitPrice: 11 },
+];
+
+const packagingImagePool = [
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+  "https://images.unsplash.com/photo-1489515217757-5fd1be406fef",
+  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+  "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
+  "https://images.unsplash.com/photo-1560464024-54c5c887c1bf",
+  "https://images.unsplash.com/photo-1454165205744-3b78555e5572",
+  "https://images.unsplash.com/photo-1451187580459-43490279c0fa",
+  "https://images.unsplash.com/photo-1502877338535-766e1452684a",
+  "https://images.unsplash.com/photo-1487730116645-74489c95b41b",
+];
+
+async function seedAccessories() {
+  const plants = await prisma.plant.findMany({ select: { id: true, name: true } });
+  const suppliers = await prisma.supplier.findMany({ select: { id: true, name: true } });
+  const plantMap = new Map(plants.map((p) => [p.name, p.id]));
+  const supplierMap = new Map(suppliers.map((s) => [s.name, s.id]));
+
+  for (const acc of accessorySeedData) {
+    const plantId = plantMap.get(acc.plantName);
+    const supplierId = supplierMap.get(acc.supplierName || "");
+    if (!plantId) continue;
+    const slug = buildSlug(acc.name, "accessory");
+    await prisma.accessory.upsert({
+      where: { plantId_slug: { plantId, slug } },
+      create: {
+        name: acc.name,
+        slug,
+        description: acc.description,
+        unitPrice: acc.unitPrice ?? 0,
+        plantId,
+        supplierId: supplierId ?? null,
+      },
+      update: {
+        description: acc.description,
+        unitPrice: acc.unitPrice ?? 0,
+        supplierId: supplierId ?? null,
+        plantId,
+      },
+    });
+  }
+  console.info(`Seeded/ensured ${accessorySeedData.length} accessories.`);
+}
+
+async function seedPackagingMeans() {
+  const existing = await prisma.packagingMean.count();
+  if (existing > 0) {
+    console.info(`Skipping packaging mean seed: ${existing} record(s) already present.`);
+    return;
+  }
+
+  const categories = await prisma.packagingMeanCategory.findMany();
+  const plants = await prisma.plant.findMany();
+  const flows = await prisma.flow.findMany();
+  const suppliers = await prisma.supplier.findMany();
+  const accessories = await prisma.accessory.findMany();
+  const partFamilies = await prisma.partFamily.findMany();
+  const projects = await prisma.project.findMany();
+
+  if (!categories.length || !plants.length || !flows.length || !suppliers.length || !accessories.length || !partFamilies.length || !projects.length) {
+    throw new Error("Missing required seed dependencies for packaging means.");
+  }
+
+  let packagingCreated = 0;
+  for (const category of categories) {
+    for (let i = 0; i < 40; i++) {
+      const name = `${category.name} ${String(i + 1).padStart(2, "0")}`;
+      const plant = plants[i % plants.length];
+      const flow = flows[i % flows.length];
+      const supplier = suppliers[i % suppliers.length];
+      const price = 500 + (i % 10) * 25;
+      const width = 800 + (i % 5) * 10;
+      const length = 1200 + (i % 7) * 15;
+      const height = 1000 + (i % 4) * 20;
+      const numberOfPackagings = 1 + (i % 9);
+      const sop = new Date(2026, (i % 12), 1 + (i % 27));
+      const eop = new Date(sop);
+      eop.setFullYear(eop.getFullYear() + 5);
+
+      const packaging = await prisma.packagingMean.create({
+        data: {
+          name,
+          description: `Seeded ${category.name.toLowerCase()} packaging #${i + 1}`,
+          price,
+          width,
+          length,
+          height,
+          numberOfPackagings,
+          status: $Enums.PackagingStatus.ACTIVE,
+          sop,
+          eop,
+          supplierId: supplier.id,
+          plantId: plant.id,
+          flowId: flow.id,
+          packagingMeanCategoryId: category.id,
+        },
+      });
+
+      // Images
+      for (let idx = 0; idx < 5; idx++) {
+        const base = packagingImagePool[(i + idx) % packagingImagePool.length];
+        const image = await prisma.image.create({
+          data: { imageUrl: `${base}?auto=format&fit=crop&w=1200&q=80&sig=${category.slug}-${i}-${idx}` },
+        });
+        await prisma.packagingMeanImage.create({
+          data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: idx },
+        });
+      }
+
+      // Accessories per packaging (pick 2)
+      for (let a = 0; a < 2; a++) {
+        const accessory = accessories[(i + a) % accessories.length];
+        await prisma.packagingMeanAccessory.create({
+          data: {
+            packagingMeanId: packaging.id,
+            accessoryId: accessory.id,
+            qtyPerPackaging: 1 + (a % 3),
+          },
+        });
+      }
+
+      // Parts (2 per packaging)
+      for (let p = 0; p < 2; p++) {
+        const family = partFamilies[(i + p) % partFamilies.length];
+        const project = projects[(i + p) % projects.length];
+        const partName = `${category.name} Part ${p + 1} #${i + 1}`;
+        const partSlug = buildSlug(`${partName}-${project.code}`, "part");
+        const part = await prisma.part.create({
+          data: {
+            name: partName,
+            slug: partSlug,
+            partFamilyId: family.id,
+            projectId: project.id,
+          },
+        });
+
+        await prisma.packagingMeanPart.create({
+          data: {
+            packagingMeanId: packaging.id,
+            partId: part.id,
+            partsPerPackaging: 1 + (p % 4),
+            levelsPerPackaging: 1 + (p % 2),
+            verticalPitch: 50 + p * 10,
+            horizontalPitch: 40 + p * 8,
+            notes: "Seeded part link",
+          },
+        });
+
+        // Part accessories (1 accessory)
+        const acc = accessories[(i + p + 1) % accessories.length];
+        await prisma.partAccessory.create({
+          data: {
+            partId: part.id,
+            accessoryId: acc.id,
+            qtyPerPart: 1 + (p % 2),
+          },
+        });
+      }
+
+      packagingCreated += 1;
+    }
+  }
+  console.info(`Seeded ${packagingCreated} packaging means with parts, accessories, and images.`);
+}
+
 async function seedStorageMeanCategories() {
   for (const category of storageMeanCategoriesSeedData) {
     const slug = buildSlug(category.name, "storage");
@@ -1092,6 +1290,9 @@ async function main() {
   await seedStorageMeans();
   await seedProjects();
   await seedPackagingMeanCategories();
+  await seedPartFamilies();
+  await seedAccessories();
+  await seedPackagingMeans();
 }
 
 main()

@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export type GalleryImage = { id: string; url: string };
 
@@ -10,56 +14,95 @@ type GalleryProps = {
 };
 
 export function Gallery({ images, title }: GalleryProps) {
-  const [activeId, setActiveId] = useState<string | undefined>(images[0]?.id);
-  const activeImage = images.find((img) => img.id === activeId)?.url ?? images[0]?.url;
+  const initial = images?.[0]?.url ?? null;
+  const [selected, setSelected] = useState<string | null>(initial);
   const [showModal, setShowModal] = useState(false);
 
+  const modal =
+    showModal && selected
+      ? createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
+            <div className="relative max-h-[90vh] max-w-[90vw]">
+              <Button
+                type="button"
+                className="absolute -right-3 -top-3 rounded-full bg-red-500 px-3 py-1 text-white"
+                onClick={() => setShowModal(false)}
+                aria-label="Close image modal"
+              >
+                Close
+              </Button>
+              <div className="overflow-hidden rounded-2xl bg-white p-2">
+                <Image
+                  src={selected}
+                  alt={`${title ?? "Gallery"} modal`}
+                  width={1200}
+                  height={800}
+                  className="h-[80vh] max-h-[80vh] w-full max-w-[80vw] object-contain"
+                  unoptimized
+                />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
+  const hasImages = images && images.length > 0;
+
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div className="space-y-3">
       <div
-        className="flex-[2] min-h-[60vh] overflow-hidden rounded-xl border border-smc-border/70 bg-smc-bg/60 cursor-pointer"
-        onClick={() => setShowModal(Boolean(activeImage))}
+        className="overflow-hidden rounded-2xl border border-smc-border/70 bg-smc-bg/40 shadow-inner"
+        onClick={() => selected && setShowModal(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && selected) setShowModal(true);
+        }}
+        style={{ cursor: selected ? "pointer" : "default" }}
       >
-        {activeImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={activeImage} alt={title ?? "Gallery image"} className="h-full w-full object-cover" />
+        {selected ? (
+          <Image
+            src={selected}
+            alt={`${title ?? "Gallery"} hero`}
+            width={800}
+            height={600}
+            className="h-80 w-full object-cover"
+            unoptimized
+          />
         ) : (
-          <div className="flex h-full min-h-[60vh] items-center justify-center text-sm text-smc-text-muted">No image available</div>
+          <div className="flex h-80 items-center justify-center text-sm text-smc-text-muted">No image available</div>
         )}
       </div>
-      <div className="flex flex-1 flex-wrap content-start gap-2 overflow-y-auto rounded-xl border border-smc-border/70 bg-white p-2 shadow-inner max-h-[30vh]">
-        {images.map((img) => (
-          <button
-            key={img.id}
-            type="button"
-            onClick={() => setActiveId(img.id)}
-            className={`overflow-hidden rounded-lg border ${img.id === activeId ? "border-smc-secondary ring-2 ring-smc-secondary/40" : "border-smc-border/70"} bg-white cursor-pointer`}
-            style={{ height: "70px", width: "70px" }}
-            aria-label="Thumbnail"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img.url} alt="Gallery" className="h-full w-full object-cover" />
-          </button>
-        ))}
-        {images.length === 0 ? <span className="text-xs text-smc-text-muted">No images.</span> : null}
-      </div>
-
-      {showModal && activeImage ? (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4" onClick={() => setShowModal(false)}>
-          <div className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-wrap gap-2">
+        {hasImages ? (
+          images.map((img, idx) => (
             <button
+              key={img.id}
               type="button"
-              className="absolute right-4 top-4 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-red-600 text-lg font-bold text-white shadow-lg ring-2 ring-red-300/70 hover:bg-red-700"
-              onClick={() => setShowModal(false)}
-              aria-label="Close image modal"
+              aria-label="thumbnail"
+              onClick={() => setSelected(img.url)}
+              className={cn(
+                "overflow-hidden rounded-xl border px-1 py-1",
+                selected === img.url ? "border-smc-primary ring-2 ring-smc-primary/40" : "border-smc-border/70"
+              )}
+              style={{ width: "64px", height: "64px", cursor: "pointer" }}
             >
-              ×
+              <Image
+                src={img.url}
+                alt={`Thumbnail ${idx + 1}`}
+                width={64}
+                height={64}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
             </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={activeImage} alt={title ?? "Gallery image"} className="max-h-[90vh] max-w-[90vw] object-contain" />
-          </div>
-        </div>
-      ) : null}
+          ))
+        ) : (
+          <p className="text-xs text-smc-text-muted">No images.</p>
+        )}
+      </div>
+      {modal}
     </div>
   );
 }

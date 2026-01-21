@@ -50,7 +50,7 @@ export function FlowInput({
     <div className="space-y-2">
       <label className="block text-sm font-semibold text-smc-text">{label}</label>
       <select
-        className="mt-1 w-full rounded-lg border border-smc-border/80 px-3 py-2"
+        className="mt-1 w-full rounded-lg border border-smc-border/80 bg-smc-bg/60 px-3 py-2"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -83,7 +83,7 @@ export function FlowInput({
             >
               <div className="grid grid-cols-2 gap-2">
                 <select
-                  className="w-full rounded-lg border border-smc-border/70 px-2 py-1 text-sm"
+                  className="w-full rounded-lg border border-smc-border/70 bg-smc-bg/60 px-2 py-1 text-sm"
                   value={newFlow.from}
                   onChange={(e) => {
                     const next = e.target.value;
@@ -100,7 +100,7 @@ export function FlowInput({
                   ))}
                 </select>
                 <select
-                  className="w-full rounded-lg border border-smc-border/70 px-2 py-1 text-sm"
+                  className="w-full rounded-lg border border-smc-border/70 bg-smc-bg/60 px-2 py-1 text-sm"
                   value={newFlow.to}
                   onChange={(e) => {
                     const next = e.target.value;

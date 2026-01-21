@@ -63,7 +63,7 @@ export function MeanMultistepForm({ heroTitle, heroSubtitle, modeLabel, steps, c
         <p className="text-sm text-smc-text-muted">{heroSubtitle}</p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[4fr_1fr]">
         <div className="space-y-3">
           <div className="rounded-xl bg-smc-primary/15 p-3 shadow-inner">
             <StepBanner steps={steps} currentIndex={currentIndex} />
