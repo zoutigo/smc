@@ -25,6 +25,7 @@ export function CustomButton({ href, text, variant = "secondary", size = "sm", c
 
   if (href) {
     const { href: _omitHref, ...linkProps } = rest as CustomButtonLinkProps;
+    void _omitHref;
     return (
       <Button asChild variant={variant} size={size} className={baseClass}>
         <Link href={href} {...linkProps}>

@@ -1,24 +1,27 @@
 import Image from "next/image";
-import Link from "next/link";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { buttonVariants } from "@/components/ui/button";
+import { CategoryControls } from "./CategoryControls";
 import { CustomButton } from "@/components/ui/custom-button";
-import { cn } from "@/lib/utils";
 import { getPrisma } from "@/lib/prisma";
 import { getPackagingMeanCategories, getPackagingMeanCategoryBySlug } from "../actions";
 import { findPackagingMeanCategoryFallbackBySlug } from "../fallback-data";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 type Params = { slug: string } | Promise<{ slug: string }>;
+type SearchParams = Record<string, string | string[] | undefined> | Promise<Record<string, string | string[] | undefined>>;
 
 type PackagingMeanCategoryPageProps = {
   params: Params;
+  searchParams?: SearchParams;
 };
 
 const resolveParams = async (params: Params) => (params instanceof Promise ? params : Promise.resolve(params));
+const resolveSearchParams = async (searchParams?: SearchParams) =>
+  searchParams instanceof Promise ? searchParams : Promise.resolve(searchParams ?? {});
 
 export async function generateStaticParams() {
   const categories = await getPackagingMeanCategories();
@@ -44,8 +47,13 @@ export async function generateMetadata({ params }: PackagingMeanCategoryPageProp
   };
 }
 
-export default async function PackagingMeanCategoryPage({ params }: PackagingMeanCategoryPageProps) {
+export default async function PackagingMeanCategoryPage({ params, searchParams }: PackagingMeanCategoryPageProps) {
   const { slug } = await resolveParams(params);
+  const resolvedSearchParams = await resolveSearchParams(searchParams);
+  const plantId = typeof resolvedSearchParams?.plantId === "string" ? resolvedSearchParams?.plantId : "";
+  const flowId = typeof resolvedSearchParams?.flowId === "string" ? resolvedSearchParams?.flowId : "";
+  const showHeroParam = typeof resolvedSearchParams?.showHero === "string" ? resolvedSearchParams?.showHero : undefined;
+  const showHero = showHeroParam !== "0";
   const category = await getPackagingMeanCategoryBySlug(slug);
   const resolvedCategory = category ?? findPackagingMeanCategoryFallbackBySlug(slug);
   if (!resolvedCategory) {
@@ -53,8 +61,17 @@ export default async function PackagingMeanCategoryPage({ params }: PackagingMea
   }
 
   const prisma = getPrisma();
+  const [plants, flows] = await Promise.all([
+    prisma.plant.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.flow.findMany({ select: { id: true, slug: true }, orderBy: { slug: "asc" } }),
+  ]);
+
   const packagingMeans = await prisma.packagingMean.findMany({
-    where: { packagingMeanCategory: { slug } },
+    where: {
+      packagingMeanCategory: { slug },
+      ...(plantId ? { plantId } : {}),
+      ...(flowId ? { flowId } : {}),
+    },
     orderBy: { updatedAt: "desc" },
     include: { plant: true, flow: true },
   });
@@ -62,22 +79,15 @@ export default async function PackagingMeanCategoryPage({ params }: PackagingMea
   const fallbackText = resolvedCategory.name.slice(0, 2).toUpperCase();
 
   return (
-    <main className="px-8 py-10 space-y-8">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/packaging-means"
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-smc-primary/90")}
-        >
-          0 Back to packaging means
-        </Link>
-      </div>
+    <main className="px-8 pt-0 pb-4 space-y-2">
+      <CategoryControls showHero={showHero} plantId={plantId} flowId={flowId} plants={plants} flows={flows} />
 
+      {showHero ? (
       <section className="grid gap-6 rounded-3xl border border-smc-border bg-white p-8 shadow-soft lg:grid-cols-[1.3fr_0.7fr]">
         <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-smc-primary/80">Packaging category</p>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="space-y-1">
-              <h1 className="text-4xl font-bold text-slate-900">{resolvedCategory.name}</h1>
+              <h1 className="text-4xl font-bold text-smc-primary">{resolvedCategory.name}</h1>
               <p className="text-base text-slate-600">{resolvedCategory.description}</p>
             </div>
             <div className="rounded-full border border-smc-border/80 px-4 py-2 text-sm text-smc-text-muted">
@@ -118,6 +128,7 @@ export default async function PackagingMeanCategoryPage({ params }: PackagingMea
           )}
         </div>
       </section>
+      ) : null}
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

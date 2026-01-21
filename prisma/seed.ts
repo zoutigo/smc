@@ -884,12 +884,13 @@ async function seedPackagingMeans() {
   }
 
   let packagingCreated = 0;
-  for (const category of categories) {
+  for (const [categoryIndex, category] of categories.entries()) {
     for (let i = 0; i < 40; i++) {
       const name = `${category.name} ${String(i + 1).padStart(2, "0")}`;
-      const plant = plants[i % plants.length];
-      const flow = flows[i % flows.length];
-      const supplier = suppliers[i % suppliers.length];
+      const plantIndex = (i + categoryIndex * 3) % plants.length;
+      const plant = plants[plantIndex];
+      const flow = flows[(i + categoryIndex + plantIndex) % flows.length];
+      const supplier = suppliers[(i + categoryIndex) % suppliers.length];
       const price = 500 + (i % 10) * 25;
       const width = 800 + (i % 5) * 10;
       const length = 1200 + (i % 7) * 15;
