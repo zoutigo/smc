@@ -27,15 +27,30 @@ jest.mock("@/lib/prisma", () => ({
         flow: { slug: "flow-a" },
         supplier: { name: "Supplier A" },
         images: [],
-        accessories: [{ accessoryId: "acc-1", qtyPerPackaging: 1, accessory: { name: "Cover" } }],
+        accessories: [
+          { accessoryId: "acc-1", qtyPerPackaging: 1, accessory: { name: "Cover", supplier: { name: "AccSupplier" } } },
+        ],
         parts: [
           {
             partId: "part-1",
             partsPerPackaging: 3,
-            part: { name: "Part A", partFamily: { name: "Family A" }, project: { name: "Proj A" } },
+            levelsPerPackaging: 2,
+            verticalPitch: 10,
+            horizontalPitch: 11,
+            part: {
+              name: "Part A",
+              partFamily: { name: "Family A" },
+              project: { name: "Proj A" },
+              accessories: [
+                { accessoryId: "acc-2", qtyPerPart: 5, accessory: { name: "Bolt", supplier: { name: "BoltCo" } } },
+              ],
+            },
           },
         ],
       }),
+    },
+    noteLink: {
+      findMany: jest.fn().mockResolvedValue([]),
     },
   }),
 }));
@@ -49,10 +64,51 @@ jest.mock("next/navigation", () => ({
 }));
 
 describe("Packaging detail page", () => {
-  it("affiche parts et accessories", async () => {
+  it("affiche le header, les métriques et les sections Parts/Accessories", async () => {
     render(await DetailPage({ params: { slug: "utility-cart", id: "pkg-1" } }));
-    expect(screen.getByText(/Part A/)).toBeInTheDocument();
+
+    // Header titles
+    expect(screen.getByText(/My Packaging/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Utility Cart/i).length).toBeGreaterThan(0);
+
+    // Metrics
+    expect(screen.getByText(/Dimensions/i)).toBeInTheDocument();
+    expect(screen.getByText(/100 × 200 × 300/)).toBeInTheDocument();
+    expect(screen.getByText(/Total packagings/i)).toBeInTheDocument();
+    expect(screen.getAllByText("2").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Price/i)).toBeInTheDocument();
+    expect(screen.getByText("$10")).toBeInTheDocument();
+    expect(screen.getByText(/Plant A/)).toBeInTheDocument();
+    expect(screen.getByText(/flow-a/)).toBeInTheDocument();
+    expect(screen.getByText(/Supplier A/)).toBeInTheDocument();
+
+    // Parts section
+    expect(screen.getByText(/Parts/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Part A/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Family A/)).toBeInTheDocument();
+    expect(screen.getByText(/Proj A/)).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument(); // qty/pack
+    expect(screen.getAllByText("2").length).toBeGreaterThan(1); // levels present
+    expect(screen.getByText("10")).toBeInTheDocument(); // V pitch
+    expect(screen.getByText("11")).toBeInTheDocument(); // H pitch
+
+    // Packaging accessories
+    expect(screen.getByText(/Packaging Accessories/)).toBeInTheDocument();
     expect(screen.getByText(/Cover/)).toBeInTheDocument();
+    expect(screen.getByText(/AccSupplier/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Qty\/pack/i).length).toBeGreaterThan(0);
+
+    // Part accessories
+    expect(screen.getByText(/Part Accessories/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Bolt/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/BoltCo/)).toBeInTheDocument();
+    expect(screen.getByText(/Qty\/part/i)).toBeInTheDocument();
+
+    // Meta
+    expect(screen.getByText(/Meta/)).toBeInTheDocument();
+    expect(screen.getByText(/Created/)).toBeInTheDocument();
+    expect(screen.getByText(/Updated/)).toBeInTheDocument();
+    expect(screen.getByText(/Status/)).toBeInTheDocument();
+    expect(screen.getByText(/Category/)).toBeInTheDocument();
   });
 });

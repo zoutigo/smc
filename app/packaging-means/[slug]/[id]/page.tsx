@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { resolvePackagingMeanSlug } from "@/app/packaging-means/_registry/packagingMean.registry";
 import { Gallery } from "@/components/media/Gallery";
+import NotesSection from "./NotesSection";
+import { CustomButton } from "@/components/ui/custom-button";
 
 type Params = { slug: string; id: string } | Promise<{ slug: string; id: string }>;
 const resolveParams = async (params: Params) => (params instanceof Promise ? params : Promise.resolve(params));
@@ -10,7 +11,7 @@ const resolveParams = async (params: Params) => (params instanceof Promise ? par
 export default async function PackagingMeanDetailPage({ params }: { params: Params }) {
   const { slug, id } = await resolveParams(params);
   const resolved = resolvePackagingMeanSlug(slug);
-  if (!resolved) notFound();
+  if (!resolved || !id) notFound();
   const prisma = getPrisma();
   const packaging = await prisma.packagingMean.findUnique({
     where: { id },
@@ -20,32 +21,47 @@ export default async function PackagingMeanDetailPage({ params }: { params: Para
       plant: true,
       flow: true,
       supplier: true,
-      accessories: { include: { accessory: true } },
-      parts: { include: { part: { include: { partFamily: true, project: true } } } },
+      accessories: { include: { accessory: { include: { supplier: true } } } },
+      parts: {
+        include: {
+          part: {
+            include: {
+              partFamily: true,
+              project: true,
+              accessories: {
+                include: { accessory: { include: { supplier: true } } },
+              },
+            },
+          },
+        },
+      },
     },
   });
   if (!packaging) notFound();
 
   const galleryImages = packaging.images.map((img) => ({ id: img.imageId, url: img.image.imageUrl }));
+  const notes = "noteLink" in prisma
+    ? await prisma.noteLink.findMany({
+        where: { targetType: "PACKAGING_MEAN", targetId: id },
+        include: { note: true },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
 
   return (
-    <main className="px-8 py-10">
-      <div className="mb-4">
-        <Link href={`/packaging-means/${slug}`} className="text-sm text-smc-primary hover:underline">
-          ← Back
-        </Link>
-      </div>
+    <main className="px-8 pt-6 pb-10">
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="space-y-4 rounded-2xl border border-smc-border bg-white p-6 shadow-soft">
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
               <p className="text-xs uppercase tracking-[0.2em] text-smc-text-muted">{packaging.packagingMeanCategory.name}</p>
               <h1 className="text-3xl font-semibold text-smc-text">{packaging.name}</h1>
               <p className="text-sm text-smc-text-muted">{packaging.description}</p>
             </div>
-            <Link href={`/packaging-means/${slug}/${id}/edit`} className="text-sm text-smc-primary hover:underline">
-              Edit
-            </Link>
+            <div className="flex items-center gap-2">
+              <CustomButton href={`/packaging-means/${slug}`} text="Back" variant="destructive" size="sm" />
+              <CustomButton href={`/packaging-means/${slug}/${id}/edit`} text="Edit" size="sm" />
+            </div>
           </div>
           <div className="grid gap-4 rounded-xl border border-smc-border/70 bg-smc-bg/50 p-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -128,19 +144,88 @@ export default async function PackagingMeanDetailPage({ params }: { params: Para
 
           <div className="rounded-xl border border-smc-border/70 bg-white p-4 shadow-inner">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-smc-text">Accessories</h3>
+              <h3 className="text-lg font-semibold text-smc-text">Packaging Accessories</h3>
               <span className="text-xs text-smc-text-muted">{packaging.accessories.length} item(s)</span>
             </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {packaging.accessories.map((a) => (
-                <div key={a.accessoryId} className="rounded-lg border border-smc-border/60 bg-smc-bg/40 p-2 text-sm">
-                  <p className="font-semibold text-smc-text">{a.accessory.name}</p>
-                  <p className="text-xs text-smc-text-muted">Qty/pack: {a.qtyPerPackaging ?? 1}</p>
-                </div>
-              ))}
-              {packaging.accessories.length === 0 ? <p className="text-sm text-smc-text-muted">No accessories.</p> : null}
+            <div className="mt-3 overflow-x-auto">
+              <table className="min-w-full text-sm text-smc-text">
+                <thead>
+                  <tr className="text-xs uppercase text-smc-text-muted">
+                    <th className="px-2 py-1 text-left">Name</th>
+                    <th className="px-2 py-1 text-left">Supplier</th>
+                    <th className="px-2 py-1 text-left">Qty/pack</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {packaging.accessories.map((a) => (
+                    <tr key={a.accessoryId} className="border-t border-smc-border/40">
+                      <td className="px-2 py-1">{a.accessory.name}</td>
+                      <td className="px-2 py-1 text-smc-text-muted">{a.accessory.supplier?.name ?? "—"}</td>
+                      <td className="px-2 py-1">{a.qtyPerPackaging ?? 1}</td>
+                    </tr>
+                  ))}
+                  {packaging.accessories.length === 0 ? (
+                    <tr>
+                      <td className="px-2 py-2 text-smc-text-muted" colSpan={3}>
+                        No accessories.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
             </div>
           </div>
+
+          <div className="rounded-xl border border-smc-border/70 bg-white p-4 shadow-inner">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-smc-text">Part Accessories</h3>
+              <span className="text-xs text-smc-text-muted">
+                {packaging.parts.reduce((acc, p) => acc + (p.part.accessories?.length ?? 0), 0)} item(s)
+              </span>
+            </div>
+            <div className="mt-3 overflow-x-auto">
+              <table className="min-w-full text-sm text-smc-text">
+                <thead>
+                  <tr className="text-xs uppercase text-smc-text-muted">
+                    <th className="px-2 py-1 text-left">Part</th>
+                    <th className="px-2 py-1 text-left">Accessory</th>
+                    <th className="px-2 py-1 text-left">Qty/part</th>
+                    <th className="px-2 py-1 text-left">Supplier</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {packaging.parts.flatMap((p) =>
+                    (p.part.accessories ?? []).map((link) => (
+                      <tr key={`${p.partId}-${link.accessoryId}`} className="border-t border-smc-border/40">
+                        <td className="px-2 py-1">{p.part.name}</td>
+                        <td className="px-2 py-1 text-smc-text">{link.accessory?.name ?? "—"}</td>
+                        <td className="px-2 py-1">{link.qtyPerPart ?? 1}</td>
+                        <td className="px-2 py-1 text-smc-text-muted">{link.accessory?.supplier?.name ?? "—"}</td>
+                      </tr>
+                    ))
+                  )}
+                  {packaging.parts.every((p) => (p.part.accessories ?? []).length === 0) ? (
+                    <tr>
+                      <td className="px-2 py-2 text-smc-text-muted" colSpan={4}>
+                        No part accessories.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <NotesSection
+            slug={slug}
+            packagingMeanId={packaging.id}
+            initialNotes={notes.map((n) => ({
+              id: n.noteId,
+              title: n.note.title,
+              content: n.note.content,
+              createdAt: n.note.createdAt.toISOString(),
+            }))}
+          />
 
           <div className="rounded-xl border border-smc-border/70 bg-white p-4 shadow-inner">
             <h3 className="text-lg font-semibold text-smc-text">Meta</h3>

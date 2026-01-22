@@ -36,7 +36,7 @@ import { ImageInput } from "@/components/forms/ImageInput";
 import { AccessoryInput } from "@/components/forms/AccessoryInput";
 import { PartFamilyInput } from "@/components/forms/PartFamilyInput";
 import { ProjectInput } from "@/components/forms/ProjectInput";
-import { basePackagingMeanSchema } from "./packagingMean.registry";
+import { basePackagingMeanSchema } from "./base-packaging-mean-schema";
 
 type PackagingMeanImageWithUrl = PackagingMeanImage & { image: Image };
 type PackagingMeanAccessoryWithAccessory = PackagingMeanAccessory & { accessory?: Accessory };

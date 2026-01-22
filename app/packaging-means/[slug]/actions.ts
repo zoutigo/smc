@@ -3,16 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { PrismaClient } from "@prisma/client";
-import { PackagingStatus } from "@prisma/client";
+import { PackagingStatus, NoteTargetType } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { persistUploadFile, deleteUploadFileByUrl } from "@/lib/uploads";
-import { basePackagingMeanSchema, resolvePackagingMeanSlug } from "../_registry/packagingMean.registry";
+import { resolvePackagingMeanSlug } from "../_registry/packagingMean.registry";
+import { basePackagingMeanSchema } from "../_registry/base-packaging-mean-schema";
 
 export type PackagingMeanActionState = {
   status: "idle" | "success" | "error";
   message?: string;
   fieldErrors?: Record<string, string>;
   id?: string;
+};
+
+export type NoteActionState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+  fieldErrors?: Record<string, string>;
+  note?: { id: string; title?: string | null; content: string; createdAt: string };
 };
 
 const packagingSchema = basePackagingMeanSchema
@@ -172,6 +180,64 @@ export async function createPackagingMeanAction(_: PackagingMeanActionState, for
     return { status: "success", id: created.id };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unable to create packaging mean";
+    return { status: "error", message };
+  }
+}
+
+const noteSchema = z.object({
+  packagingMeanId: z.string().uuid(),
+  content: z.string().min(1, "Content is required"),
+  title: z.string().min(1, "Title is required"),
+  slug: z.string().optional(),
+});
+
+export async function createPackagingMeanNoteAction(_: NoteActionState, formData: FormData): Promise<NoteActionState> {
+  const payload = {
+    packagingMeanId: extractString(formData.get("packagingMeanId")),
+    content: extractString(formData.get("content")),
+    title: extractString(formData.get("title")),
+    slug: extractString(formData.get("slug")),
+  };
+
+  const parsed = noteSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { status: "error", fieldErrors: mapFieldErrors(parsed.error.issues) };
+  }
+
+  const prisma = getPrisma() as PrismaClient;
+  try {
+    const noteTargetType = (NoteTargetType?.PACKAGING_MEAN ?? "PACKAGING_MEAN") as NoteTargetType;
+    const note = await prisma.note.create({
+      data: {
+        title: parsed.data.title,
+        content: parsed.data.content!,
+      },
+    });
+
+    await prisma.noteLink.create({
+      data: {
+        noteId: note.id,
+        targetId: parsed.data.packagingMeanId!,
+        targetType: noteTargetType,
+      },
+    });
+
+    try {
+      revalidatePath("/packaging-means");
+      if (parsed.data.slug) {
+        revalidatePath(`/packaging-means/${parsed.data.slug}`);
+      }
+      if (parsed.data.slug && parsed.data.packagingMeanId) {
+        revalidatePath(`/packaging-means/${parsed.data.slug}/${parsed.data.packagingMeanId}`);
+      }
+    } catch {}
+
+    return {
+      status: "success",
+      note: { id: note.id, title: note.title, content: note.content, createdAt: note.createdAt.toISOString() },
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unable to add note";
     return { status: "error", message };
   }
 }

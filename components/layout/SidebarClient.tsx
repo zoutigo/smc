@@ -42,16 +42,23 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
 export default function SidebarClient({ storageCategories, packagingCategories }: SidebarClientProps) {
   const pathname = usePathname() ?? "";
   const { sidebarCollapsed } = useUIStore();
+  const [dashboardMenuOpen, setDashboardMenuOpen] = useState(false);
+  const [dashboardPackagingOpen, setDashboardPackagingOpen] = useState(false);
   const [storageMenuOpen, setStorageMenuOpen] = useState(false);
   const [packagingMenuOpen, setPackagingMenuOpen] = useState(false);
   const hasStorageCategories = storageCategories.length > 0;
   const hasPackagingCategories = packagingCategories.length > 0;
+  const dashboardLinks = [
+    { label: "Packaging means", href: "/dashboard/packaging-means", hasCategories: true },
+  ];
 
   const renderStorageSubmenu = storageMenuOpen && hasStorageCategories && !sidebarCollapsed;
   const renderPackagingSubmenu = packagingMenuOpen && hasPackagingCategories && !sidebarCollapsed;
+  const renderDashboardSubmenu = dashboardMenuOpen && !sidebarCollapsed;
 
   const storageLinkHref = "/storage-means" as const;
   const packagingLinkHref = "/packaging-means" as const;
+  const dashboardHref = "/" as const;
 
   return (
     <aside
@@ -65,6 +72,7 @@ export default function SidebarClient({ storageCategories, packagingCategories }
       <nav className="space-y-1 px-2 py-6">
         {nav.map((it) => {
           const active = pathname === it.href || (it.href !== "/" && pathname.startsWith(it.href));
+          const isDashboardLink = it.href === dashboardHref;
           const isStorageLink = it.href === storageLinkHref;
           const isPackagingLink = it.href === packagingLinkHref;
 
@@ -83,6 +91,21 @@ export default function SidebarClient({ storageCategories, packagingCategories }
                   <span className="h-2 w-2 rounded-full bg-white/30 shadow-[0_0_0_4px_rgba(255,255,255,0.06)]" aria-hidden />
                   <span className={cx(sidebarCollapsed && "sr-only")}>{it.label}</span>
                 </Link>
+                {isDashboardLink && !sidebarCollapsed ? (
+                  <button
+                    type="button"
+                    aria-label={dashboardMenuOpen ? "Hide dashboard links" : "Show dashboard links"}
+                    aria-expanded={renderDashboardSubmenu}
+                    className="rounded-lg p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 cursor-pointer"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setDashboardMenuOpen((open) => !open);
+                    }}
+                  >
+                    <ChevronIcon open={dashboardMenuOpen} />
+                  </button>
+                ) : null}
                 {isStorageLink && !sidebarCollapsed ? (
                   <button
                     type="button"
@@ -116,6 +139,57 @@ export default function SidebarClient({ storageCategories, packagingCategories }
                   </button>
                 ) : null}
               </div>
+              {isDashboardLink && renderDashboardSubmenu ? (
+                <div
+                  className="mt-1 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur"
+                  role="group"
+                  aria-label="Dashboard links"
+                >
+                  {dashboardLinks.map((link) => {
+                    const showChildToggle = link.hasCategories && hasPackagingCategories;
+                    return (
+                      <div key={link.href} className="flex flex-col">
+                        <div className="flex items-center gap-1">
+                          <Link
+                            href={link.href}
+                            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-white/80 transition hover:bg-white/10 hover:text-white"
+                          >
+                            {link.label}
+                          </Link>
+                          {showChildToggle ? (
+                            <button
+                              type="button"
+                              aria-label={dashboardPackagingOpen ? "Hide packaging dashboards" : "Show packaging dashboards"}
+                              aria-expanded={dashboardPackagingOpen}
+                              className="rounded-md p-1 text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 cursor-pointer"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                setDashboardPackagingOpen((open) => !open);
+                              }}
+                            >
+                              <ChevronIcon open={dashboardPackagingOpen} />
+                            </button>
+                          ) : null}
+                        </div>
+                        {showChildToggle && dashboardPackagingOpen ? (
+                          <div className="mt-1 space-y-1 rounded-md bg-white/5 px-2 py-2 text-sm text-white/80 ring-1 ring-white/10">
+                            {packagingCategories.map((category) => (
+                              <Link
+                                key={category.id}
+                                href={`/dashboard/packaging-means/${category.slug}`}
+                                className="block cursor-pointer rounded-md px-2 py-1 transition hover:bg-white/10 hover:text-white"
+                              >
+                                {category.name}
+                              </Link>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
               {isStorageLink && renderStorageSubmenu ? (
                 <div className="mt-1 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Storage mean categories">
                   {storageCategories.map((category) => (
