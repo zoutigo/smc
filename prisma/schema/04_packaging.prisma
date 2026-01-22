@@ -1,0 +1,70 @@
+model PackagingMean {
+  id                 String          @id @default(uuid()) @db.Char(36)
+  name               String
+  price              Int             @default(0)
+  description        String?
+  width              Int
+  length             Int
+  height             Int
+  numberOfPackagings Int             @default(1)
+  status             PackagingStatus @default(ACTIVE)
+  sop                DateTime        @default(now())
+  eop                DateTime        @default(now())
+
+  supplierId String?   @db.Char(36)
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  plantId String @db.Char(36)
+  plant   Plant  @relation(fields: [plantId], references: [id])
+
+  flowId String? @db.Char(36)
+  flow   Flow?   @relation(fields: [flowId], references: [id])
+
+  packagingMeanCategoryId String                @db.Char(36)
+  packagingMeanCategory   PackagingMeanCategory @relation(fields: [packagingMeanCategoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images      PackagingMeanImage[]
+  parts       PackagingMeanPart[]
+  accessories PackagingMeanAccessory[]
+
+  // transport association
+  transportLinks TransportMeanPackagingMean[]
+
+  @@unique([plantId, name, packagingMeanCategoryId])
+  @@index([plantId])
+  @@index([flowId])
+}
+
+model PackagingMeanCategory {
+  id          String   @id @default(uuid()) @db.Char(36)
+  name        String   @default("Description of packaging category")
+  slug        String   @unique
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  image          PackagingMeanCategoryImage?
+  packagingMeans PackagingMean[]
+}
+
+model PackagingMeanPart {
+  packagingMeanId String @db.Char(36)
+  partId          String @db.Char(36)
+
+  partsPerPackaging  Int     @default(1)
+  levelsPerPackaging Int?
+  verticalPitch      Int?
+  horizontalPitch    Int?
+  notes              String?
+
+  packagingMean  PackagingMean                @relation(fields: [packagingMeanId], references: [id], onDelete: Cascade)
+  part           Part                         @relation(fields: [partId], references: [id], onDelete: Cascade)
+  transportLinks TransportMeanPackagingMean[]
+
+  @@id([packagingMeanId, partId])
+  @@index([partId])
+  @@index([packagingMeanId])
+}

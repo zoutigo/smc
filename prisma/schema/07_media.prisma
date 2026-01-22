@@ -1,0 +1,70 @@
+model Image {
+  id        String   @id @default(uuid()) @db.Char(36)
+  imageUrl  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  storageMeanLinks       StorageMeanImage[]
+  packagingMeanLinks     PackagingMeanImage[]
+  plantLinks             PlantImage[]
+  transportMeanLinks     TransportMeanImage[]
+  transportCategoryLinks TransportMeanCategoryImage?
+
+  storageMeanCategoryLink   StorageMeanCategoryImage?
+  packagingMeanCategoryLink PackagingMeanCategoryImage?
+}
+
+model StorageMeanImage {
+  storageMeanId String @db.Char(36)
+  imageId       String @db.Char(36)
+  sortOrder     Int    @default(0)
+
+  storageMean StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
+  image       Image       @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@id([storageMeanId, imageId])
+  @@index([imageId])
+  @@index([storageMeanId, sortOrder])
+}
+
+model PackagingMeanImage {
+  packagingMeanId String @db.Char(36)
+  imageId         String @db.Char(36)
+  sortOrder       Int    @default(0)
+
+  packagingMean PackagingMean @relation(fields: [packagingMeanId], references: [id], onDelete: Cascade)
+  image         Image         @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@id([packagingMeanId, imageId])
+  @@index([imageId])
+  @@index([packagingMeanId, sortOrder])
+}
+
+model PlantImage {
+  plantId   String @db.Char(36)
+  imageId   String @db.Char(36)
+  sortOrder Int    @default(0)
+
+  plant Plant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@id([plantId, imageId])
+  @@index([imageId])
+  @@index([plantId, sortOrder])
+}
+
+model StorageMeanCategoryImage {
+  storageMeanCategoryId String @unique @db.Char(36)
+  imageId               String @unique @db.Char(36)
+
+  storageMeanCategory StorageMeanCategory @relation(fields: [storageMeanCategoryId], references: [id], onDelete: Cascade)
+  image               Image               @relation(fields: [imageId], references: [id], onDelete: Cascade)
+}
+
+model PackagingMeanCategoryImage {
+  packagingMeanCategoryId String @unique @db.Char(36)
+  imageId                 String @unique @db.Char(36)
+
+  packagingMeanCategory PackagingMeanCategory @relation(fields: [packagingMeanCategoryId], references: [id], onDelete: Cascade)
+  image                 Image                 @relation(fields: [imageId], references: [id], onDelete: Cascade)
+}

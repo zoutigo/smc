@@ -1,0 +1,69 @@
+model Plant {
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String
+  addressId String?  @db.Char(36)
+  address   Address? @relation(fields: [addressId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images         PlantImage[]
+  packagingMeans PackagingMean[]
+  storageMeans   StorageMean[]
+
+  accessories    Accessory[]
+  transportMeans TransportMean[]
+}
+
+model Supplier {
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String
+  addressId String?  @db.Char(36)
+  address   Address? @relation(fields: [addressId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  storageMeans   StorageMean[]
+  packagingMeans PackagingMean[]
+  accessories    Accessory[]
+  transportMeans TransportMean[]
+}
+
+model Address {
+  id        String   @id @default(uuid()) @db.Char(36)
+  street    String?
+  city      String
+  zipcode   String?
+  countryId String   @db.Char(36)
+  country   Country  @relation(fields: [countryId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plants    Plant[]
+  suppliers Supplier[]
+}
+
+model Country {
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String
+  code      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addresses Address[]
+}
+
+model Flow {
+  id        String      @id @default(uuid()) @db.Char(36)
+  from      FlowStation @default(INJECTION)
+  to        FlowStation @default(PAINT)
+  slug      String      @unique
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  storageMeans       StorageMean[]
+  packagingMeans     PackagingMean[]
+  transportMeanLinks TransportMeanFlow[]
+  transportMeans     TransportMean[]
+
+  @@unique([from, to])
+}

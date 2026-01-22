@@ -5,6 +5,55 @@ import { slugifyValue } from "../lib/utils";
 
 const prisma = new PrismaClient();
 
+const transportMeanCategoriesSeedData = [
+  { name: "AGV-AMR", description: "Autonomous mobile robots and guided vehicles for intralogistics." },
+  { name: "Forklift", description: "Counterbalance and reach trucks for versatile handling." },
+  { name: "Tugger Train", description: "Tugger tractors with tow carts for milk runs." },
+];
+
+type TransportMeanSeed = {
+  name: string;
+  categoryName: string;
+  supplierName?: string;
+  plantName: string;
+  loadCapacityKg: number;
+  units: number;
+  cruiseSpeedKmh: number;
+  maxSpeedKmh: number;
+  sop: Date;
+  eop: Date;
+  packagingMeanNames?: string[];
+};
+
+const transportMeansSeedData: TransportMeanSeed[] = [
+  // Detroit Assembly (7)
+  { name: "AGV Shuttle D1", categoryName: "AGV-AMR", supplierName: "Midwest Machining", plantName: "Detroit Assembly", loadCapacityKg: 800, units: 4, cruiseSpeedKmh: 6, maxSpeedKmh: 10, sop: new Date("2026-01-10"), eop: new Date("2031-01-01"), packagingMeanNames: ["Utility Cart 01", "Picking Cart 01"] },
+  { name: "AGV Shuttle D2", categoryName: "AGV-AMR", supplierName: "North Steel", plantName: "Detroit Assembly", loadCapacityKg: 750, units: 3, cruiseSpeedKmh: 7, maxSpeedKmh: 11, sop: new Date("2026-03-01"), eop: new Date("2031-03-01"), packagingMeanNames: ["Kitting Cart 02"] },
+  { name: "Forklift D1", categoryName: "Forklift", supplierName: "Midwest Machining", plantName: "Detroit Assembly", loadCapacityKg: 2000, units: 5, cruiseSpeedKmh: 12, maxSpeedKmh: 18, sop: new Date("2026-05-01"), eop: new Date("2032-05-01"), packagingMeanNames: ["High Density Tower 01"] },
+  { name: "Forklift D2", categoryName: "Forklift", supplierName: "North Steel", plantName: "Detroit Assembly", loadCapacityKg: 2200, units: 4, cruiseSpeedKmh: 13, maxSpeedKmh: 20, sop: new Date("2026-06-01"), eop: new Date("2032-06-01"), packagingMeanNames: ["Plastic Box 03"] },
+  { name: "Tugger Loop D1", categoryName: "Tugger Train", supplierName: "Midwest Machining", plantName: "Detroit Assembly", loadCapacityKg: 1500, units: 6, cruiseSpeedKmh: 9, maxSpeedKmh: 14, sop: new Date("2026-07-01"), eop: new Date("2032-07-01"), packagingMeanNames: ["Picking Cart 05", "Kitting Cart 04"] },
+  { name: "Tugger Loop D2", categoryName: "Tugger Train", supplierName: "North Steel", plantName: "Detroit Assembly", loadCapacityKg: 1400, units: 5, cruiseSpeedKmh: 8, maxSpeedKmh: 13, sop: new Date("2026-08-01"), eop: new Date("2032-08-01"), packagingMeanNames: ["Utility Cart 07"] },
+  { name: "AMR Conveyor D3", categoryName: "AGV-AMR", supplierName: "Midwest Machining", plantName: "Detroit Assembly", loadCapacityKg: 900, units: 3, cruiseSpeedKmh: 7, maxSpeedKmh: 12, sop: new Date("2026-09-01"), eop: new Date("2032-09-01"), packagingMeanNames: ["Shopstock Hook 02"] },
+
+  // Barcelona Assembly (7)
+  { name: "AGV BCN 01", categoryName: "AGV-AMR", supplierName: "Catalunya Metals", plantName: "Barcelona Assembly", loadCapacityKg: 700, units: 4, cruiseSpeedKmh: 6, maxSpeedKmh: 10, sop: new Date("2026-01-15"), eop: new Date("2031-01-15"), packagingMeanNames: ["Picking Cart 02", "Utility Cart 03"] },
+  { name: "AGV BCN 02", categoryName: "AGV-AMR", supplierName: "Catalunya Metals", plantName: "Barcelona Assembly", loadCapacityKg: 680, units: 3, cruiseSpeedKmh: 7, maxSpeedKmh: 11, sop: new Date("2026-02-15"), eop: new Date("2031-02-15"), packagingMeanNames: ["Kitting Cart 06"] },
+  { name: "Forklift BCN 01", categoryName: "Forklift", supplierName: "Catalunya Metals", plantName: "Barcelona Assembly", loadCapacityKg: 2300, units: 5, cruiseSpeedKmh: 12, maxSpeedKmh: 19, sop: new Date("2026-04-01"), eop: new Date("2032-04-01"), packagingMeanNames: ["High Density Tower 05"] },
+  { name: "Forklift BCN 02", categoryName: "Forklift", supplierName: "Catalunya Metals", plantName: "Barcelona Assembly", loadCapacityKg: 2100, units: 4, cruiseSpeedKmh: 13, maxSpeedKmh: 20, sop: new Date("2026-05-01"), eop: new Date("2032-05-01"), packagingMeanNames: ["Plastic Box 06"] },
+  { name: "Tugger BCN 01", categoryName: "Tugger Train", supplierName: "Catalunya Metals", plantName: "Barcelona Assembly", loadCapacityKg: 1600, units: 6, cruiseSpeedKmh: 9, maxSpeedKmh: 14, sop: new Date("2026-06-01"), eop: new Date("2032-06-01"), packagingMeanNames: ["Picking Cart 09"] },
+  { name: "Tugger BCN 02", categoryName: "Tugger Train", supplierName: "Catalunya Metals", plantName: "Barcelona Assembly", loadCapacityKg: 1550, units: 5, cruiseSpeedKmh: 8, maxSpeedKmh: 13, sop: new Date("2026-07-01"), eop: new Date("2032-07-01"), packagingMeanNames: ["Utility Cart 05"] },
+  { name: "AMR Dock BCN", categoryName: "AGV-AMR", supplierName: "Catalunya Metals", plantName: "Barcelona Assembly", loadCapacityKg: 800, units: 4, cruiseSpeedKmh: 7, maxSpeedKmh: 12, sop: new Date("2026-08-01"), eop: new Date("2032-08-01"), packagingMeanNames: ["Kitting Cart 10"] },
+
+  // Stockholm Lines (7)
+  { name: "AMR Nordic 01", categoryName: "AGV-AMR", supplierName: "Nordic Foams", plantName: "Stockholm Lines", loadCapacityKg: 820, units: 3, cruiseSpeedKmh: 6, maxSpeedKmh: 10, sop: new Date("2026-02-01"), eop: new Date("2031-02-01"), packagingMeanNames: ["Picking Cart 11", "Utility Cart 09"] },
+  { name: "AMR Nordic 02", categoryName: "AGV-AMR", supplierName: "Baltic Fasteners", plantName: "Stockholm Lines", loadCapacityKg: 780, units: 4, cruiseSpeedKmh: 7, maxSpeedKmh: 11, sop: new Date("2026-03-01"), eop: new Date("2031-03-01"), packagingMeanNames: ["Kitting Cart 12"] },
+  { name: "Forklift Nordic 01", categoryName: "Forklift", supplierName: "Baltic Fasteners", plantName: "Stockholm Lines", loadCapacityKg: 2100, units: 5, cruiseSpeedKmh: 12, maxSpeedKmh: 19, sop: new Date("2026-04-15"), eop: new Date("2032-04-15"), packagingMeanNames: ["High Density Tower 08"] },
+  { name: "Forklift Nordic 02", categoryName: "Forklift", supplierName: "Nordic Foams", plantName: "Stockholm Lines", loadCapacityKg: 2050, units: 4, cruiseSpeedKmh: 13, maxSpeedKmh: 20, sop: new Date("2026-05-15"), eop: new Date("2032-05-15"), packagingMeanNames: ["Plastic Box 09"] },
+  { name: "Tugger Nordic 01", categoryName: "Tugger Train", supplierName: "Baltic Fasteners", plantName: "Stockholm Lines", loadCapacityKg: 1500, units: 6, cruiseSpeedKmh: 9, maxSpeedKmh: 14, sop: new Date("2026-06-15"), eop: new Date("2032-06-15"), packagingMeanNames: ["Picking Cart 15"] },
+  { name: "Tugger Nordic 02", categoryName: "Tugger Train", supplierName: "Nordic Foams", plantName: "Stockholm Lines", loadCapacityKg: 1450, units: 5, cruiseSpeedKmh: 8, maxSpeedKmh: 13, sop: new Date("2026-07-15"), eop: new Date("2032-07-15"), packagingMeanNames: ["Utility Cart 10"] },
+  { name: "AMR Shuttle Nordic", categoryName: "AGV-AMR", supplierName: "Baltic Fasteners", plantName: "Stockholm Lines", loadCapacityKg: 900, units: 3, cruiseSpeedKmh: 7, maxSpeedKmh: 12, sop: new Date("2026-08-15"), eop: new Date("2032-08-15"), packagingMeanNames: ["Kitting Cart 15"] },
+];
+
 const packagingMeanCategoriesSeedData = [
   {
     name: "Utility Cart",
@@ -986,6 +1035,89 @@ async function seedPackagingMeans() {
   console.info(`Seeded ${packagingCreated} packaging means with parts, accessories, and images.`);
 }
 
+async function seedTransportMeanCategories() {
+  for (const category of transportMeanCategoriesSeedData) {
+    const slug = buildSlug(category.name, "transport");
+    const existing = await prisma.transportMeanCategory.findUnique({ where: { slug } });
+    if (existing) {
+      await prisma.transportMeanCategory.update({
+        where: { id: existing.id },
+        data: { description: category.description },
+      });
+      continue;
+    }
+    await prisma.transportMeanCategory.create({
+      data: {
+        name: category.name,
+        description: category.description,
+        slug,
+      },
+    });
+  }
+  console.info(`Seeded/updated ${transportMeanCategoriesSeedData.length} transport mean categories.`);
+}
+
+async function seedTransportMeans() {
+  const plantMap = new Map<string, string>();
+  const plants = await prisma.plant.findMany({ select: { id: true, name: true } });
+  plants.forEach((p) => plantMap.set(p.name, p.id));
+
+  const supplierMap = new Map<string, string>();
+  const suppliers = await prisma.supplier.findMany({ select: { id: true, name: true } });
+  suppliers.forEach((s) => supplierMap.set(s.name, s.id));
+
+  const categoryMap = new Map<string, string>();
+  const categories = await prisma.transportMeanCategory.findMany({ select: { id: true, name: true, slug: true } });
+  categories.forEach((c) => categoryMap.set(c.name, c.id));
+
+  const packagingMap = new Map<string, string>();
+  const packagingMeans = await prisma.packagingMean.findMany({ select: { id: true, name: true } });
+  packagingMeans.forEach((pm) => packagingMap.set(pm.name, pm.id));
+
+  let created = 0;
+  for (const seed of transportMeansSeedData) {
+    const plantId = plantMap.get(seed.plantName);
+    const categoryId = categoryMap.get(seed.categoryName);
+    const supplierId = seed.supplierName ? supplierMap.get(seed.supplierName) : undefined;
+    if (!plantId || !categoryId) continue;
+
+    const slug = buildSlug(seed.name, "transport");
+    const packagingLinks = (seed.packagingMeanNames ?? [])
+      .map((name, idx) => ({
+        packagingMeanId: packagingMap.get(name),
+        maxQty: 1 + (idx % 3),
+      }))
+      .filter((l) => Boolean(l.packagingMeanId)) as Array<{ packagingMeanId: string; maxQty: number }>;
+
+    await prisma.transportMean.create({
+      data: {
+        name: seed.name,
+        slug,
+        description: `Seeded ${seed.categoryName.toLowerCase()} transport mean`,
+        transportMeanCategoryId: categoryId,
+        supplierId: supplierId ?? null,
+        plantId,
+        loadCapacityKg: seed.loadCapacityKg,
+        units: seed.units,
+        cruiseSpeedKmh: seed.cruiseSpeedKmh,
+        maxSpeedKmh: seed.maxSpeedKmh,
+        sop: seed.sop,
+        eop: seed.eop,
+        packagingLinks: packagingLinks.length
+          ? {
+              create: packagingLinks.map((l) => ({
+                packagingMeanId: l.packagingMeanId,
+                maxQty: l.maxQty,
+              })),
+            }
+          : undefined,
+      },
+    });
+    created += 1;
+  }
+  console.info(`Seeded ${created} transport means.`);
+}
+
 async function seedStorageMeanCategories() {
   for (const category of storageMeanCategoriesSeedData) {
     const slug = buildSlug(category.name, "storage");
@@ -1294,6 +1426,8 @@ async function main() {
   await seedPartFamilies();
   await seedAccessories();
   await seedPackagingMeans();
+  await seedTransportMeanCategories();
+  await seedTransportMeans();
 }
 
 main()

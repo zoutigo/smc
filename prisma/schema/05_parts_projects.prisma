@@ -1,0 +1,42 @@
+model Project {
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String
+  code      String?  @db.Char(5)
+  slug      String   @unique
+  sop       DateTime @default(now())
+  eop       DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parts Part[]
+}
+
+model PartFamily {
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String   @default("Bumper")
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parts Part[]
+}
+
+model Part {
+  id           String     @id @default(uuid()) @db.Char(36)
+  name         String     @default("Front Bumper Upper")
+  slug         String
+  partFamilyId String     @db.Char(36)
+  partFamily   PartFamily @relation(fields: [partFamilyId], references: [id])
+
+  // ✅ si tu veux “1 part appartient à 1 projet” → rends-le obligatoire
+  projectId String  @db.Char(36)
+  project   Project @relation(fields: [projectId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  packagingMeans PackagingMeanPart[]
+  accessories    PartAccessory[]
+
+  @@unique([projectId, slug])
+}

@@ -20,6 +20,7 @@ export type SidebarClientCategory = {
 type SidebarClientProps = {
   storageCategories: SidebarClientCategory[];
   packagingCategories: SidebarClientCategory[];
+  transportCategories: SidebarClientCategory[];
 };
 
 const ChevronIcon = ({ open }: { open: boolean }) => (
@@ -39,25 +40,29 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
   </svg>
 );
 
-export default function SidebarClient({ storageCategories, packagingCategories }: SidebarClientProps) {
+export default function SidebarClient({ storageCategories, packagingCategories, transportCategories }: SidebarClientProps) {
   const pathname = usePathname() ?? "";
   const { sidebarCollapsed } = useUIStore();
   const [dashboardMenuOpen, setDashboardMenuOpen] = useState(false);
   const [dashboardPackagingOpen, setDashboardPackagingOpen] = useState(false);
   const [storageMenuOpen, setStorageMenuOpen] = useState(false);
   const [packagingMenuOpen, setPackagingMenuOpen] = useState(false);
+  const [transportMenuOpen, setTransportMenuOpen] = useState(false);
   const hasStorageCategories = storageCategories.length > 0;
   const hasPackagingCategories = packagingCategories.length > 0;
+  const hasTransportCategories = transportCategories.length > 0;
   const dashboardLinks = [
     { label: "Packaging means", href: "/dashboard/packaging-means", hasCategories: true },
   ];
 
   const renderStorageSubmenu = storageMenuOpen && hasStorageCategories && !sidebarCollapsed;
   const renderPackagingSubmenu = packagingMenuOpen && hasPackagingCategories && !sidebarCollapsed;
+  const renderTransportSubmenu = transportMenuOpen && hasTransportCategories && !sidebarCollapsed;
   const renderDashboardSubmenu = dashboardMenuOpen && !sidebarCollapsed;
 
   const storageLinkHref = "/storage-means" as const;
   const packagingLinkHref = "/packaging-means" as const;
+  const transportLinkHref = "/transport-means" as const;
   const dashboardHref = "/" as const;
 
   return (
@@ -75,6 +80,7 @@ export default function SidebarClient({ storageCategories, packagingCategories }
           const isDashboardLink = it.href === dashboardHref;
           const isStorageLink = it.href === storageLinkHref;
           const isPackagingLink = it.href === packagingLinkHref;
+          const isTransportLink = it.href === transportLinkHref;
 
           return (
             <div key={it.href} className="flex flex-col">
@@ -136,6 +142,22 @@ export default function SidebarClient({ storageCategories, packagingCategories }
                     disabled={!hasPackagingCategories}
                   >
                     <ChevronIcon open={packagingMenuOpen && hasPackagingCategories} />
+                  </button>
+                ) : null}
+                {isTransportLink && !sidebarCollapsed ? (
+                  <button
+                    type="button"
+                    aria-label={transportMenuOpen ? "Hide transport categories" : "Show transport categories"}
+                    aria-expanded={renderTransportSubmenu}
+                    className="rounded-lg p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 cursor-pointer disabled:opacity-40"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setTransportMenuOpen((open) => !open);
+                    }}
+                    disabled={!hasTransportCategories}
+                  >
+                    <ChevronIcon open={transportMenuOpen && hasTransportCategories} />
                   </button>
                 ) : null}
               </div>
@@ -209,6 +231,19 @@ export default function SidebarClient({ storageCategories, packagingCategories }
                     <Link
                       key={category.id}
                       href={`${packagingLinkHref}/${category.slug}`}
+                      className="block cursor-pointer rounded-md px-2 py-1 text-white/75 transition hover:bg-white/10 hover:text-white"
+                    >
+                      {category.name}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+              {isTransportLink && renderTransportSubmenu ? (
+                <div className="mt-1 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Transport categories">
+                  {transportCategories.map((category) => (
+                    <Link
+                      key={category.id}
+                      href={`${transportLinkHref}/${category.slug}`}
                       className="block cursor-pointer rounded-md px-2 py-1 text-white/75 transition hover:bg-white/10 hover:text-white"
                     >
                       {category.name}
