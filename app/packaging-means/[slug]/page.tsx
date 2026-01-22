@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CategoryControls } from "./CategoryControls";
+import { Button } from "@/components/ui/button";
 import { CustomButton } from "@/components/ui/custom-button";
 import { getPrisma } from "@/lib/prisma";
 import { getPackagingMeanCategories, getPackagingMeanCategoryBySlug } from "../actions";
@@ -53,7 +54,7 @@ export default async function PackagingMeanCategoryPage({ params, searchParams }
   const plantId = typeof resolvedSearchParams?.plantId === "string" ? resolvedSearchParams?.plantId : "";
   const flowId = typeof resolvedSearchParams?.flowId === "string" ? resolvedSearchParams?.flowId : "";
   const showHeroParam = typeof resolvedSearchParams?.showHero === "string" ? resolvedSearchParams?.showHero : undefined;
-  const showHero = showHeroParam !== "0";
+  const showHero = showHeroParam === "1";
   const category = await getPackagingMeanCategoryBySlug(slug);
   const resolvedCategory = category ?? findPackagingMeanCategoryFallbackBySlug(slug);
   if (!resolvedCategory) {
@@ -73,10 +74,24 @@ export default async function PackagingMeanCategoryPage({ params, searchParams }
       ...(flowId ? { flowId } : {}),
     },
     orderBy: { updatedAt: "desc" },
-    include: { plant: true, flow: true },
+    include: { plant: true, flow: true, parts: true },
   });
 
   const fallbackText = resolvedCategory.name.slice(0, 2).toUpperCase();
+
+  const EyeIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+
+  const PencilIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  );
 
   return (
     <main className="px-8 pt-0 pb-4 space-y-2">
@@ -130,10 +145,10 @@ export default async function PackagingMeanCategoryPage({ params, searchParams }
       </section>
       ) : null}
 
-      <section className="space-y-4">
+      <section className="mt-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-smc-text">Packaging means in this category</h2>
+            <h2 className="text-xl font-semibold text-smc-text">{`${resolvedCategory.name}'s list`}</h2>
             <p className="text-sm text-smc-text-muted">Browse all {resolvedCategory.name.toLowerCase()} below.</p>
           </div>
           <CustomButton
@@ -141,21 +156,15 @@ export default async function PackagingMeanCategoryPage({ params, searchParams }
             text={`Create ${resolvedCategory.name}`}
           />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {packagingMeans.map((pkg) => (
             <article key={pkg.id} className="rounded-2xl border border-smc-border/70 bg-white p-5 shadow-soft">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
                 <div className="space-y-1">
                   <h3 className="text-lg font-semibold text-smc-text">{pkg.name}</h3>
-                  <p className="text-xs uppercase text-smc-text-muted">
-                    Updated {pkg.updatedAt.toLocaleDateString()} • SOP {pkg.sop.toLocaleDateString()}
-                  </p>
+                  <p className="text-sm font-medium text-smc-text">{pkg.width}x{pkg.length}x{pkg.height} mm</p>
                 </div>
-                <Link href={`/packaging-means/${slug}/${pkg.id}`} className="text-sm font-semibold text-smc-primary hover:underline">
-                  View
-                </Link>
               </div>
-              <p className="mt-2 text-sm text-smc-text-muted line-clamp-2">{pkg.description ?? "No description provided."}</p>
               <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-smc-text">
                 <div>
                   <p className="font-semibold text-smc-text-muted">Plant</p>
@@ -173,6 +182,31 @@ export default async function PackagingMeanCategoryPage({ params, searchParams }
                   <p className="font-semibold text-smc-text-muted">Status</p>
                   <p className="capitalize">{pkg.status.toLowerCase()}</p>
                 </div>
+                <div>
+                  <p className="font-semibold text-smc-text-muted">Total packaging</p>
+                  <p>{pkg.numberOfPackagings ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-smc-text-muted">Part variants</p>
+                  <p>{pkg.parts?.length ?? 0}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-4 text-[11px] text-smc-text-muted">
+                <p><span className="font-semibold text-smc-text">Updated:</span> {pkg.updatedAt.toLocaleDateString()}</p>
+                <p><span className="font-semibold text-smc-text">SOP:</span> {pkg.sop.toLocaleDateString()}</p>
+                <p><span className="font-semibold text-smc-text">EOP:</span> {pkg.eop.toLocaleDateString()}</p>
+              </div>
+              <div className="mt-5 -mx-5 -mb-5 flex justify-end gap-2 bg-secondary/30 px-5 py-4">
+                <Button size="icon" variant="secondary" className="text-white" asChild aria-label={`Edit ${pkg.name}`}>
+                  <Link href={`/packaging-means/${slug}/${pkg.id}/edit`}>
+                    <PencilIcon />
+                  </Link>
+                </Button>
+                <Button size="icon" variant="secondary" className="text-white" asChild aria-label={`View ${pkg.name}`}>
+                  <Link href={`/packaging-means/${slug}/${pkg.id}`}>
+                    <EyeIcon />
+                  </Link>
+                </Button>
               </div>
             </article>
           ))}

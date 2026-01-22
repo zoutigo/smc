@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
-import type { NameType } from "recharts/types/component/DefaultTooltipContent";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bar,
