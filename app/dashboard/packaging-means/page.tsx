@@ -8,6 +8,8 @@ export const metadata = {
   description: "KPI overview for all packaging means and categories.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function PackagingMeansDashboardPage() {
   const prisma = getPrisma();
 
