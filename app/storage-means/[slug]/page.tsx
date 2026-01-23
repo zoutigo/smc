@@ -7,8 +7,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { CustomButton } from "@/components/ui/custom-button";
 import { cn } from "@/lib/utils";
 import { getPrisma } from "@/lib/prisma";
-import { getStorageMeanCategories, getStorageMeanCategoryBySlug } from "../actions";
-import { findStorageMeanCategoryFallbackBySlug, listStorageMeanCategoryAliasSlugs } from "../fallback-data";
+import { getStorageMeanCategoryBySlug } from "../actions";
+import { findStorageMeanCategoryFallbackBySlug } from "../fallback-data";
 
 export const revalidate = 60;
 
@@ -21,22 +21,8 @@ type StorageMeanCategoryPageProps = {
 const resolveParams = async (params: Params) => (params instanceof Promise ? params : Promise.resolve(params));
 
 export async function generateStaticParams() {
-  try {
-    const categories = await getStorageMeanCategories();
-    const aliases = listStorageMeanCategoryAliasSlugs();
-
-    const slugs = new Set<string>();
-    categories
-      .filter((category) => Boolean(category.slug))
-      .forEach((category) => slugs.add(category.slug));
-
-    aliases.forEach((alias) => slugs.add(alias));
-
-    return Array.from(slugs).map((slug) => ({ slug }));
-  } catch {
-    // Avoid failing build when DB unavailable during CI/export
-    return [];
-  }
+  // Avoid DB access during build/CI
+  return [];
 }
 
 export async function generateMetadata({ params }: StorageMeanCategoryPageProps): Promise<Metadata> {

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { CustomButton } from "@/components/ui/custom-button";
-import { getTransportMeanCategories, getTransportMeanCategoryBySlug, getTransportMeansByCategorySlug } from "../actions";
+import { getTransportMeanCategoryBySlug, getTransportMeansByCategorySlug } from "../actions";
 import { getPrisma } from "@/lib/prisma";
 import type { TransportMean, TransportMeanCategory } from "@prisma/client";
 
@@ -29,8 +29,8 @@ const resolveSearchParams = async (searchParams?: SearchParams) => {
 };
 
 export async function generateStaticParams() {
-  const categories = await getTransportMeanCategories();
-  return categories.map((cat) => ({ slug: cat.slug }));
+  // Avoid DB access during build/CI
+  return [];
 }
 
 type TransportMeanWithRelations = TransportMean & {

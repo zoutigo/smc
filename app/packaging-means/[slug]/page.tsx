@@ -7,7 +7,7 @@ import { CategoryControls } from "./CategoryControls";
 import { Button } from "@/components/ui/button";
 import { CustomButton } from "@/components/ui/custom-button";
 import { getPrisma } from "@/lib/prisma";
-import { getPackagingMeanCategories, getPackagingMeanCategoryBySlug } from "../actions";
+import { getPackagingMeanCategoryBySlug } from "../actions";
 import { findPackagingMeanCategoryFallbackBySlug } from "../fallback-data";
 
 export const dynamic = "force-dynamic";
@@ -25,15 +25,8 @@ const resolveSearchParams = async (searchParams?: SearchParams) =>
   searchParams instanceof Promise ? searchParams : Promise.resolve(searchParams ?? {});
 
 export async function generateStaticParams() {
-  try {
-    const categories = await getPackagingMeanCategories();
-    const slugs = new Set<string>();
-    categories.filter((category) => Boolean(category.slug)).forEach((category) => slugs.add(category.slug));
-    return Array.from(slugs).map((slug) => ({ slug }));
-  } catch {
-    // Avoid failing build when DB unavailable during CI/export
-    return [];
-  }
+  // Avoid DB access during build/CI
+  return [];
 }
 
 export async function generateMetadata({ params }: PackagingMeanCategoryPageProps): Promise<Metadata> {
