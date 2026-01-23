@@ -57,7 +57,7 @@ describe("TransportMeanForm edit flow", () => {
 
   it("walks through steps and submits on summary", async () => {
     const onSubmit = jest.fn().mockResolvedValue({ status: "success" });
-    const { container } = render(
+    render(
       <TransportMeanForm
         mode="edit"
         categoryId="aaaaaaaa-bbbb-4aaa-8aaa-aaaaaaaaaaaa"

@@ -45,6 +45,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
   const { sidebarCollapsed } = useUIStore();
   const [dashboardMenuOpen, setDashboardMenuOpen] = useState(false);
   const [dashboardPackagingOpen, setDashboardPackagingOpen] = useState(false);
+  const [dashboardTransportOpen, setDashboardTransportOpen] = useState(false);
   const [storageMenuOpen, setStorageMenuOpen] = useState(false);
   const [packagingMenuOpen, setPackagingMenuOpen] = useState(false);
   const [transportMenuOpen, setTransportMenuOpen] = useState(false);
@@ -53,6 +54,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
   const hasTransportCategories = transportCategories.length > 0;
   const dashboardLinks = [
     { label: "Packaging means", href: "/dashboard/packaging-means", hasCategories: true },
+    { label: "Transport means", href: "/dashboard/transport-means", hasCategories: true, type: "transport" as const },
   ];
 
   const renderStorageSubmenu = storageMenuOpen && hasStorageCategories && !sidebarCollapsed;
@@ -168,7 +170,8 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                   aria-label="Dashboard links"
                 >
                   {dashboardLinks.map((link) => {
-                    const showChildToggle = link.hasCategories && hasPackagingCategories;
+                    const showChildToggle =
+                      link.hasCategories && (link.type === "transport" ? hasTransportCategories : hasPackagingCategories);
                     return (
                       <div key={link.href} className="flex flex-col">
                         <div className="flex items-center gap-1">
@@ -181,25 +184,34 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                           {showChildToggle ? (
                             <button
                               type="button"
-                              aria-label={dashboardPackagingOpen ? "Hide packaging dashboards" : "Show packaging dashboards"}
-                              aria-expanded={dashboardPackagingOpen}
+                              aria-label={
+                                link.type === "transport"
+                                  ? dashboardTransportOpen
+                                    ? "Hide transport dashboards"
+                                    : "Show transport dashboards"
+                                  : dashboardPackagingOpen
+                                  ? "Hide packaging dashboards"
+                                  : "Show packaging dashboards"
+                              }
+                              aria-expanded={link.type === "transport" ? dashboardTransportOpen : dashboardPackagingOpen}
                               className="rounded-md p-1 text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 cursor-pointer"
                               onClick={(event) => {
                                 event.preventDefault();
                                 event.stopPropagation();
-                                setDashboardPackagingOpen((open) => !open);
+                                if (link.type === "transport") setDashboardTransportOpen((open) => !open);
+                                else setDashboardPackagingOpen((open) => !open);
                               }}
                             >
-                              <ChevronIcon open={dashboardPackagingOpen} />
+                              <ChevronIcon open={link.type === "transport" ? dashboardTransportOpen : dashboardPackagingOpen} />
                             </button>
                           ) : null}
                         </div>
-                        {showChildToggle && dashboardPackagingOpen ? (
+                        {showChildToggle && ((link.type === "transport" && dashboardTransportOpen) || (!link.type && dashboardPackagingOpen)) ? (
                           <div className="mt-1 space-y-1 rounded-md bg-white/5 px-2 py-2 text-sm text-white/80 ring-1 ring-white/10">
-                            {packagingCategories.map((category) => (
+                            {(link.type === "transport" ? transportCategories : packagingCategories).map((category) => (
                               <Link
                                 key={category.id}
-                                href={`/dashboard/packaging-means/${category.slug}`}
+                                href={`/dashboard/${link.type === "transport" ? "transport-means" : "packaging-means"}/${category.slug}`}
                                 className="block cursor-pointer rounded-md px-2 py-1 transition hover:bg-white/10 hover:text-white"
                               >
                                 {category.name}
