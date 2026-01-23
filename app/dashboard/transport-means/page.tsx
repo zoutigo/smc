@@ -8,6 +8,8 @@ export const metadata = {
   description: "KPI overview for all transport means and categories.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function TransportMeansDashboardPage() {
   const prisma = getPrisma();
 

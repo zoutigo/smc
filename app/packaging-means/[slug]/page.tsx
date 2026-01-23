@@ -25,14 +25,15 @@ const resolveSearchParams = async (searchParams?: SearchParams) =>
   searchParams instanceof Promise ? searchParams : Promise.resolve(searchParams ?? {});
 
 export async function generateStaticParams() {
-  const categories = await getPackagingMeanCategories();
-  const slugs = new Set<string>();
-
-  categories
-    .filter((category) => Boolean(category.slug))
-    .forEach((category) => slugs.add(category.slug));
-
-  return Array.from(slugs).map((slug) => ({ slug }));
+  try {
+    const categories = await getPackagingMeanCategories();
+    const slugs = new Set<string>();
+    categories.filter((category) => Boolean(category.slug)).forEach((category) => slugs.add(category.slug));
+    return Array.from(slugs).map((slug) => ({ slug }));
+  } catch {
+    // Avoid failing build when DB unavailable during CI/export
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PackagingMeanCategoryPageProps): Promise<Metadata> {

@@ -21,17 +21,22 @@ type StorageMeanCategoryPageProps = {
 const resolveParams = async (params: Params) => (params instanceof Promise ? params : Promise.resolve(params));
 
 export async function generateStaticParams() {
-  const categories = await getStorageMeanCategories();
-  const aliases = listStorageMeanCategoryAliasSlugs();
+  try {
+    const categories = await getStorageMeanCategories();
+    const aliases = listStorageMeanCategoryAliasSlugs();
 
-  const slugs = new Set<string>();
-  categories
-    .filter((category) => Boolean(category.slug))
-    .forEach((category) => slugs.add(category.slug));
+    const slugs = new Set<string>();
+    categories
+      .filter((category) => Boolean(category.slug))
+      .forEach((category) => slugs.add(category.slug));
 
-  aliases.forEach((alias) => slugs.add(alias));
+    aliases.forEach((alias) => slugs.add(alias));
 
-  return Array.from(slugs).map((slug) => ({ slug }));
+    return Array.from(slugs).map((slug) => ({ slug }));
+  } catch {
+    // Avoid failing build when DB unavailable during CI/export
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: StorageMeanCategoryPageProps): Promise<Metadata> {
