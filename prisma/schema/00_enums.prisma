@@ -1,0 +1,34 @@
+enum StorageStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+}
+
+enum PackagingStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+}
+
+enum TransportStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+}
+
+enum FlowStation {
+  INJECTION
+  PAINT
+  ASSEMBLY
+  BONDING
+  INSPECTION
+  SILS
+  CUSTOMER
+  WAREHOUSE
+}
+
+enum NoteTargetType {
+  STORAGE_MEAN
+  PACKAGING_MEAN
+  TRANSPORT_MEAN
+}

@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 
-import SidebarClient from "../SidebarClient";
+import SidebarClient, { type SidebarClientCategory } from "../SidebarClient";
 
 jest.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -21,10 +21,11 @@ const packagingCategories = [
   { id: "pkg-1", name: "Trolley", slug: "trolley" },
   { id: "pkg-2", name: "Tallboy", slug: "tallboy" },
 ];
+const transportCategories: SidebarClientCategory[] = [];
 
 describe("Sidebar navigation", () => {
   it("renders the Packaging means link inside the aside", () => {
-    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} />);
+    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} transportCategories={transportCategories} />);
 
     const sidebar = screen.getByRole("complementary");
     const packagingLink = within(sidebar).getByRole("link", { name: /packaging means/i });
@@ -34,7 +35,7 @@ describe("Sidebar navigation", () => {
   });
 
   it("toggles storage categories when the caret button is clicked", async () => {
-    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} />);
+    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} transportCategories={transportCategories} />);
     const user = userEvent.setup();
 
     const toggleButton = screen.getByRole("button", { name: /show storage mean categories/i });
@@ -47,7 +48,7 @@ describe("Sidebar navigation", () => {
     expect(screen.queryByRole("link", { name: /cold room/i })).not.toBeInTheDocument();
   });
   it("toggles packaging categories when the caret button is clicked", async () => {
-    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} />);
+    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} transportCategories={transportCategories} />);
     const user = userEvent.setup();
 
     const toggleButton = screen.getByRole("button", { name: /show packaging categories/i });
@@ -61,7 +62,7 @@ describe("Sidebar navigation", () => {
   });
 
   it("shows all storage category links when expanded", async () => {
-    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} />);
+    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} transportCategories={transportCategories} />);
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: /show storage mean categories/i }));
@@ -73,7 +74,7 @@ describe("Sidebar navigation", () => {
   });
 
   it("shows all packaging category links when expanded", async () => {
-    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} />);
+    render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} transportCategories={transportCategories} />);
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: /show packaging categories/i }));

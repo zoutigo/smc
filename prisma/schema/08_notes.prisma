@@ -1,0 +1,32 @@
+model Note {
+  id      String  @id @default(uuid()) @db.Char(36)
+  title   String?
+  content String  @db.Text
+
+  // ✅ relation nommée et symétrique avec User.notes
+  authorId String? @db.Char(36)
+  author   User?   @relation("UserNotes", fields: [authorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  links NoteLink[]
+}
+
+model NoteLink {
+  id String @id @default(uuid()) @db.Char(36)
+
+  noteId String @db.Char(36)
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  targetType NoteTargetType
+  targetId   String         @db.Char(36)
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([noteId, targetType, targetId])
+  @@index([targetType, targetId])
+  @@index([noteId])
+}

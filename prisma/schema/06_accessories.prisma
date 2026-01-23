@@ -1,0 +1,51 @@
+model Accessory {
+  id          String  @id @default(uuid()) @db.Char(36)
+  name        String
+  slug        String
+  description String?
+
+  plantId String @db.Char(36)
+  plant   Plant  @relation(fields: [plantId], references: [id])
+
+  supplierId String?   @db.Char(36)
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  unitPrice Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  partLinks      PartAccessory[]
+  packagingLinks PackagingMeanAccessory[]
+
+  @@unique([plantId, slug])
+  @@index([plantId])
+  @@index([supplierId])
+}
+
+model PartAccessory {
+  partId      String @db.Char(36)
+  accessoryId String @db.Char(36)
+
+  qtyPerPart Int     @default(1)
+  notes      String?
+
+  part      Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+  accessory Accessory @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+
+  @@id([partId, accessoryId])
+}
+
+model PackagingMeanAccessory {
+  packagingMeanId String @db.Char(36)
+  accessoryId     String @db.Char(36)
+
+  qtyPerPackaging   Int     @default(1)
+  unitPriceOverride Int?
+  notes             String?
+
+  packagingMean PackagingMean @relation(fields: [packagingMeanId], references: [id], onDelete: Cascade)
+  accessory     Accessory     @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+
+  @@id([packagingMeanId, accessoryId])
+  @@index([accessoryId])
+}

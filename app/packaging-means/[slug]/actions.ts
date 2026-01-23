@@ -138,15 +138,17 @@ export async function createPackagingMeanAction(_: PackagingMeanActionState, for
 
     if (parsed.data.parts?.length) {
       for (const part of parsed.data.parts) {
+        if (!part.projectId) {
+          throw new Error("Project is required for parts.");
+        }
         const slug = `${part.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
-        const partRecord = await prisma.part.create({
-          data: {
-            name: part.name,
-            slug,
-            partFamilyId: part.partFamilyId,
-            projectId: part.projectId ?? null,
-          },
-        });
+        const partData = {
+          name: part.name,
+          slug,
+          partFamilyId: part.partFamilyId,
+          projectId: part.projectId,
+        };
+        const partRecord = await prisma.part.create({ data: partData });
         await prisma.packagingMeanPart.create({
           data: {
             packagingMeanId: created.id,
@@ -172,7 +174,7 @@ export async function createPackagingMeanAction(_: PackagingMeanActionState, for
       }
     }
 
-    const slug = resolvePackagingMeanSlug(formData.get("categorySlug") as string) ?? "";
+    const slug = resolvePackagingMeanSlug(formData.get("categorySlug") as string) ?? undefined;
     try {
       revalidatePath("/packaging-means");
       if (slug) revalidatePath(`/packaging-means/${slug}`);
@@ -352,15 +354,17 @@ export async function updatePackagingMeanAction(_: PackagingMeanActionState, for
     await prisma.packagingMeanPart.deleteMany({ where: { packagingMeanId: parsed.data.id } });
     if (parts.length) {
       for (const part of parts) {
+        if (!part.projectId) {
+          throw new Error("Project is required for parts.");
+        }
         const slug = `${part.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
-        const partRecord = await prisma.part.create({
-          data: {
-            name: part.name,
-            slug,
-            partFamilyId: part.partFamilyId,
-            projectId: part.projectId ?? null,
-          },
-        });
+        const partData = {
+          name: part.name,
+          slug,
+          partFamilyId: part.partFamilyId,
+          projectId: part.projectId,
+        };
+        const partRecord = await prisma.part.create({ data: partData });
         await prisma.packagingMeanPart.create({
           data: {
             packagingMeanId: parsed.data.id,
@@ -386,7 +390,7 @@ export async function updatePackagingMeanAction(_: PackagingMeanActionState, for
       }
     }
 
-    const slug = resolvePackagingMeanSlug(formData.get("categorySlug") as string) ?? "";
+    const slug = resolvePackagingMeanSlug(formData.get("categorySlug") as string) ?? undefined;
     try {
       revalidatePath("/packaging-means");
       if (slug) revalidatePath(`/packaging-means/${slug}`);

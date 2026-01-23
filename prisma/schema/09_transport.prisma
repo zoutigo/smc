@@ -1,0 +1,114 @@
+model TransportMean {
+  id          String  @id @default(uuid()) @db.Char(36)
+  name        String
+  slug        String  @unique
+  description String?
+
+  // ✅ catégorie
+  transportMeanCategoryId String
+  transportMeanCategory   TransportMeanCategory @relation(fields: [transportMeanCategoryId], references: [id], onDelete: Cascade)
+
+  // ✅ contexte réel
+  plantId String @db.Char(36)
+  plant   Plant  @relation(fields: [plantId], references: [id])
+
+  flowId String? @db.Char(36)
+  flow   Flow?   @relation(fields: [flowId], references: [id])
+
+  supplierId String?   @db.Char(36)
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  // ✅ données propres à l’équipement
+  loadCapacityKg Int @default(0)
+  units          Int @default(1)
+
+  cruiseSpeedKmh Int @default(0)
+  maxSpeedKmh    Int @default(0)
+
+  sop       DateTime @default(now())
+  eop       DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ✅ images via pivot (plural)
+  images TransportMeanImage[]
+
+  // ✅ transporte des packaging means
+  packagingLinks TransportMeanPackagingMean[]
+
+  // ✅ MULTI FLOWS via pivot
+  flows TransportMeanFlow[]
+
+  // optionnel si tu veux éviter les doublons
+  @@unique([plantId, slug])
+  @@index([transportMeanCategoryId])
+  @@index([plantId])
+  @@index([flowId])
+  @@index([supplierId])
+}
+
+model TransportMeanImage {
+  transportMeanId String @db.Char(36)
+  imageId         String @db.Char(36)
+  sortOrder       Int    @default(0)
+
+  transportMean TransportMean @relation(fields: [transportMeanId], references: [id], onDelete: Cascade)
+  image         Image         @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@id([transportMeanId, imageId])
+  @@index([imageId])
+  @@index([transportMeanId, sortOrder])
+}
+
+model TransportMeanCategory {
+  id          String  @id @default(uuid()) @db.Char(36)
+  name        String
+  slug        String  @unique
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 1 image “main” via pivot (comme tes autres catégories)
+  image TransportMeanCategoryImage?
+
+  transportMeans TransportMean[]
+}
+
+model TransportMeanCategoryImage {
+  transportMeanCategoryId String @unique @db.Char(36)
+  imageId                 String @unique @db.Char(36)
+
+  transportMeanCategory TransportMeanCategory @relation(fields: [transportMeanCategoryId], references: [id], onDelete: Cascade)
+  image                 Image                 @relation(fields: [imageId], references: [id], onDelete: Cascade)
+}
+
+model TransportMeanPackagingMean {
+  transportMeanId String @db.Char(36)
+  packagingMeanId String @db.Char(36)
+
+  // combien de PackagingMean de ce type il peut embarquer (capacité)
+  maxQty Int @default(1)
+
+  notes String?
+
+  transportMean                    TransportMean      @relation(fields: [transportMeanId], references: [id], onDelete: Cascade)
+  packagingMean                    PackagingMean      @relation(fields: [packagingMeanId], references: [id], onDelete: Cascade)
+  packagingMeanPart                PackagingMeanPart? @relation(fields: [packagingMeanPartPackagingMeanId, packagingMeanPartPartId], references: [packagingMeanId, partId])
+  packagingMeanPartPackagingMeanId String?            @db.Char(36)
+  packagingMeanPartPartId          String?            @db.Char(36)
+
+  @@id([transportMeanId, packagingMeanId])
+  @@index([packagingMeanId])
+}
+
+model TransportMeanFlow {
+  transportMeanId String @db.Char(36)
+  flowId          String @db.Char(36)
+
+  transportMean TransportMean @relation(fields: [transportMeanId], references: [id], onDelete: Cascade)
+  flow          Flow          @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@id([transportMeanId, flowId])
+  @@index([flowId])
+}

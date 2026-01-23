@@ -1,0 +1,108 @@
+model StorageMean {
+  id          String        @id @default(uuid()) @db.Char(36)
+  name        String
+  price       Int           @default(0)
+  description String?
+  status      StorageStatus @default(ACTIVE)
+  sop         DateTime      @default(now())
+  eop         DateTime      @default(now())
+
+  supplierId String?   @db.Char(36)
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  plantId String @db.Char(36)
+  plant   Plant  @relation(fields: [plantId], references: [id])
+
+  flowId String? @db.Char(36)
+  flow   Flow?   @relation(fields: [flowId], references: [id])
+
+  storageMeanCategoryId String?              @db.Char(36)
+  storageMeanCategory   StorageMeanCategory? @relation(fields: [storageMeanCategoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  manualTranstocker StorageMeanManualTranstocker?
+  autoTranstocker   StorageMeanAutoTranstocker?
+
+  images StorageMeanImage[]
+
+  @@unique([plantId, name, storageMeanCategoryId])
+  @@index([plantId])
+  @@index([storageMeanCategoryId])
+}
+
+model StorageMeanCategory {
+  id          String   @id @default(uuid()) @db.Char(36)
+  name        String   @default("Description of storage mean category")
+  slug        String   @unique
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  image StorageMeanCategoryImage?
+
+  storageMeans StorageMean[]
+}
+
+model Lane {
+  id        String   @id @default(uuid()) @db.Char(36)
+  length    Int      @default(0)
+  width     Int      @default(0)
+  height    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  manualLinks StorageMeanManualTranstockerLane[]
+  autoLinks   StorageMeanAutoTranstockerLane[]
+
+  @@unique([length, width, height])
+}
+
+model StorageMeanManualTranstocker {
+  storageMeanId String      @id @db.Char(36)
+  storageMean   StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
+
+  emptyReturnLanes Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  lanes StorageMeanManualTranstockerLane[]
+}
+
+model StorageMeanAutoTranstocker {
+  storageMeanId String      @id @db.Char(36)
+  storageMean   StorageMean @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
+
+  plcType          String   @default("siemens")
+  emptyReturnLanes Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  lanes StorageMeanAutoTranstockerLane[]
+}
+
+model StorageMeanManualTranstockerLane {
+  transtockerId String @db.Char(36)
+  laneId        String @db.Char(36)
+  quantity      Int    @default(0)
+
+  // ✅ @relation SUR LA MEME LIGNE
+  transtocker StorageMeanManualTranstocker @relation(fields: [transtockerId], references: [storageMeanId], onDelete: Cascade)
+  lane        Lane                         @relation(fields: [laneId], references: [id])
+
+  @@id([transtockerId, laneId])
+  @@index([laneId])
+}
+
+model StorageMeanAutoTranstockerLane {
+  transtockerId String @db.Char(36)
+  laneId        String @db.Char(36)
+  quantity      Int    @default(0)
+
+  transtocker StorageMeanAutoTranstocker @relation(fields: [transtockerId], references: [storageMeanId], onDelete: Cascade)
+  lane        Lane                       @relation(fields: [laneId], references: [id])
+
+  @@id([transtockerId, laneId])
+  @@index([laneId])
+}

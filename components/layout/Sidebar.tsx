@@ -1,7 +1,8 @@
-import type { PackagingMeanCategory, StorageMeanCategory } from "@prisma/client";
+import type { PackagingMeanCategory, StorageMeanCategory, TransportMeanCategory } from "@prisma/client";
 
 import { getStorageMeanCategories } from "@/app/storage-means/actions";
 import { getPackagingMeanCategories } from "@/app/packaging-means/actions";
+import { getTransportMeanCategories } from "@/app/transport-means/actions";
 
 import SidebarClient, { type SidebarClientCategory } from "./SidebarClient";
 
@@ -15,9 +16,10 @@ const safeFetch = async <T,>(fetcher: () => Promise<T>): Promise<T> => {
 };
 
 export default async function Sidebar() {
-  const [storageCategories, packagingCategories] = await Promise.all([
+  const [storageCategories, packagingCategories, transportCategories] = await Promise.all([
     safeFetch(() => getStorageMeanCategories() as Promise<StorageMeanCategory[]>),
     safeFetch(() => getPackagingMeanCategories() as Promise<PackagingMeanCategory[]>),
+    safeFetch(() => getTransportMeanCategories() as Promise<TransportMeanCategory[]>),
   ]);
 
   const sidebarStorageCategories: SidebarClientCategory[] = (storageCategories ?? [])
@@ -38,5 +40,20 @@ export default async function Sidebar() {
       slug: category.slug,
     }));
 
-  return <SidebarClient storageCategories={sidebarStorageCategories} packagingCategories={sidebarPackagingCategories} />;
+  const sidebarTransportCategories: SidebarClientCategory[] = (transportCategories ?? [])
+    .filter((category) => Boolean(category.slug))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((category) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+    }));
+
+  return (
+    <SidebarClient
+      storageCategories={sidebarStorageCategories}
+      packagingCategories={sidebarPackagingCategories}
+      transportCategories={sidebarTransportCategories}
+    />
+  );
 }
