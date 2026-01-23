@@ -962,88 +962,90 @@ async function seedPackagingMeans() {
       const length = 1200 + (i % 7) * 15;
       const height = 1000 + (i % 4) * 20;
       const numberOfPackagings = 1 + (i % 9);
-      const sop = new Date(2026, (i % 12), 1 + (i % 27));
+      const sop = new Date(2026, i % 12, 1 + (i % 27));
       const eop = new Date(sop);
       eop.setFullYear(eop.getFullYear() + 5);
 
-      const packaging = await prisma.packagingMean.create({
-        data: {
-          name,
-          description: `Seeded ${category.name.toLowerCase()} packaging #${i + 1}`,
-          price,
-          width,
-          length,
-          height,
-          numberOfPackagings,
-          status: $Enums.PackagingStatus.ACTIVE,
-          sop,
-          eop,
-          supplierId: supplier.id,
-          plantId: plant.id,
-          flowId: flow.id,
-          packagingMeanCategoryId: category.id,
-        },
-      });
-
-      // Images
-      for (let idx = 0; idx < 5; idx++) {
-        const base = packagingImagePool[(i + idx) % packagingImagePool.length];
-        const image = await prisma.image.create({
-          data: { imageUrl: `${base}?auto=format&fit=crop&w=1200&q=80&sig=${category.slug}-${i}-${idx}` },
-        });
-        await prisma.packagingMeanImage.create({
-          data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: idx },
-        });
-      }
-
-      // Accessories per packaging (pick 2)
-      for (let a = 0; a < 2; a++) {
-        const accessory = accessories[(i + a) % accessories.length];
-        await prisma.packagingMeanAccessory.create({
+      const packaging = await retry(() =>
+        prisma.packagingMean.create({
           data: {
-            packagingMeanId: packaging.id,
-            accessoryId: accessory.id,
-            qtyPerPackaging: 1 + (a % 3),
+            name,
+            description: `Seeded ${category.name.toLowerCase()} packaging #${i + 1}`,
+            price,
+            width,
+            length,
+            height,
+            numberOfPackagings,
+            status: $Enums.PackagingStatus.ACTIVE,
+            sop,
+            eop,
+            supplierId: supplier.id,
+            plantId: plant.id,
+            flowId: flow.id,
+            packagingMeanCategoryId: category.id,
           },
+        })
+      );
+
+      const images = Array.from({ length: 5 }, (_v, idx) => ({
+        url: `${packagingImagePool[(i + idx) % packagingImagePool.length]}?auto=format&fit=crop&w=1200&q=80&sig=${category.slug}-${i}-${idx}`,
+        sortOrder: idx,
+      }));
+      for (const img of images) {
+        await retry(async () => {
+          const image = await prisma.image.create({ data: { imageUrl: img.url } });
+          await prisma.packagingMeanImage.create({
+            data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: img.sortOrder },
+          });
         });
       }
 
-      // Parts (2 per packaging)
+      const accessoryLinks = Array.from({ length: 2 }, (_v, a) => {
+        const accessory = accessories[(i + a) % accessories.length];
+        return { packagingMeanId: packaging.id, accessoryId: accessory.id, qtyPerPackaging: 1 + (a % 3) };
+      });
+      await retry(() => prisma.packagingMeanAccessory.createMany({ data: accessoryLinks, skipDuplicates: true }));
+
       for (let p = 0; p < 2; p++) {
         const family = partFamilies[(i + p) % partFamilies.length];
         const project = projects[(i + p) % projects.length];
         const partName = `${category.name} Part ${p + 1} #${i + 1}`;
         const partSlug = buildSlug(`${partName}-${project.code}`, "part");
-        const part = await prisma.part.create({
-          data: {
-            name: partName,
-            slug: partSlug,
-            partFamilyId: family.id,
-            projectId: project.id,
-          },
-        });
+        const part = await retry(() =>
+          prisma.part.create({
+            data: {
+              name: partName,
+              slug: partSlug,
+              partFamilyId: family.id,
+              projectId: project.id,
+            },
+          })
+        );
 
-        await prisma.packagingMeanPart.create({
-          data: {
-            packagingMeanId: packaging.id,
-            partId: part.id,
-            partsPerPackaging: 1 + (p % 4),
-            levelsPerPackaging: 1 + (p % 2),
-            verticalPitch: 50 + p * 10,
-            horizontalPitch: 40 + p * 8,
-            notes: "Seeded part link",
-          },
-        });
+        await retry(() =>
+          prisma.packagingMeanPart.create({
+            data: {
+              packagingMeanId: packaging.id,
+              partId: part.id,
+              partsPerPackaging: 1 + (p % 4),
+              levelsPerPackaging: 1 + (p % 2),
+              verticalPitch: 50 + p * 10,
+              horizontalPitch: 40 + p * 8,
+              notes: "Seeded part link",
+            },
+          })
+        );
 
-        // Part accessories (1 accessory)
         const acc = accessories[(i + p + 1) % accessories.length];
-        await prisma.partAccessory.create({
-          data: {
-            partId: part.id,
-            accessoryId: acc.id,
-            qtyPerPart: 1 + (p % 2),
-          },
-        });
+        await retry(() =>
+          prisma.partAccessory.create({
+            data: {
+              partId: part.id,
+              accessoryId: acc.id,
+              qtyPerPart: 1 + (p % 2),
+            },
+          })
+        );
       }
 
       packagingCreated += 1;
