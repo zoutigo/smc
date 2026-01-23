@@ -11,7 +11,10 @@ export type PlantState = { status: "idle" | "error" | "success"; message?: strin
 type PrismaLikeError = { code?: string };
 const isPrismaError = (error: unknown): error is PrismaLikeError => typeof error === "object" && error !== null && "code" in error;
 
+const SKIP_DB = process.env.SKIP_DB_ON_BUILD === "1";
+
 export async function getPlants() {
+  if (SKIP_DB) return [];
   const prisma = getPrisma();
   try {
     return await prisma.plant.findMany({
@@ -28,6 +31,7 @@ export async function getPlants() {
 }
 
 export async function getPlantById(id: string) {
+  if (SKIP_DB) return null;
   const prisma = getPrisma();
   try {
     return await prisma.plant.findUnique({

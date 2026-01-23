@@ -33,6 +33,8 @@ jobs:
         run: npm run type-check
 
       - name: Build (standalone)
+        env:
+          SKIP_DB_ON_BUILD: "1"
         run: npm run build
 
       - name: Prepare deploy artifact (standalone only)

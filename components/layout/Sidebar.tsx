@@ -7,6 +7,9 @@ import { getTransportMeanCategories } from "@/app/transport-means/actions";
 import SidebarClient, { type SidebarClientCategory } from "./SidebarClient";
 
 const safeFetch = async <T,>(fetcher: () => Promise<T>): Promise<T> => {
+  if (process.env.SKIP_DB_ON_BUILD === "1") {
+    return [] as unknown as T;
+  }
   try {
     return await fetcher();
   } catch (error) {

@@ -3,7 +3,10 @@
 import type { PrismaClient, TransportMean, TransportMeanCategory } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 
+const SKIP_DB = process.env.SKIP_DB_ON_BUILD === "1";
+
 export async function getTransportMeanCategories(): Promise<TransportMeanCategory[]> {
+  if (SKIP_DB) return [];
   const prisma = getPrisma() as PrismaClient & { transportMeanCategory?: PrismaClient["transportMeanCategory"] };
   if (!("transportMeanCategory" in prisma)) return [];
   try {

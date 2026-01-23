@@ -18,6 +18,8 @@ export type StorageMeanCategoryState = {
 type PrismaLikeError = { code?: string };
 const isPrismaError = (error: unknown): error is PrismaLikeError => typeof error === "object" && error !== null && "code" in error;
 
+const SKIP_DB = process.env.SKIP_DB_ON_BUILD === "1";
+
 const extractString = (value: FormDataEntryValue | null) => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -47,6 +49,7 @@ const findSlugCollision = async (delegate: StorageMeanCategoryDelegate, slug: st
 };
 
 export async function getStorageMeanCategories() {
+  if (SKIP_DB) return listStorageMeanCategoryFallbacks();
   const categoryDelegate = getStorageMeanCategoryDelegate();
   if (!categoryDelegate) {
     console.warn(MODEL_MISSING_WARNING);
