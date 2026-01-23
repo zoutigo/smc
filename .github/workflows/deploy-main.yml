@@ -296,7 +296,23 @@ jobs:
           set -euo pipefail
 
           set +u
-          . "$O2_NODEENV_ACTIVATE"
+          ACTIVATE_CMD="${O2_NODEENV_ACTIVATE:-}"
+          if [ -z "$ACTIVATE_CMD" ]; then
+            echo "ERROR: O2_NODEENV_ACTIVATE is empty."
+            exit 1
+          fi
+          if echo "$ACTIVATE_CMD" | grep -q "^source "; then
+            echo "Activating virtualenv via command: $ACTIVATE_CMD"
+            eval "$ACTIVATE_CMD"
+          else
+            echo "Activating virtualenv from file: $ACTIVATE_CMD"
+            if [ ! -f "$ACTIVATE_CMD" ]; then
+              echo "ERROR: activate file not found: $ACTIVATE_CMD"
+              exit 1
+            fi
+            # shellcheck disable=SC1090
+            . "$ACTIVATE_CMD"
+          fi
           set -u
 
           cd "$O2_TARGET_DIR"
