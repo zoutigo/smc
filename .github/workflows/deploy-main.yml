@@ -344,7 +344,6 @@ jobs:
           npm ci --include=dev
           npx --no-install prisma generate
           npx --no-install prisma migrate deploy
-          npx --no-install prisma db seed
 
           mkdir -p tmp
           touch tmp/restart.txt

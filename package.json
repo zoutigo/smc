@@ -58,6 +58,6 @@
   },
   "prisma": {
     "schema": "./prisma/schema",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "node prisma/seed-runner.cjs"
   }
 }
