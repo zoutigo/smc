@@ -78,6 +78,10 @@ jobs:
             rsync -a prisma/ deploy/prisma/
           fi
 
+          if [ -d lib ]; then
+            rsync -a lib/ deploy/lib/
+          fi
+
           cp -f package.json deploy/
           if [ -f package-lock.json ]; then
             cp -f package-lock.json deploy/
