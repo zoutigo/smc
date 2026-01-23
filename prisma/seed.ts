@@ -5,6 +5,21 @@ import { slugifyValue } from "../lib/utils";
 
 const prisma = new PrismaClient();
 
+async function retry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 500): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (i < attempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError;
+}
+
 const transportMeanCategoriesSeedData = [
   { name: "AGV-AMR", description: "Autonomous mobile robots and guided vehicles for intralogistics." },
   { name: "Forklift", description: "Counterbalance and reach trucks for versatile handling." },
@@ -892,23 +907,25 @@ async function seedAccessories() {
     const supplierId = supplierMap.get(acc.supplierName || "");
     if (!plantId) continue;
     const slug = buildSlug(acc.name, "accessory");
-    await prisma.accessory.upsert({
-      where: { plantId_slug: { plantId, slug } },
-      create: {
-        name: acc.name,
-        slug,
-        description: acc.description,
-        unitPrice: acc.unitPrice ?? 0,
-        plantId,
-        supplierId: supplierId ?? null,
-      },
-      update: {
-        description: acc.description,
-        unitPrice: acc.unitPrice ?? 0,
-        supplierId: supplierId ?? null,
-        plantId,
-      },
-    });
+    await retry(() =>
+      prisma.accessory.upsert({
+        where: { plantId_slug: { plantId, slug } },
+        create: {
+          name: acc.name,
+          slug,
+          description: acc.description,
+          unitPrice: acc.unitPrice ?? 0,
+          plantId,
+          supplierId: supplierId ?? null,
+        },
+        update: {
+          description: acc.description,
+          unitPrice: acc.unitPrice ?? 0,
+          supplierId: supplierId ?? null,
+          plantId,
+        },
+      })
+    );
   }
   console.info(`Seeded/ensured ${accessorySeedData.length} accessories.`);
 }
