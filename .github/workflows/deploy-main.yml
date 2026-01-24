@@ -47,9 +47,36 @@ jobs:
           cat > deploy/server.js <<'JS'
           /* eslint-disable @typescript-eslint/no-require-imports */
           const path = require("path");
+          const fs = require("fs");
 
           const appRoot = __dirname;
           const standaloneDir = path.join(appRoot, ".next", "standalone");
+
+          // File logging (passenger-compatible)
+          const logFile = "/home/yilu0122/nodeapps/smc/passenger.log";
+          let logStream = null;
+          try {
+            logStream = fs.createWriteStream(logFile, { flags: "a" });
+          } catch (err) {
+            // fall back to stderr
+            process.stderr.write(`Failed to open log file ${logFile}: ${err?.message || err}\n`);
+          }
+          const log = (...args) => {
+            const line = `[${new Date().toISOString()}] ${args
+              .map((a) => (typeof a === "string" ? a : JSON.stringify(a)))
+              .join(" ")}\n`;
+            if (logStream) logStream.write(line);
+            else process.stderr.write(line);
+          };
+          console.log = log;
+          console.error = log;
+
+          process.on("uncaughtException", (err) => {
+            log("UNCAUGHT_EXCEPTION", err?.stack || err);
+          });
+          process.on("unhandledRejection", (err) => {
+            log("UNHANDLED_REJECTION", err?.stack || err);
+          });
 
           process.env.NODE_ENV = process.env.NODE_ENV || "production";
           process.env.PORT = process.env.PORT || "3000";
