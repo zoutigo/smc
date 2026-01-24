@@ -19,8 +19,8 @@ jest.mock("next/navigation", () => {
   };
 });
 
-jest.mock("@/components/packaging-means/PackagingCard", () => {
-  const MockPackagingCard = ({ name, id, onEdit, onDelete }: { name: string; id: string; onEdit?: (id: string) => void; onDelete?: (id: string) => void }) => (
+jest.mock("@/components/ui/CategoryCard", () => {
+  const MockCategoryCard = ({ name, id, onEdit, onDelete }: { name: string; id: string; onEdit?: (id: string) => void; onDelete?: (id: string) => void }) => (
     <div data-testid="packaging-card">
       {name}
       <button type="button" aria-label={`edit-${name}`} onClick={() => onEdit?.(id)}>
@@ -31,8 +31,8 @@ jest.mock("@/components/packaging-means/PackagingCard", () => {
       </button>
     </div>
   );
-  MockPackagingCard.displayName = "MockPackagingCard";
-  return { __esModule: true, default: MockPackagingCard };
+  MockCategoryCard.displayName = "MockCategoryCard";
+  return { __esModule: true, default: MockCategoryCard };
 });
 
 type MockPackagingFormProps = Record<string, unknown> & { mode?: string; onClose?: () => void };

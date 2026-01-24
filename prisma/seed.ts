@@ -21,9 +21,21 @@ async function retry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 500): Prom
 }
 
 const transportMeanCategoriesSeedData = [
-  { name: "AGV-AMR", description: "Autonomous mobile robots and guided vehicles for intralogistics." },
-  { name: "Forklift", description: "Counterbalance and reach trucks for versatile handling." },
-  { name: "Tugger Train", description: "Tugger tractors with tow carts for milk runs." },
+  {
+    name: "AGV-AMR",
+    description: "Autonomous mobile robots and guided vehicles for intralogistics.",
+    imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+  },
+  {
+    name: "Forklift",
+    description: "Counterbalance and reach trucks for versatile handling.",
+    imageUrl: "https://images.unsplash.com/photo-1489515217757-5fd1be406fef",
+  },
+  {
+    name: "Tugger Train",
+    description: "Tugger tractors with tow carts for milk runs.",
+    imageUrl: "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+  },
 ];
 
 type TransportMeanSeed = {
@@ -1057,21 +1069,50 @@ async function seedPackagingMeans() {
 async function seedTransportMeanCategories() {
   for (const category of transportMeanCategoriesSeedData) {
     const slug = buildSlug(category.name, "transport");
-    const existing = await prisma.transportMeanCategory.findUnique({ where: { slug } });
+    const existing = await prisma.transportMeanCategory.findUnique({
+      where: { slug },
+      include: { image: { include: { image: true } } },
+    });
     if (existing) {
       await prisma.transportMeanCategory.update({
         where: { id: existing.id },
         data: { description: category.description },
       });
+      if (!existing.image && category.imageUrl) {
+        const image = await prisma.image.create({
+          data: {
+            imageUrl: category.imageUrl,
+          },
+        });
+        await prisma.transportMeanCategoryImage.create({
+          data: {
+            transportMeanCategoryId: existing.id,
+            imageId: image.id,
+          },
+        });
+      }
       continue;
     }
-    await prisma.transportMeanCategory.create({
+    const created = await prisma.transportMeanCategory.create({
       data: {
         name: category.name,
         description: category.description,
         slug,
       },
     });
+    if (category.imageUrl) {
+      const image = await prisma.image.create({
+        data: {
+          imageUrl: category.imageUrl,
+        },
+      });
+      await prisma.transportMeanCategoryImage.create({
+        data: {
+          transportMeanCategoryId: created.id,
+          imageId: image.id,
+        },
+      });
+    }
   }
   console.info(`Seeded/updated ${transportMeanCategoriesSeedData.length} transport mean categories.`);
 }

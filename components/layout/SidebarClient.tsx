@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -40,6 +40,79 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
   </svg>
 );
 
+const iconProps = {
+  width: 18,
+  height: 18,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: "text-white/70",
+} as const;
+
+const HomeIcon = () => (
+  <svg {...iconProps} aria-hidden>
+    <path d="M3 11.5 12 4l9 7.5" />
+    <path d="M5 10v10h4v-6h6v6h4V10" />
+  </svg>
+);
+
+const BoxIcon = () => (
+  <svg {...iconProps} aria-hidden>
+    <path d="M3 7 12 3l9 4-9 4-9-4Z" />
+    <path d="M3 7v10l9 4 9-4V7" />
+    <path d="M12 11v10" />
+  </svg>
+);
+
+const WarehouseIcon = () => (
+  <svg {...iconProps} aria-hidden>
+    <path d="M3 20V9.5L12 5l9 4.5V20" />
+    <path d="M7 20v-6h10v6" />
+    <path d="M10 20v-4h4v4" />
+  </svg>
+);
+
+const TruckIcon = () => (
+  <svg {...iconProps} aria-hidden>
+    <path d="M3 5h11v10H3Z" />
+    <path d="M14 8h3l3 3v4h-2.5" />
+    <circle cx="7" cy="18" r="2" />
+    <circle cx="17" cy="18" r="2" />
+  </svg>
+);
+
+const ChartIcon = () => (
+  <svg {...iconProps} aria-hidden>
+    <path d="M4 19V5" />
+    <path d="M20 19H4" />
+    <path d="M8 19V9" />
+    <path d="M12 19V7" />
+    <path d="M16 19v-4" />
+  </svg>
+);
+
+const LeafIcon = () => (
+  <svg {...iconProps} aria-hidden>
+    <path d="M20 4c-8 0-14 6-14 14" />
+    <path d="M4 18c6 0 11-5 11-11" />
+    <path d="M10 22c0-3.5 3-6 6-6" />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg {...iconProps} aria-hidden>
+    <circle cx="9" cy="8" r="3" />
+    <circle cx="17" cy="9" r="3" />
+    <path d="M4 21v-1a5 5 0 0 1 5-5h2" />
+    <path d="M14 15h2a4 4 0 0 1 4 4v2" />
+  </svg>
+);
+
+const defaultIcon = () => <span className="h-2 w-2 rounded-full bg-white/30 shadow-[0_0_0_4px_rgba(255,255,255,0.06)]" aria-hidden />;
+
 export default function SidebarClient({ storageCategories, packagingCategories, transportCategories }: SidebarClientProps) {
   const pathname = usePathname() ?? "";
   const { sidebarCollapsed } = useUIStore();
@@ -49,9 +122,39 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
   const [storageMenuOpen, setStorageMenuOpen] = useState(false);
   const [packagingMenuOpen, setPackagingMenuOpen] = useState(false);
   const [transportMenuOpen, setTransportMenuOpen] = useState(false);
-  const hasStorageCategories = storageCategories.length > 0;
-  const hasPackagingCategories = packagingCategories.length > 0;
-  const hasTransportCategories = transportCategories.length > 0;
+  const [storageCats, setStorageCats] = useState(storageCategories);
+  const [packagingCats, setPackagingCats] = useState(packagingCategories);
+  const [transportCats, setTransportCats] = useState(transportCategories);
+
+  useEffect(() => {
+    let cancelled = false;
+    const hasAll = storageCats.length > 0 && packagingCats.length > 0 && transportCats.length > 0;
+    if (hasAll) return;
+
+    const load = async () => {
+      try {
+        const res = await fetch("/api/sidebar/categories");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (Array.isArray(data?.storageCategories)) setStorageCats(data.storageCategories);
+        if (Array.isArray(data?.packagingCategories)) setPackagingCats(data.packagingCategories);
+        if (Array.isArray(data?.transportCategories)) setTransportCats(data.transportCategories);
+      } catch (error) {
+        console.error("Sidebar categories fetch failed", error);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const hasStorageCategories = storageCats.length > 0;
+  const hasPackagingCategories = packagingCats.length > 0;
+  const hasTransportCategories = transportCats.length > 0;
   const dashboardLinks = [
     { label: "Packaging means", href: "/dashboard/packaging-means", hasCategories: true },
     { label: "Transport means", href: "/dashboard/transport-means", hasCategories: true, type: "transport" as const },
@@ -65,7 +168,20 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
   const storageLinkHref = "/storage-means" as const;
   const packagingLinkHref = "/packaging-means" as const;
   const transportLinkHref = "/transport-means" as const;
-  const dashboardHref = "/" as const;
+  const dashboardHref = "/dashboard" as const;
+
+  const iconMap = useMemo(
+    () => ({
+      "/": HomeIcon,
+      "/packaging-means": BoxIcon,
+      "/storage-means": WarehouseIcon,
+      "/transport-means": TruckIcon,
+      "/dashboard": ChartIcon,
+      "/plants": LeafIcon,
+      "/users": UsersIcon,
+    }),
+    []
+  );
 
   return (
     <aside
@@ -83,6 +199,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
           const isStorageLink = it.href === storageLinkHref;
           const isPackagingLink = it.href === packagingLinkHref;
           const isTransportLink = it.href === transportLinkHref;
+          const Icon = iconMap[it.href] ?? defaultIcon;
 
           return (
             <div key={it.href} className="flex flex-col">
@@ -96,7 +213,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                       : "text-white/75 hover:bg-white/10 hover:text-white"
                   )}
                 >
-                  <span className="h-2 w-2 rounded-full bg-white/30 shadow-[0_0_0_4px_rgba(255,255,255,0.06)]" aria-hidden />
+                  <Icon />
                   <span className={cx(sidebarCollapsed && "sr-only")}>{it.label}</span>
                 </Link>
                 {isDashboardLink && !sidebarCollapsed ? (
@@ -226,7 +343,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
               ) : null}
               {isStorageLink && renderStorageSubmenu ? (
                 <div className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Storage mean categories">
-                  {storageCategories.map((category) => (
+                  {storageCats.map((category) => (
                     <Link
                       key={category.id}
                       href={`${storageLinkHref}/${category.slug}`}
@@ -239,7 +356,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
               ) : null}
               {isPackagingLink && renderPackagingSubmenu ? (
                 <div className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Packaging categories">
-                  {packagingCategories.map((category) => (
+                  {packagingCats.map((category) => (
                     <Link
                       key={category.id}
                       href={`${packagingLinkHref}/${category.slug}`}
@@ -252,7 +369,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
               ) : null}
               {isTransportLink && renderTransportSubmenu ? (
                 <div className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Transport categories">
-                  {transportCategories.map((category) => (
+                  {transportCats.map((category) => (
                     <Link
                       key={category.id}
                       href={`${transportLinkHref}/${category.slug}`}

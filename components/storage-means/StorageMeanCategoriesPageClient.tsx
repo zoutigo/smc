@@ -3,10 +3,10 @@
 import React, { useMemo, useState } from "react";
 import type { Image, StorageMeanCategory } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { CustomButton } from "@/components/ui/custom-button";
 import { cn } from "@/lib/utils";
 import Pagination from "@/components/pagination/Pagination";
-import StorageCard from "@/components/storage-means/StorageCard";
+import CategoryCard from "@/components/ui/CategoryCard";
 import StorageForm from "@/components/storage-means/StorageForm";
 import { useConfirmMessage } from "@/components/ui/confirm-message";
 import { deleteStorageMeanCategoryAction, updateStorageMeanCategoryAction } from "@/app/storage-means/actions";
@@ -101,9 +101,11 @@ export default function StorageMeanCategoriesPageClient({ categories }: StorageM
             </p>
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
-            <Button onClick={handleToggle} className="self-stretch sm:self-auto">
-              {showForm ? "Hide form" : "Add storage category"}
-            </Button>
+            <CustomButton
+              onClick={handleToggle}
+              className="self-stretch sm:self-auto"
+              text={showForm ? "Hide form" : "Add storage category"}
+            />
             <p className="text-xs text-smc-text-muted">Upload visuals to showcase each category.</p>
           </div>
         </div>
@@ -114,18 +116,27 @@ export default function StorageMeanCategoriesPageClient({ categories }: StorageM
           <div className="space-y-6">
             <div data-testid="storage-cards-grid" className={cardsGridClassName}>
               {paginatedCategories.map((category) => (
-              <StorageCard
-                key={category.id}
-                id={category.id}
-                name={category.name}
-                description={category.description}
-                imageUrl={category.image?.imageUrl}
-                href={`/storage-means/${category.slug}`}
-                onEdit={() => handleEdit(category)}
-                onDelete={() => handleDelete(category.id)}
-              />
-            ))}
-          </div>
+                <CategoryCard
+                  key={category.id}
+                  id={category.id}
+                  name={category.name}
+                  description={category.description}
+                  imageUrl={category.image?.imageUrl ?? ""}
+                  href={`/storage-means/${category.slug}`}
+                  label="STORAGE"
+                  viewAriaLabel="View storage mean category"
+                  editAriaLabel="Edit storage mean category"
+                  deleteAriaLabel="Delete storage mean category"
+                  deleteTitle="Delete storage category"
+                  deleteDescription={`Are you sure you want to delete ${category.name}? This action cannot be undone.`}
+                  descriptionTestId="storage-description"
+                  footerTestId="storage-card-footer"
+                  labelTestId="storage-label"
+                  onEdit={() => handleEdit(category)}
+                  onDelete={() => handleDelete(category.id)}
+                />
+              ))}
+            </div>
             <div className="flex justify-center" data-testid="storage-pagination">
               <Pagination
                 totalItems={totalItems}

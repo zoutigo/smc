@@ -1,10 +1,9 @@
 export const nav = [
-  { label: "Dashboard", href: "/" },
-  { label: "Users", href: "/users" },
-  { label: "Storage means", href: "/storage-means" },
-  { label: "Plants", href: "/plants" },
+  { label: "Home", href: "/" },
   { label: "Packaging means", href: "/packaging-means" },
+  { label: "Storage means", href: "/storage-means" },
   { label: "Transport means", href: "/transport-means" },
-  { label: "Profile", href: "/profile" },
-  { label: "Settings", href: "/settings" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Plants", href: "/plants" },
+  { label: "Users", href: "/users" },
 ] as const;

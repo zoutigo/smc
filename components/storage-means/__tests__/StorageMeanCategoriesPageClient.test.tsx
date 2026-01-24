@@ -20,8 +20,8 @@ jest.mock("next/navigation", () => {
   };
 });
 
-jest.mock("@/components/storage-means/StorageCard", () => {
-  const MockStorageCard = ({ name, id, onEdit, onDelete }: { name: string; id: string; onEdit?: (id: string) => void; onDelete?: (id: string) => void }) => (
+jest.mock("@/components/ui/CategoryCard", () => {
+  const MockCategoryCard = ({ name, id, onEdit, onDelete }: { name: string; id: string; onEdit?: (id: string) => void; onDelete?: (id: string) => void }) => (
     <div data-testid="storage-card">
       {name}
       <button type="button" aria-label={`edit-${name}`} onClick={() => onEdit?.(id)}>
@@ -32,8 +32,8 @@ jest.mock("@/components/storage-means/StorageCard", () => {
       </button>
     </div>
   );
-  MockStorageCard.displayName = "MockStorageCard";
-  return { __esModule: true, default: MockStorageCard };
+  MockCategoryCard.displayName = "MockCategoryCard";
+  return { __esModule: true, default: MockCategoryCard };
 });
 
 type MockStorageFormProps = Record<string, unknown> & { mode?: string; onClose?: () => void };

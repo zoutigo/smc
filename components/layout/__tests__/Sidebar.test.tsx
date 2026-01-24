@@ -3,6 +3,9 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 
 import SidebarClient, { type SidebarClientCategory } from "../SidebarClient";
+import { waitFor } from "@testing-library/react";
+
+const mockFetch = jest.fn();
 
 jest.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -11,6 +14,8 @@ jest.mock("next/navigation", () => ({
 jest.mock("@/lib/stores/ui-store", () => ({
   useUIStore: () => ({ sidebarCollapsed: false }),
 }));
+
+global.fetch = mockFetch as unknown as typeof fetch;
 
 const storageCategories = [
   { id: "cat-1", name: "Cold room", slug: "cold-room" },
@@ -24,6 +29,10 @@ const packagingCategories = [
 const transportCategories: SidebarClientCategory[] = [];
 
 describe("Sidebar navigation", () => {
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
+
   it("renders the Packaging means link inside the aside", () => {
     render(<SidebarClient storageCategories={storageCategories} packagingCategories={packagingCategories} transportCategories={transportCategories} />);
 
@@ -83,5 +92,31 @@ describe("Sidebar navigation", () => {
       const link = screen.getByRole("link", { name: category.name });
       expect(link).toHaveAttribute("href", `/packaging-means/${category.slug}`);
     });
+  });
+
+  it("lazy-loads categories from API when none are provided", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        storageCategories,
+        packagingCategories,
+        transportCategories,
+      }),
+    });
+
+    render(<SidebarClient storageCategories={[]} packagingCategories={[]} transportCategories={[]} />);
+    const user = userEvent.setup();
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const packagingToggle = await screen.findByRole("button", { name: /show packaging categories/i });
+    await waitFor(() => expect(packagingToggle).toBeEnabled());
+    await user.click(packagingToggle);
+    expect(await screen.findByRole("link", { name: /trolley/i })).toHaveAttribute("href", "/packaging-means/trolley");
+
+    const storageToggle = screen.getByRole("button", { name: /show storage mean categories/i });
+    await waitFor(() => expect(storageToggle).toBeEnabled());
+    await user.click(storageToggle);
+    expect(await screen.findByRole("link", { name: /cold room/i })).toHaveAttribute("href", "/storage-means/cold-room");
   });
 });
