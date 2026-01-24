@@ -13,7 +13,7 @@
     "prisma": "prisma",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -58,6 +58,6 @@
   },
   "prisma": {
     "schema": "./prisma/schema",
-    "seed": "node prisma/seed-runner.cjs"
+    "seed": "node prisma/seed.js"
   }
 }
