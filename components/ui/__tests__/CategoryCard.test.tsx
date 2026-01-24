@@ -10,7 +10,11 @@ import CategoryCard from "@/components/ui/CategoryCard";
 
 jest.mock("next/image", () => ({
   __esModule: true,
-  default: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} />,
+  default: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => {
+    const { unoptimized, ...rest } = props as React.ImgHTMLAttributes<HTMLImageElement> & { unoptimized?: boolean };
+    void unoptimized;
+    return <img alt={alt} {...rest} />;
+  },
 }));
 
 jest.mock("@/components/ConfirmModal", () => ({

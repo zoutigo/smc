@@ -134,7 +134,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
     const load = async () => {
       try {
         const res = await fetch("/api/sidebar/categories");
-        if (!res.ok) return;
+        if (!res || !res.ok) return;
         const data = await res.json();
         if (cancelled) return;
         if (Array.isArray(data?.storageCategories)) setStorageCats(data.storageCategories);

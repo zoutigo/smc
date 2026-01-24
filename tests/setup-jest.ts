@@ -6,11 +6,10 @@ Object.assign(global, { TextEncoder, TextDecoder });
 const globalWithPolyfills = global as typeof globalThis;
 
 // Ensure WHATWG-style APIs are available in test environments without extra deps
-if (!globalWithPolyfills.fetch) {
-	globalWithPolyfills.fetch = async () => {
-		throw new Error("fetch is not implemented in tests");
-	};
-}
+globalWithPolyfills.fetch = jest.fn(async () => ({
+	ok: true,
+	json: async () => ({ storageCategories: [], packagingCategories: [], transportCategories: [] }),
+})) as unknown as typeof fetch;
 
 if (!globalWithPolyfills.Request) {
 	class SimpleRequest {
