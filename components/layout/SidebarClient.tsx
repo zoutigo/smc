@@ -165,7 +165,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
               </div>
               {isDashboardLink && renderDashboardSubmenu ? (
                 <div
-                  className="mt-1 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur"
+                  className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur"
                   role="group"
                   aria-label="Dashboard links"
                 >
@@ -207,7 +207,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                           ) : null}
                         </div>
                         {showChildToggle && ((link.type === "transport" && dashboardTransportOpen) || (!link.type && dashboardPackagingOpen)) ? (
-                          <div className="mt-1 space-y-1 rounded-md bg-white/5 px-2 py-2 text-sm text-white/80 ring-1 ring-white/10">
+                          <div className="mt-1 ml-3 space-y-1 rounded-md bg-white/5 px-2 py-2 text-sm text-white/80 ring-1 ring-white/10">
                             {(link.type === "transport" ? transportCategories : packagingCategories).map((category) => (
                               <Link
                                 key={category.id}
@@ -225,7 +225,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                 </div>
               ) : null}
               {isStorageLink && renderStorageSubmenu ? (
-                <div className="mt-1 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Storage mean categories">
+                <div className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Storage mean categories">
                   {storageCategories.map((category) => (
                     <Link
                       key={category.id}
@@ -238,7 +238,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                 </div>
               ) : null}
               {isPackagingLink && renderPackagingSubmenu ? (
-                <div className="mt-1 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Packaging categories">
+                <div className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Packaging categories">
                   {packagingCategories.map((category) => (
                     <Link
                       key={category.id}
@@ -251,7 +251,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                 </div>
               ) : null}
               {isTransportLink && renderTransportSubmenu ? (
-                <div className="mt-1 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Transport categories">
+                <div className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Transport categories">
                   {transportCategories.map((category) => (
                     <Link
                       key={category.id}
