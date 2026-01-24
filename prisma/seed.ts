@@ -20,6 +20,23 @@ async function retry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 500): Prom
   throw lastError;
 }
 
+async function truncateAllTables() {
+  const tables: Array<{ TABLE_NAME: string }> = await prisma.$queryRaw`
+    SELECT TABLE_NAME
+    FROM information_schema.tables
+    WHERE table_schema = database()
+      AND TABLE_NAME NOT LIKE '_prisma_migrations'
+  `;
+
+  if (!tables.length) return;
+
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS=0"),
+    ...tables.map((t) => prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${t.TABLE_NAME}\``)),
+    prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS=1"),
+  ]);
+}
+
 const transportMeanCategoriesSeedData = [
   {
     name: "AGV-AMR",
@@ -1474,6 +1491,9 @@ async function seedCountries() {
 }
 
 async function main() {
+  // Start fresh: truncate all tables so seed is always deterministic
+  await truncateAllTables();
+
   await seedCountries();
   await seedPlants();
   await seedSuppliers();
