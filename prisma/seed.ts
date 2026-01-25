@@ -849,18 +849,39 @@ async function getCountryMap(codes: Set<string>) {
 }
 
 async function seedPackagingMeanCategories() {
-  const existingCount = await prisma.packagingMeanCategory.count();
-  if (existingCount > 0) {
-    console.info(`Skipping packaging mean category seed: ${existingCount} record(s) already present.`);
-    return;
-  }
-
   for (const category of packagingMeanCategoriesSeedData) {
+    const slug = buildSlug(category.name, "packaging");
+    const existing = await prisma.packagingMeanCategory.findUnique({
+      where: { slug },
+      include: { image: { include: { image: true } } },
+    });
+
+    if (existing) {
+      await prisma.packagingMeanCategory.update({
+        where: { id: existing.id },
+        data: { description: category.description, name: category.name },
+      });
+      if (!existing.image && category.imageUrl) {
+        const image = await prisma.image.create({
+          data: {
+            imageUrl: category.imageUrl,
+          },
+        });
+        await prisma.packagingMeanCategoryImage.create({
+          data: {
+            packagingMeanCategoryId: existing.id,
+            imageId: image.id,
+          },
+        });
+      }
+      continue;
+    }
+
     const created = await prisma.packagingMeanCategory.create({
       data: {
         name: category.name,
         description: category.description,
-        slug: buildSlug(category.name, "packaging"),
+        slug,
       },
     });
 
@@ -878,7 +899,7 @@ async function seedPackagingMeanCategories() {
       });
     }
   }
-  console.info(`Seeded ${packagingMeanCategoriesSeedData.length} packaging mean categories.`);
+  console.info(`Seeded/updated ${packagingMeanCategoriesSeedData.length} packaging mean categories.`);
 }
 
 const partFamilySeedNames = ["Bumper", "Tailgate", "Console", "Dashboard", "Door Panel", "Roof Rack", "Seat Frame", "Fascia", "Hood", "Trunk Lid"];
@@ -1038,9 +1059,11 @@ async function seedPackagingMeans() {
       for (const img of images) {
         await retry(async () => {
           const image = await prisma.image.create({ data: { imageUrl: img.url } });
-          await prisma.packagingMeanImage.create({
-            data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: img.sortOrder },
-          });
+          await ignoreDuplicate(
+            prisma.packagingMeanImage.create({
+              data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: img.sortOrder },
+            })
+          );
         });
       }
 
@@ -1069,32 +1092,34 @@ async function seedPackagingMeans() {
         );
 
         await retry(() =>
-          ignoreDuplicate(
-            prisma.packagingMeanPart.create({
-              data: {
-                packagingMeanId: packaging.id,
-                partId: part.id,
-                partsPerPackaging: 1 + (p % 4),
-                levelsPerPackaging: 1 + (p % 2),
-                verticalPitch: 50 + p * 10,
-                horizontalPitch: 40 + p * 8,
-                notes: "Seeded part link",
-              },
-            })
-          )
+          prisma.packagingMeanPart.upsert({
+            where: { packagingMeanId_partId: { packagingMeanId: packaging.id, partId: part.id } },
+            update: {
+              partsPerPackaging: 1 + (p % 4),
+              levelsPerPackaging: 1 + (p % 2),
+              verticalPitch: 50 + p * 10,
+              horizontalPitch: 40 + p * 8,
+              notes: "Seeded part link",
+            },
+            create: {
+              packagingMeanId: packaging.id,
+              partId: part.id,
+              partsPerPackaging: 1 + (p % 4),
+              levelsPerPackaging: 1 + (p % 2),
+              verticalPitch: 50 + p * 10,
+              horizontalPitch: 40 + p * 8,
+              notes: "Seeded part link",
+            },
+          })
         );
 
         const acc = accessories[(i + p + 1) % accessories.length];
         await retry(() =>
-          ignoreDuplicate(
-            prisma.partAccessory.create({
-              data: {
-                partId: part.id,
-                accessoryId: acc.id,
-                qtyPerPart: 1 + (p % 2),
-              },
-            })
-          )
+          prisma.partAccessory.upsert({
+            where: { partId_accessoryId: { partId: part.id, accessoryId: acc.id } },
+            update: { qtyPerPart: 1 + (p % 2) },
+            create: { partId: part.id, accessoryId: acc.id, qtyPerPart: 1 + (p % 2) },
+          })
         );
       }
 
@@ -1173,6 +1198,8 @@ async function seedTransportMeans() {
   const packagingMeans = await prisma.packagingMean.findMany({ select: { id: true, name: true } });
   packagingMeans.forEach((pm) => packagingMap.set(pm.name, pm.id));
 
+  const flows = await prisma.flow.findMany({ select: { id: true, slug: true } });
+
   let created = 0;
   for (const seed of transportMeansSeedData) {
     const plantId = plantMap.get(seed.plantName);
@@ -1188,7 +1215,10 @@ async function seedTransportMeans() {
       }))
       .filter((l) => Boolean(l.packagingMeanId)) as Array<{ packagingMeanId: string; maxQty: number }>;
 
-    await prisma.transportMean.upsert({
+    const primaryFlow = flows[(created + seed.name.length) % flows.length];
+    const secondaryFlow = flows[(created + seed.name.length + 1) % flows.length];
+
+    const tm = await prisma.transportMean.upsert({
       where: { slug },
       update: {
         description: `Seeded ${seed.categoryName.toLowerCase()} transport mean`,
@@ -1201,6 +1231,7 @@ async function seedTransportMeans() {
         maxSpeedKmh: seed.maxSpeedKmh,
         sop: seed.sop,
         eop: seed.eop,
+        flowId: primaryFlow.id,
       },
       create: {
         name: seed.name,
@@ -1215,6 +1246,7 @@ async function seedTransportMeans() {
         maxSpeedKmh: seed.maxSpeedKmh,
         sop: seed.sop,
         eop: seed.eop,
+        flowId: primaryFlow.id,
         packagingLinks: packagingLinks.length
           ? {
               create: packagingLinks.map((l) => ({
@@ -1226,6 +1258,14 @@ async function seedTransportMeans() {
       },
     });
     created += 1;
+    await ignoreDuplicate(
+      prisma.transportMeanFlow.create({
+        data: {
+          transportMeanId: tm.id,
+          flowId: secondaryFlow.id,
+        },
+      })
+    );
     await pauseEvery(created, 50, 300);
   }
   console.info(`Seeded ${created} transport means.`);
@@ -1320,9 +1360,13 @@ async function seedPlants() {
   const countryCodes = new Set(plantSeedData.map((plant) => plant.address.countryCode));
   const countryMap = await getCountryMap(countryCodes);
 
+  const existingPlants = await prisma.plant.findMany({ select: { id: true, name: true } });
+  const existingPlantMap = new Map(existingPlants.map((p) => [p.name, p.id]));
+
   for (const plant of plantSeedData) {
+    if (existingPlantMap.has(plant.name)) continue;
     const countryId = countryMap.get(plant.address.countryCode)!;
-    await ignoreDuplicate(prisma.plant.create({
+    await prisma.plant.create({
       data: {
         name: plant.name,
         address: {
@@ -1334,7 +1378,7 @@ async function seedPlants() {
           },
         },
       },
-    }));
+    });
   }
 
   console.info(`Seeded ${plantSeedData.length} plants with addresses.`);
@@ -1351,9 +1395,13 @@ async function seedSuppliers() {
 
   const countryMap = await getCountryMap(supplierCodes);
 
+  const existingSuppliers = await prisma.supplier.findMany({ select: { id: true, name: true } });
+  const existingSupplierMap = new Map(existingSuppliers.map((s) => [s.name, s.id]));
+
   for (const supplier of supplierSeedData) {
+    if (existingSupplierMap.has(supplier.name)) continue;
     const countryId = countryMap.get(supplier.address.countryCode)!;
-    await ignoreDuplicate(prisma.supplier.create({
+    await prisma.supplier.create({
       data: {
         name: supplier.name,
         address: {
@@ -1365,7 +1413,7 @@ async function seedSuppliers() {
           },
         },
       },
-    }));
+    });
   }
 
   console.info(`Seeded ${supplierSeedData.length} suppliers with addresses.`);
@@ -1467,13 +1515,15 @@ async function seedStorageMeans() {
           create: { length: lane.length, width: lane.width, height: lane.height },
         });
 
-        await prisma.storageMeanManualTranstockerLane.create({
-          data: {
-            transtockerId: storageMean.id,
-            laneId: laneRecord.id,
-            quantity: lane.quantity,
-          },
-        });
+        await ignoreDuplicate(
+          prisma.storageMeanManualTranstockerLane.create({
+            data: {
+              transtockerId: storageMean.id,
+              laneId: laneRecord.id,
+              quantity: lane.quantity,
+            },
+          })
+        );
       }
     }
   }
