@@ -104,6 +104,10 @@ jobs:
           mkdir -p deploy/.next/standalone/.next
           rsync -a .next/static/ deploy/.next/standalone/.next/static/
 
+          # Ship node_modules from build (production only)
+          npm prune --production
+          cp -a node_modules deploy/node_modules
+
           if [ -d prisma ]; then
             rsync -a prisma/ deploy/prisma/
           fi
@@ -365,17 +369,9 @@ jobs:
 
           mkdir -p "$O2_TARGET_DIR/files"
 
-          # Only ensure node_modules symlink exists; no heavy reinstall
-          if [ -e node_modules ] && [ ! -L node_modules ]; then
-            echo "node_modules is a real directory/file -> removing"
-            rm -rf node_modules
-          fi
-          ln -sfn "$VENV/lib/node_modules" node_modules
-          echo "node_modules -> $(readlink node_modules || true)"
-
           echo "DB check (node + prisma)..."
           node -e "
-            const { PrismaClient } = require('@prisma/client');
+            const { PrismaClient } = require('./node_modules/@prisma/client');
             const p = new PrismaClient();
             p.\$queryRaw\`SELECT 1\`.then(() => { console.log('DB OK'); }).catch(e => { console.error(e); process.exit(1); }).finally(() => p.\$disconnect());
           "
