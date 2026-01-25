@@ -38,6 +38,7 @@ export default async function Edit({ params }: { params: Params }) {
         mode="edit"
         categoryId={category.id}
         categorySlug={category.slug}
+        specType={entry.specType}
         storageMean={sm}
         plants={plants}
         flows={flows}

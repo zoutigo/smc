@@ -281,10 +281,10 @@ export async function getTransportMeansByCategorySlug(
       where: {
         transportMeanCategory: { slug },
         ...(filters?.plantId ? { plantId: filters.plantId } : {}),
-        ...(filters?.flowId ? { flowId: filters.flowId } : {}),
+        ...(filters?.flowId ? { flows: { some: { flowId: filters.flowId } } } : {}),
       },
       orderBy: { updatedAt: "desc" },
-      include: { supplier: true, transportMeanCategory: true, plant: true, flow: true },
+      include: { supplier: true, transportMeanCategory: true, plant: true, flows: { include: { flow: true } } },
     });
   } catch (error) {
     console.warn("getTransportMeansByCategorySlug failed", error);

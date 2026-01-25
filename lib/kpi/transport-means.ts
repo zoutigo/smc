@@ -154,10 +154,7 @@ export async function getTransportMeansKpis(filters: TransportKpiFilters): Promi
     loadTotal: tm.loadCapacityKg * tm.units,
     packagingMeanIds: tm.packagingLinks.map((l) => l.packagingMeanId),
     packagingCount: new Set(tm.packagingLinks.map((l) => l.packagingMeanId)).size,
-    flowIds: [
-      ...(tm.flowId ? [tm.flowId] : []),
-      ...tm.flows.map((f) => f.flowId),
-    ],
+    flowIds: tm.flows.map((f) => f.flowId),
   }));
 
   const totalUnits = computed.reduce((sum, tm) => sum + tm.units, 0) || 1;

@@ -36,10 +36,11 @@ export default async function NewStorageMeanPage({ params }: { params: Params })
           mode="create"
           categoryId={category.id}
           categorySlug={category.slug}
+          specType={entry.specType}
           plants={plants}
           flows={flows}
-          countries={countries}
           suppliers={suppliers}
+          countries={countries}
         />
       </div>
     </ConfirmProvider>

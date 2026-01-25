@@ -124,9 +124,11 @@ CREATE TABLE `StorageMean` (
     `status` ENUM('ACTIVE', 'INACTIVE', 'DRAFT') NOT NULL DEFAULT 'ACTIVE',
     `sop` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `eop` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `heightMm` INTEGER NOT NULL DEFAULT 0,
+    `usefulSurfaceM2` DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    `grossSurfaceM2` DECIMAL(10, 2) NOT NULL DEFAULT 0,
     `supplierId` CHAR(36) NULL,
     `plantId` CHAR(36) NOT NULL,
-    `flowId` CHAR(36) NULL,
     `storageMeanCategoryId` CHAR(36) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -153,20 +155,43 @@ CREATE TABLE `StorageMeanCategory` (
 -- CreateTable
 CREATE TABLE `Lane` (
     `id` CHAR(36) NOT NULL,
-    `length` INTEGER NOT NULL DEFAULT 0,
-    `width` INTEGER NOT NULL DEFAULT 0,
-    `height` INTEGER NOT NULL DEFAULT 0,
+    `laneGroupId` CHAR(36) NOT NULL,
+    `lengthMm` INTEGER NOT NULL DEFAULT 0,
+    `widthMm` INTEGER NOT NULL DEFAULT 0,
+    `heightMm` INTEGER NOT NULL DEFAULT 0,
+    `numberOfLanes` INTEGER NOT NULL DEFAULT 1,
+    `level` INTEGER NOT NULL DEFAULT 0,
+    `laneType` ENUM('EMPTIES', 'ACCUMULATION', 'EMPTIES_AND_ACCUMULATION') NOT NULL DEFAULT 'ACCUMULATION',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `Lane_length_width_height_key`(`length`, `width`, `height`),
+    INDEX `Lane_laneGroupId_idx`(`laneGroupId`),
+    INDEX `Lane_laneGroupId_level_idx`(`laneGroupId`, `level`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `StorageMeanManualTranstocker` (
+CREATE TABLE `LaneGroup` (
+    `id` CHAR(36) NOT NULL,
     `storageMeanId` CHAR(36) NOT NULL,
-    `emptyReturnLanes` INTEGER NOT NULL DEFAULT 0,
+    `name` VARCHAR(191) NULL,
+    `description` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `LaneGroup_storageMeanId_idx`(`storageMeanId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `HighBayRackSpec` (
+    `storageMeanId` CHAR(36) NOT NULL,
+    `numberOfLevels` INTEGER NOT NULL DEFAULT 0,
+    `numberOfBays` INTEGER NOT NULL DEFAULT 0,
+    `slotLengthMm` INTEGER NOT NULL DEFAULT 0,
+    `slotWidthMm` INTEGER NOT NULL DEFAULT 0,
+    `slotHeightMm` INTEGER NOT NULL DEFAULT 0,
+    `numberOfSlots` INTEGER NOT NULL DEFAULT 0,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -174,34 +199,33 @@ CREATE TABLE `StorageMeanManualTranstocker` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `StorageMeanAutoTranstocker` (
+CREATE TABLE `StorageMeanFlow` (
     `storageMeanId` CHAR(36) NOT NULL,
-    `plcType` VARCHAR(191) NOT NULL DEFAULT 'siemens',
-    `emptyReturnLanes` INTEGER NOT NULL DEFAULT 0,
+    `flowId` CHAR(36) NOT NULL,
+    `sortOrder` INTEGER NOT NULL DEFAULT 0,
+    `notes` VARCHAR(191) NULL,
+
+    INDEX `StorageMeanFlow_flowId_idx`(`flowId`),
+    INDEX `StorageMeanFlow_storageMeanId_sortOrder_idx`(`storageMeanId`, `sortOrder`),
+    PRIMARY KEY (`storageMeanId`, `flowId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `StaffingLine` (
+    `id` CHAR(36) NOT NULL,
+    `storageMeanId` CHAR(36) NOT NULL,
+    `shift` ENUM('SHIFT_1', 'SHIFT_2', 'SHIFT_3') NOT NULL,
+    `workforceType` ENUM('DIRECT', 'INDIRECT') NOT NULL,
+    `qty` DECIMAL(5, 2) NOT NULL DEFAULT 0,
+    `role` VARCHAR(191) NOT NULL,
+    `description` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    PRIMARY KEY (`storageMeanId`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `StorageMeanManualTranstockerLane` (
-    `transtockerId` CHAR(36) NOT NULL,
-    `laneId` CHAR(36) NOT NULL,
-    `quantity` INTEGER NOT NULL DEFAULT 0,
-
-    INDEX `StorageMeanManualTranstockerLane_laneId_idx`(`laneId`),
-    PRIMARY KEY (`transtockerId`, `laneId`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `StorageMeanAutoTranstockerLane` (
-    `transtockerId` CHAR(36) NOT NULL,
-    `laneId` CHAR(36) NOT NULL,
-    `quantity` INTEGER NOT NULL DEFAULT 0,
-
-    INDEX `StorageMeanAutoTranstockerLane_laneId_idx`(`laneId`),
-    PRIMARY KEY (`transtockerId`, `laneId`)
+    INDEX `StaffingLine_storageMeanId_idx`(`storageMeanId`),
+    INDEX `StaffingLine_storageMeanId_shift_idx`(`storageMeanId`, `shift`),
+    INDEX `StaffingLine_storageMeanId_workforceType_idx`(`storageMeanId`, `workforceType`),
+    PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -435,7 +459,6 @@ CREATE TABLE `TransportMean` (
     `description` VARCHAR(191) NULL,
     `transportMeanCategoryId` VARCHAR(191) NOT NULL,
     `plantId` CHAR(36) NOT NULL,
-    `flowId` CHAR(36) NULL,
     `supplierId` CHAR(36) NULL,
     `loadCapacityKg` INTEGER NOT NULL DEFAULT 0,
     `units` INTEGER NOT NULL DEFAULT 1,
@@ -449,7 +472,6 @@ CREATE TABLE `TransportMean` (
     UNIQUE INDEX `TransportMean_slug_key`(`slug`),
     INDEX `TransportMean_transportMeanCategoryId_idx`(`transportMeanCategoryId`),
     INDEX `TransportMean_plantId_idx`(`plantId`),
-    INDEX `TransportMean_flowId_idx`(`flowId`),
     INDEX `TransportMean_supplierId_idx`(`supplierId`),
     UNIQUE INDEX `TransportMean_plantId_slug_key`(`plantId`, `slug`),
     PRIMARY KEY (`id`)
@@ -507,6 +529,7 @@ CREATE TABLE `TransportMeanFlow` (
     `flowId` CHAR(36) NOT NULL,
 
     INDEX `TransportMeanFlow_flowId_idx`(`flowId`),
+    INDEX `TransportMeanFlow_transportMeanId_idx`(`transportMeanId`),
     PRIMARY KEY (`transportMeanId`, `flowId`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -532,28 +555,25 @@ ALTER TABLE `StorageMean` ADD CONSTRAINT `StorageMean_supplierId_fkey` FOREIGN K
 ALTER TABLE `StorageMean` ADD CONSTRAINT `StorageMean_plantId_fkey` FOREIGN KEY (`plantId`) REFERENCES `Plant`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `StorageMean` ADD CONSTRAINT `StorageMean_flowId_fkey` FOREIGN KEY (`flowId`) REFERENCES `Flow`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `StorageMean` ADD CONSTRAINT `StorageMean_storageMeanCategoryId_fkey` FOREIGN KEY (`storageMeanCategoryId`) REFERENCES `StorageMeanCategory`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `StorageMeanManualTranstocker` ADD CONSTRAINT `StorageMeanManualTranstocker_storageMeanId_fkey` FOREIGN KEY (`storageMeanId`) REFERENCES `StorageMean`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `Lane` ADD CONSTRAINT `Lane_laneGroupId_fkey` FOREIGN KEY (`laneGroupId`) REFERENCES `LaneGroup`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `StorageMeanAutoTranstocker` ADD CONSTRAINT `StorageMeanAutoTranstocker_storageMeanId_fkey` FOREIGN KEY (`storageMeanId`) REFERENCES `StorageMean`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `LaneGroup` ADD CONSTRAINT `LaneGroup_storageMeanId_fkey` FOREIGN KEY (`storageMeanId`) REFERENCES `StorageMean`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `StorageMeanManualTranstockerLane` ADD CONSTRAINT `StorageMeanManualTranstockerLane_transtockerId_fkey` FOREIGN KEY (`transtockerId`) REFERENCES `StorageMeanManualTranstocker`(`storageMeanId`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `HighBayRackSpec` ADD CONSTRAINT `HighBayRackSpec_storageMeanId_fkey` FOREIGN KEY (`storageMeanId`) REFERENCES `StorageMean`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `StorageMeanManualTranstockerLane` ADD CONSTRAINT `StorageMeanManualTranstockerLane_laneId_fkey` FOREIGN KEY (`laneId`) REFERENCES `Lane`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `StorageMeanFlow` ADD CONSTRAINT `StorageMeanFlow_storageMeanId_fkey` FOREIGN KEY (`storageMeanId`) REFERENCES `StorageMean`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `StorageMeanAutoTranstockerLane` ADD CONSTRAINT `StorageMeanAutoTranstockerLane_transtockerId_fkey` FOREIGN KEY (`transtockerId`) REFERENCES `StorageMeanAutoTranstocker`(`storageMeanId`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `StorageMeanFlow` ADD CONSTRAINT `StorageMeanFlow_flowId_fkey` FOREIGN KEY (`flowId`) REFERENCES `Flow`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `StorageMeanAutoTranstockerLane` ADD CONSTRAINT `StorageMeanAutoTranstockerLane_laneId_fkey` FOREIGN KEY (`laneId`) REFERENCES `Lane`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `StaffingLine` ADD CONSTRAINT `StaffingLine_storageMeanId_fkey` FOREIGN KEY (`storageMeanId`) REFERENCES `StorageMean`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `PackagingMean` ADD CONSTRAINT `PackagingMean_supplierId_fkey` FOREIGN KEY (`supplierId`) REFERENCES `Supplier`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -638,9 +658,6 @@ ALTER TABLE `TransportMean` ADD CONSTRAINT `TransportMean_transportMeanCategoryI
 
 -- AddForeignKey
 ALTER TABLE `TransportMean` ADD CONSTRAINT `TransportMean_plantId_fkey` FOREIGN KEY (`plantId`) REFERENCES `Plant`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `TransportMean` ADD CONSTRAINT `TransportMean_flowId_fkey` FOREIGN KEY (`flowId`) REFERENCES `Flow`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `TransportMean` ADD CONSTRAINT `TransportMean_supplierId_fkey` FOREIGN KEY (`supplierId`) REFERENCES `Supplier`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

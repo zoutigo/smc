@@ -11,7 +11,6 @@ var __copyProps = (to, from, except, desc) => {
       if (!__hasOwnProp.call(to, key) && key !== except)
         __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
   }
-  return to;
 };
 var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
   // If the importer is in node compatibility mode or this is not an ESM
@@ -1922,8 +1921,8 @@ var storageMeanCategoriesSeedData = [
     imageUrl: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606"
   },
   {
-    name: "ARSR",
-    description: "Automated Storage and Retrieval Systems,  grid orchestrating deep-lane buffering for fast movers.",
+    name: "ASRS",
+    description: "Automated Storage and Retrieval Systems, grid orchestrating deep-lane buffering for fast movers.",
     imageUrl: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429"
   },
   {
@@ -1990,7 +1989,10 @@ var manualTranstockerSeeds = [
     flowSlug: "paint-to-assembly",
     sop: /* @__PURE__ */ new Date("2026-06-01"),
     eop: /* @__PURE__ */ new Date("2036-06-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1100,
+    usefulSurfaceM2: 45,
+    grossSurfaceM2: 60
   },
   {
     name: "Manual Transtocker A1",
@@ -2002,7 +2004,10 @@ var manualTranstockerSeeds = [
     flowSlug: "injection-to-paint",
     sop: /* @__PURE__ */ new Date("2026-02-01"),
     eop: /* @__PURE__ */ new Date("2034-02-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1150,
+    usefulSurfaceM2: 32,
+    grossSurfaceM2: 45
   },
   {
     name: "Manual Transtocker A2",
@@ -2014,7 +2019,10 @@ var manualTranstockerSeeds = [
     flowSlug: "paint-to-assembly",
     sop: /* @__PURE__ */ new Date("2026-03-01"),
     eop: /* @__PURE__ */ new Date("2034-03-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1120,
+    usefulSurfaceM2: 30,
+    grossSurfaceM2: 40
   },
   {
     name: "Manual Transtocker A3",
@@ -2026,7 +2034,10 @@ var manualTranstockerSeeds = [
     flowSlug: "assembly-to-warehouse",
     sop: /* @__PURE__ */ new Date("2026-04-01"),
     eop: /* @__PURE__ */ new Date("2034-04-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1100,
+    usefulSurfaceM2: 28,
+    grossSurfaceM2: 38
   },
   {
     name: "Manual Transtocker A4",
@@ -2038,7 +2049,10 @@ var manualTranstockerSeeds = [
     flowSlug: "paint-to-assembly",
     sop: /* @__PURE__ */ new Date("2026-05-01"),
     eop: /* @__PURE__ */ new Date("2034-05-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1180,
+    usefulSurfaceM2: 36,
+    grossSurfaceM2: 50
   },
   {
     name: "Manual Transtocker A5",
@@ -2050,7 +2064,10 @@ var manualTranstockerSeeds = [
     flowSlug: "assembly-to-warehouse",
     sop: /* @__PURE__ */ new Date("2026-06-01"),
     eop: /* @__PURE__ */ new Date("2034-06-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1140,
+    usefulSurfaceM2: 34,
+    grossSurfaceM2: 48
   },
   {
     name: "Manual Transtocker A6",
@@ -2062,7 +2079,10 @@ var manualTranstockerSeeds = [
     flowSlug: "paint-to-assembly",
     sop: /* @__PURE__ */ new Date("2026-07-01"),
     eop: /* @__PURE__ */ new Date("2034-07-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1160,
+    usefulSurfaceM2: 35,
+    grossSurfaceM2: 49
   },
   {
     name: "Manual Transtocker A7",
@@ -2074,7 +2094,10 @@ var manualTranstockerSeeds = [
     flowSlug: "injection-to-paint",
     sop: /* @__PURE__ */ new Date("2026-08-01"),
     eop: /* @__PURE__ */ new Date("2034-08-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1090,
+    usefulSurfaceM2: 30,
+    grossSurfaceM2: 42
   },
   {
     name: "Manual Transtocker A8",
@@ -2086,7 +2109,10 @@ var manualTranstockerSeeds = [
     flowSlug: "assembly-to-warehouse",
     sop: /* @__PURE__ */ new Date("2026-09-01"),
     eop: /* @__PURE__ */ new Date("2034-09-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1110,
+    usefulSurfaceM2: 31,
+    grossSurfaceM2: 43
   },
   {
     name: "Manual Transtocker A9",
@@ -2098,7 +2124,10 @@ var manualTranstockerSeeds = [
     flowSlug: "paint-to-assembly",
     sop: /* @__PURE__ */ new Date("2026-10-01"),
     eop: /* @__PURE__ */ new Date("2034-10-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1130,
+    usefulSurfaceM2: 33,
+    grossSurfaceM2: 46
   },
   {
     name: "Manual Transtocker A10",
@@ -2110,7 +2139,10 @@ var manualTranstockerSeeds = [
     flowSlug: "injection-to-paint",
     sop: /* @__PURE__ */ new Date("2026-11-01"),
     eop: /* @__PURE__ */ new Date("2034-11-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1170,
+    usefulSurfaceM2: 35,
+    grossSurfaceM2: 50
   },
   {
     name: "Manual Transtocker A11",
@@ -2122,7 +2154,10 @@ var manualTranstockerSeeds = [
     flowSlug: "paint-to-assembly",
     sop: /* @__PURE__ */ new Date("2026-12-01"),
     eop: /* @__PURE__ */ new Date("2034-12-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1120,
+    usefulSurfaceM2: 30,
+    grossSurfaceM2: 42
   },
   {
     name: "Manual Transtocker A12",
@@ -2134,7 +2169,10 @@ var manualTranstockerSeeds = [
     flowSlug: "injection-to-paint",
     sop: /* @__PURE__ */ new Date("2027-01-01"),
     eop: /* @__PURE__ */ new Date("2035-01-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1150,
+    usefulSurfaceM2: 34,
+    grossSurfaceM2: 47
   },
   {
     name: "Manual Transtocker A13",
@@ -2146,7 +2184,10 @@ var manualTranstockerSeeds = [
     flowSlug: "paint-to-assembly",
     sop: /* @__PURE__ */ new Date("2027-02-01"),
     eop: /* @__PURE__ */ new Date("2035-02-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1160,
+    usefulSurfaceM2: 35,
+    grossSurfaceM2: 48
   },
   {
     name: "Manual Transtocker A14",
@@ -2158,7 +2199,10 @@ var manualTranstockerSeeds = [
     flowSlug: "assembly-to-warehouse",
     sop: /* @__PURE__ */ new Date("2027-03-01"),
     eop: /* @__PURE__ */ new Date("2035-03-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1110,
+    usefulSurfaceM2: 32,
+    grossSurfaceM2: 44
   },
   {
     name: "Manual Transtocker A15",
@@ -2170,7 +2214,10 @@ var manualTranstockerSeeds = [
     flowSlug: "injection-to-paint",
     sop: /* @__PURE__ */ new Date("2027-04-01"),
     eop: /* @__PURE__ */ new Date("2035-04-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1120,
+    usefulSurfaceM2: 33,
+    grossSurfaceM2: 45
   },
   {
     name: "Manual Transtocker A16",
@@ -2182,7 +2229,10 @@ var manualTranstockerSeeds = [
     flowSlug: "assembly-to-warehouse",
     sop: /* @__PURE__ */ new Date("2027-05-01"),
     eop: /* @__PURE__ */ new Date("2035-05-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1130,
+    usefulSurfaceM2: 34,
+    grossSurfaceM2: 46
   },
   {
     name: "Manual Transtocker A17",
@@ -2194,7 +2244,10 @@ var manualTranstockerSeeds = [
     flowSlug: "injection-to-paint",
     sop: /* @__PURE__ */ new Date("2027-06-01"),
     eop: /* @__PURE__ */ new Date("2035-06-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1140,
+    usefulSurfaceM2: 35,
+    grossSurfaceM2: 47
   },
   {
     name: "Manual Transtocker A18",
@@ -2230,7 +2283,10 @@ var manualTranstockerSeeds = [
     flowSlug: "injection-to-paint",
     sop: /* @__PURE__ */ new Date("2027-09-01"),
     eop: /* @__PURE__ */ new Date("2035-09-01"),
-    storageMeanCategoryName: "Manual Transtocker"
+    storageMeanCategoryName: "Manual Transtocker",
+    heightMm: 1150,
+    usefulSurfaceM2: 36,
+    grossSurfaceM2: 48
   }
 ].map((seed) => ({ ...manualTranstockerDefaults, ...seed }));
 var storageMeansSeedData = [...baseStorageMeansSeedData, ...manualTranstockerSeeds];
@@ -3015,7 +3071,13 @@ async function seedTransportMeans() {
         maxSpeedKmh: seed.maxSpeedKmh,
         sop: seed.sop,
         eop: seed.eop,
-        flowId: primaryFlow.id
+        packagingLinks: {
+          deleteMany: {},
+          create: packagingLinks.map((l) => ({
+            packagingMeanId: l.packagingMeanId,
+            maxQty: l.maxQty
+          }))
+        }
       },
       create: {
         name: seed.name,
@@ -3030,7 +3092,6 @@ async function seedTransportMeans() {
         maxSpeedKmh: seed.maxSpeedKmh,
         sop: seed.sop,
         eop: seed.eop,
-        flowId: primaryFlow.id,
         packagingLinks: packagingLinks.length ? {
           create: packagingLinks.map((l) => ({
             packagingMeanId: l.packagingMeanId,
@@ -3040,17 +3101,14 @@ async function seedTransportMeans() {
       }
     });
     created += 1;
-    if (secondaryFlow && secondaryFlow.id !== primaryFlow.id) {
-      await prisma.transportMeanFlow.createMany({
-        data: [
-          {
-            transportMeanId: tm.id,
-            flowId: secondaryFlow.id
-          }
-        ],
-        skipDuplicates: true
-      });
-    }
+    await prisma.transportMeanFlow.deleteMany({ where: { transportMeanId: tm.id } });
+    await prisma.transportMeanFlow.createMany({
+      data: [
+        { transportMeanId: tm.id, flowId: primaryFlow.id },
+        secondaryFlow && secondaryFlow.id !== primaryFlow.id ? { transportMeanId: tm.id, flowId: secondaryFlow.id } : null
+      ].filter(Boolean),
+      skipDuplicates: true
+    });
     await pauseEvery(created, 50, 300);
   }
   console.info(`Seeded ${created} transport means.`);
@@ -3134,57 +3192,73 @@ async function seedUsers() {
   }
 }
 async function seedPlants() {
-  const countryCodes = new Set(plantSeedData.map((plant) => plant.address.countryCode));
-  const countryMap = await getCountryMap(countryCodes);
-  const existingPlants = await prisma.plant.findMany({ select: { id: true, name: true } });
-  const existingPlantMap = new Map(existingPlants.map((p) => [p.name, p.id]));
-  for (const plant of plantSeedData) {
-    if (existingPlantMap.has(plant.name)) continue;
-    const countryId = countryMap.get(plant.address.countryCode);
-    await prisma.plant.create({
-      data: {
-        name: plant.name,
-        address: {
-          create: {
-            street: plant.address.street,
-            city: plant.address.city,
-            zipcode: plant.address.zipcode,
-            countryId
+  try {
+    const countryCodes = new Set(plantSeedData.map((plant) => plant.address.countryCode));
+    const countryMap = await getCountryMap(countryCodes);
+    const existingPlants = await prisma.plant.findMany({ select: { id: true, name: true } });
+    const existingPlantMap = new Map(existingPlants.map((p) => [p.name, p.id]));
+    for (const plant of plantSeedData) {
+      if (existingPlantMap.has(plant.name)) continue;
+      const countryId = countryMap.get(plant.address.countryCode);
+      await prisma.plant.create({
+        data: {
+          name: plant.name,
+          address: {
+            create: {
+              street: plant.address.street,
+              city: plant.address.city,
+              zipcode: plant.address.zipcode,
+              countryId
+            }
           }
         }
-      }
-    });
+      });
+    }
+    console.info(`Seeded ${plantSeedData.length} plants with addresses.`);
+  } catch (error) {
+    if (error instanceof import_library.PrismaClientKnownRequestError && error.code === "P2021" || error && error.code === "P2021") {
+      console.warn("Skipping plant seeds; Plant/Address/Country table missing.");
+      return;
+    }
+    throw error;
   }
-  console.info(`Seeded ${plantSeedData.length} plants with addresses.`);
 }
 async function seedSuppliers() {
-  const allowedCountries = new Set(plantSeedData.map((plant) => plant.address.countryCode));
-  const supplierCodes = new Set(supplierSeedData.map((supplier) => supplier.address.countryCode));
-  const invalidCodes = Array.from(supplierCodes).filter((code) => !allowedCountries.has(code));
-  if (invalidCodes.length) {
-    throw new Error(`Supplier country codes not in plant seeds: ${invalidCodes.join(", ")}`);
-  }
-  const countryMap = await getCountryMap(supplierCodes);
-  const existingSuppliers = await prisma.supplier.findMany({ select: { id: true, name: true } });
-  const existingSupplierMap = new Map(existingSuppliers.map((s) => [s.name, s.id]));
-  for (const supplier of supplierSeedData) {
-    if (existingSupplierMap.has(supplier.name)) continue;
-    const countryId = countryMap.get(supplier.address.countryCode);
-    await prisma.supplier.create({
-      data: {
-        name: supplier.name,
-        address: {
-          create: {
-            street: supplier.address.street,
-            city: supplier.address.city,
-            zipcode: supplier.address.zipcode,
-            countryId
+  try {
+    const allowedCountries = new Set(plantSeedData.map((plant) => plant.address.countryCode));
+    const supplierCodes = new Set(supplierSeedData.map((supplier) => supplier.address.countryCode));
+    const invalidCodes = Array.from(supplierCodes).filter((code) => !allowedCountries.has(code));
+    if (invalidCodes.length) {
+      throw new Error(`Supplier country codes not in plant seeds: ${invalidCodes.join(", ")}`);
+    }
+    const countryMap = await getCountryMap(supplierCodes);
+    const existingSuppliers = await prisma.supplier.findMany({ select: { id: true, name: true } });
+    const existingSupplierMap = new Map(existingSuppliers.map((s) => [s.name, s.id]));
+    for (const supplier of supplierSeedData) {
+      if (existingSupplierMap.has(supplier.name)) continue;
+      const countryId = countryMap.get(supplier.address.countryCode);
+      await prisma.supplier.create({
+        data: {
+          name: supplier.name,
+          address: {
+            create: {
+              street: supplier.address.street,
+              city: supplier.address.city,
+              zipcode: supplier.address.zipcode,
+              countryId
+            }
           }
         }
-      }
-    });
+      });
+    }
+    console.info(`Seeded ${supplierSeedData.length} suppliers with addresses.`);
+  } catch (error) {
+    if (error instanceof import_library.PrismaClientKnownRequestError && error.code === "P2021" || error && error.code === "P2021") {
+      console.warn("Skipping supplier seeds; Supplier/Address/Country table missing.");
+      return;
+    }
+    throw error;
   }
-  console.info(`Seeded ${supplierSeedData.length} suppliers with addresses.`);
 }
 async function seedStorageMeans() {
   const plantMap = /* @__PURE__ */ new Map();
@@ -3221,8 +3295,10 @@ async function seedStorageMeans() {
         status,
         price: storage.price,
         plantId,
-        flowId,
         supplierId,
+        heightMm: storage.heightMm ?? 0,
+        usefulSurfaceM2: storage.usefulSurfaceM2 ?? 0,
+        grossSurfaceM2: storage.grossSurfaceM2 ?? 0,
         sop: storage.sop,
         eop: storage.eop,
         storageMeanCategoryId
@@ -3233,12 +3309,15 @@ async function seedStorageMeans() {
         status,
         price: storage.price,
         plantId,
-        flowId,
         supplierId,
+        heightMm: storage.heightMm ?? 0,
+        usefulSurfaceM2: storage.usefulSurfaceM2 ?? 0,
+        grossSurfaceM2: storage.grossSurfaceM2 ?? 0,
         sop: storage.sop,
         eop: storage.eop,
         storageMeanCategoryId
-      }
+      },
+      select: { id: true }
     });
     if (storage.imageUrl) {
       const existingImage = await prisma.image.findFirst({ where: { imageUrl: storage.imageUrl } });
@@ -3254,29 +3333,39 @@ async function seedStorageMeans() {
         create: { storageMeanId: storageMean.id, imageId: image.id, sortOrder: 0 }
       });
     }
-    const isManualTranstocker = storage.storageMeanCategoryName === "Manual Transtocker";
-    if (isManualTranstocker && storage.lanes?.length) {
-      await prisma.storageMeanManualTranstocker.upsert({
-        where: { storageMeanId: storageMean.id },
-        update: {},
-        create: { storageMeanId: storageMean.id, emptyReturnLanes: 0 }
+    await prisma.storageMeanFlow.createMany({
+      data: [
+        {
+          storageMeanId: storageMean.id,
+          flowId,
+          sortOrder: 0
+        }
+      ],
+      skipDuplicates: true
+    });
+    if (storage.lanes?.length) {
+      const laneGroupName = "Default";
+      const existingLaneGroup = await prisma.laneGroup.findFirst({
+        where: { storageMeanId: storageMean.id, name: laneGroupName }
       });
-      await prisma.storageMeanManualTranstockerLane.deleteMany({ where: { transtockerId: storageMean.id } });
+      const laneGroup = existingLaneGroup ?? await prisma.laneGroup.create({
+        data: {
+          storageMeanId: storageMean.id,
+          name: laneGroupName,
+          description: "Seeded lane group"
+        }
+      });
+      await prisma.lane.deleteMany({ where: { laneGroupId: laneGroup.id } });
       for (const lane of storage.lanes) {
-        const laneRecord = await prisma.lane.upsert({
-          where: { length_width_height: { length: lane.length, width: lane.width, height: lane.height } },
-          update: {},
-          create: { length: lane.length, width: lane.width, height: lane.height }
+        await prisma.lane.create({
+          data: {
+            laneGroupId: laneGroup.id,
+            lengthMm: lane.length,
+            widthMm: lane.width,
+            heightMm: lane.height,
+            numberOfLanes: lane.quantity
+          }
         });
-        await ignoreDuplicate(
-          prisma.storageMeanManualTranstockerLane.create({
-            data: {
-              transtockerId: storageMean.id,
-              laneId: laneRecord.id,
-              quantity: lane.quantity
-            }
-          })
-        );
       }
     }
   }
@@ -3293,8 +3382,16 @@ async function seedProjects() {
   console.info(`Seeded ${projectSeedData.length} projects.`);
 }
 async function seedCountries() {
-  await prisma.country.createMany({ data: countriesSeedData, skipDuplicates: true });
-  console.info(`Seeded ${countriesSeedData.length} countries.`);
+  try {
+    await prisma.country.createMany({ data: countriesSeedData, skipDuplicates: true });
+    console.info(`Seeded ${countriesSeedData.length} countries.`);
+  } catch (error) {
+    if (error instanceof import_library.PrismaClientKnownRequestError && error.code === "P2021" || error && error.code === "P2021") {
+      console.warn("Skipping country seeds; Country table missing.");
+      return;
+    }
+    throw error;
+  }
 }
 async function main() {
   await seedCountries();

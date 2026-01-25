@@ -55,7 +55,7 @@ export default async function StorageMeanCategoryPage({ params }: StorageMeanCat
       description: true,
       sop: true,
       plant: { select: { name: true } },
-      flow: { select: { from: true, to: true } },
+      flows: { include: { flow: true }, orderBy: { sortOrder: "asc" } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -129,7 +129,12 @@ export default async function StorageMeanCategoryPage({ params }: StorageMeanCat
                 <p className="mt-1 line-clamp-3 text-sm text-smc-text-muted">{sm.description}</p>
                 <div className="text-xs text-smc-text-muted">
                   {sm.plant?.name ? <p><span className="font-semibold text-smc-text">Plant:</span> {sm.plant.name}</p> : null}
-                  {sm.flow ? <p><span className="font-semibold text-smc-text">Flow:</span> {sm.flow.from} → {sm.flow.to}</p> : null}
+                  {sm.flows?.length ? (
+                    <p>
+                      <span className="font-semibold text-smc-text">Flows:</span>{" "}
+                      {sm.flows.map((f) => `${f.flow.from} → ${f.flow.to}`).join(", ")}
+                    </p>
+                  ) : null}
                   <p><span className="font-semibold text-smc-text">SOP:</span> {sm.sop.toLocaleDateString?.() ?? new Date(sm.sop).toLocaleDateString()}</p>
                 </div>
                 <Link href={`/storage-means/${slug}/${sm.id}`} className="mt-2 inline-flex text-sm font-semibold text-smc-primary hover:underline">

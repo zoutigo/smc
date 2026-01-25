@@ -78,7 +78,7 @@ export async function getTransportCategoryKpis(categorySlug: string, filters: Tr
     avgLoadPerUnit: transportMeans.reduce((sum, tm) => sum + tm.loadCapacityKg, 0) / (transportMeans.length || 1),
     avgMaxSpeedKmh: transportMeans.reduce((sum, tm) => sum + tm.maxSpeedKmh * tm.units, 0) / totalUnits,
     packagingCompatibility: new Set(transportMeans.flatMap((tm) => tm.packagingLinks.map((l) => l.packagingMeanId))).size,
-    flowsCovered: new Set(transportMeans.flatMap((tm) => tm.flows.map((f) => f.flowId).concat(tm.flowId ?? []))).size,
+    flowsCovered: new Set(transportMeans.flatMap((tm) => tm.flows.map((f) => f.flowId))).size,
   };
 
   const loadByPlantMap = new Map<string, { plantName: string; loadTotal: number }>();
@@ -119,7 +119,7 @@ export async function getTransportCategoryKpis(categorySlug: string, filters: Tr
       plantName: tm.plant?.name,
       supplierName: tm.supplier?.name,
       packagingCount: new Set(tm.packagingLinks.map((l) => l.packagingMeanId)).size,
-      flowsCount: new Set(tm.flows.map((f) => f.flowId).concat(tm.flowId ?? [])).size,
+      flowsCount: new Set(tm.flows.map((f) => f.flowId)).size,
       loadCapacityKg: tm.loadCapacityKg,
       units: tm.units,
       maxSpeedKmh: tm.maxSpeedKmh,

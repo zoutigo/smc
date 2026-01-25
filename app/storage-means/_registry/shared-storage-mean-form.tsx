@@ -1,12 +1,13 @@
 "use client";
 
-import React, { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import React, { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import type { StorageMean } from "@prisma/client";
+import type { Prisma, StorageMean } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { useConfirmMessage } from "@/components/ui/confirm-message";
+import { CustomButton } from "@/components/ui/custom-button";
 import {
   createStorageMeanAction,
   updateStorageMeanAction,
@@ -14,65 +15,115 @@ import {
 } from "@/app/storage-means/[slug]/actions";
 import { useCreateStorageMeanStore } from "./useCreateStorageMeanStore";
 import { PlantInput } from "@/components/forms/PlantInput";
-import { FlowInput } from "@/components/forms/FlowInput";
+import { FlowMultiInput } from "@/components/forms/FlowMultiInput";
 import { ImageInput } from "@/components/forms/ImageInput";
 import { SupplierInput } from "@/components/forms/SupplierInput";
 import { NameInput } from "@/components/forms/NameInput";
 import { PriceInput } from "@/components/forms/PriceInput";
 import { DescriptionInput } from "@/components/forms/DescriptionInput";
 import { SopInput } from "@/components/forms/SopInput";
-import {
-  storageMeanBasicsSchema,
-  storageMeanDescriptionSchema,
-  storageMeanNameSchema,
-  storageMeanPriceSchema,
-  storageMeanSopSchema,
-} from "@/lib/validation/storage-mean";
 import { MeanMultistepForm, type StepItem } from "@/components/forms/MeanMultistepForm";
 
 type StorageMeanWithRelations = StorageMean & {
-  manualTranstocker?: { lanes: Array<{ lane: { length: number; width: number; height: number }; quantity: number }> };
-  autoTranstocker?: { plcType?: string; lanes: Array<{ lane: { length: number; width: number; height: number }; quantity: number }> };
+  laneGroups?: Array<{ lanes: Array<{ lengthMm: number; widthMm: number; heightMm: number; numberOfLanes: number }> }>;
+  highBayRack?: {
+    numberOfLevels: number;
+    numberOfBays: number;
+    slotLengthMm: number;
+    slotWidthMm: number;
+    slotHeightMm: number;
+    numberOfSlots: number;
+  } | null;
+  staffingLines?: Array<{
+    shift: "SHIFT_1" | "SHIFT_2" | "SHIFT_3";
+    workforceType: "DIRECT" | "INDIRECT";
+    qty: number | Prisma.Decimal;
+    role: string;
+    description: string | null;
+  }>;
+  flows?: Array<{ flowId: string }>;
   images?: Array<{ imageId: string; image: { imageUrl: string } }>;
 };
 
-export type StepKey = "preparation" | "basics" | "lanes" | "images" | "summary";
+type StaffLine = {
+  shift: "SHIFT_1" | "SHIFT_2" | "SHIFT_3";
+  workforceType: "DIRECT" | "INDIRECT";
+  qty: number;
+  role: string;
+  description: string;
+};
+
+export type StepKey = "preparation" | "basics" | "specs" | "staff" | "images" | "summary";
 
 export type StepConfigItem = {
   key: StepKey;
   label?: string;
-  description?: ReactNode;
-  guidance?: ReactNode;
+  description?: React.ReactNode;
+  guidance?: React.ReactNode;
 };
 
 type BaseFormProps = {
   mode: "create" | "edit";
   categoryId: string;
   categorySlug: string;
+  specType: "lanes" | "highbay";
   storageMean?: StorageMeanWithRelations | null;
   plants: Array<{ id: string; name: string }>;
   flows: Array<{ id: string; from: string; to: string; slug: string }>;
-  countries: Array<{ id: string; name: string }>;
   suppliers: Array<{ id: string; name: string }>;
+  countries: Array<{ id: string; name: string }>;
   stepConfig?: StepConfigItem[];
 };
 
-const stepOneSchema = storageMeanBasicsSchema;
+const basicsSchema = z.object({
+  name: z.string().min(2),
+  description: z.string().optional(),
+  plantId: z.string().uuid(),
+  price: z.coerce.number().min(0),
+  sop: z.string().min(4),
+  flowIds: z.array(z.string().uuid()).min(1, "Select at least one flow"),
+  supplierId: z.string().uuid().optional(),
+  heightMm: z.coerce.number().int().min(0),
+  usefulSurfaceM2: z.coerce.number().min(0),
+  grossSurfaceM2: z.coerce.number().min(0),
+});
 
-const stepTwoSchema = z
+const lanesSpecSchema = z
   .array(
     z.object({
-      length: z.coerce.number().int().min(1, "Length is required"),
-      width: z.coerce.number().int().min(1, "Width is required"),
-      height: z.coerce.number().int().min(1, "Height is required"),
-      quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
+      lengthMm: z.coerce.number().int().min(1),
+      widthMm: z.coerce.number().int().min(1),
+      heightMm: z.coerce.number().int().min(1),
+      numberOfLanes: z.coerce.number().int().min(1),
     })
   )
   .min(1, "Add at least one lane");
-const stepThreeSchema = z.array(z.instanceof(File));
 
-export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageMean, plants, flows, countries, suppliers, stepConfig }: BaseFormProps) {
+const highBaySpecSchema = z.object({
+  numberOfLevels: z.coerce.number().int().min(1),
+  numberOfBays: z.coerce.number().int().min(1),
+  slotLengthMm: z.coerce.number().int().min(1),
+  slotWidthMm: z.coerce.number().int().min(1),
+  slotHeightMm: z.coerce.number().int().min(1),
+  numberOfSlots: z.coerce.number().int().min(1),
+});
+
+const imageSchema = z.array(z.instanceof(File));
+
+export default function SharedStorageMeanForm({
+  mode,
+  categoryId,
+  categorySlug,
+  specType,
+  storageMean,
+  plants,
+  flows,
+  suppliers,
+  countries,
+  stepConfig,
+}: BaseFormProps) {
   const router = useRouter();
+  const { show } = useConfirmMessage();
   const initialState: StorageMeanActionState = { status: "idle" };
   const [state, formAction, pending] = useActionState(
     mode === "edit" ? updateStorageMeanAction : createStorageMeanAction,
@@ -80,36 +131,28 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
   );
 
   const store = useCreateStorageMeanStore();
-  const resolvedSlug = categorySlug === "automated-transtocker" ? "auto-transtocker" : categorySlug;
-  const isAuto = resolvedSlug === "auto-transtocker";
-  const isEdit = mode === "edit";
-  const heroTitle = `${categorySlug.replace(/-/g, " ")} ${isEdit ? "Update" : "Creation"}`;
-  const heroSubtitle = isEdit
-    ? "Review existing data, adjust what changed, and save."
-    : "Provide details to create this storage mean.";
-  let totalSteps = stepConfig?.length && stepConfig.length > 0 ? stepConfig.length : 5;
+  const totalSteps = 6;
   const resetStore = useCreateStorageMeanStore((s) => s.reset);
   const [stepError, setStepError] = useState<string | null>(null);
   const [plantsList, setPlantsList] = useState(plants);
-  const [flowsList, setFlowsList] = useState(flows);
+  const flowsList = flows;
   const [suppliersList, setSuppliersList] = useState(suppliers);
-  const { show } = useConfirmMessage();
   const handledSuccess = useRef(false);
   const redirectTimeout = useRef<NodeJS.Timeout | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; description?: string; price?: string; sop?: string; plcType?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (state.status === "success" && !handledSuccess.current) {
       handledSuccess.current = true;
       const message = mode === "edit" ? "Storage mean updated." : "Storage mean created.";
       show(message, "success");
-      const target = isEdit && storageMean?.id ? `/storage-means/${categorySlug}/${storageMean.id}` : `/storage-means/${categorySlug}`;
-      const redirectDelay = process.env.NODE_ENV === "test" ? 0 : 2000;
+      const target = mode === "edit" && storageMean?.id ? `/storage-means/${categorySlug}/${storageMean.id}` : `/storage-means/${categorySlug}`;
+      const delay = process.env.NODE_ENV === "test" ? 0 : 1200;
       if (redirectTimeout.current) clearTimeout(redirectTimeout.current);
       redirectTimeout.current = setTimeout(() => {
         router.push(target);
         resetStore();
-      }, redirectDelay);
+      }, delay);
     }
     return () => {
       if (redirectTimeout.current) {
@@ -117,7 +160,7 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
         redirectTimeout.current = null;
       }
     };
-  }, [state.status, mode, categorySlug, resetStore, router, show, isEdit, storageMean?.id]);
+  }, [state.status, mode, categorySlug, resetStore, router, show, storageMean?.id]);
 
   useEffect(() => {
     if (mode === "create") {
@@ -126,22 +169,16 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
     }
     if (mode === "edit" && storageMean) {
       resetStore();
-      const lanes: Array<{ length: number; width: number; height: number; quantity: number }> =
-        storageMean.manualTranstocker?.lanes?.map((l) => ({
-          length: l.lane.length,
-          width: l.lane.width,
-          height: l.lane.height,
-          quantity: l.quantity,
-        })) ||
-        storageMean.autoTranstocker?.lanes?.map((l) => ({
-          length: l.lane.length,
-          width: l.lane.width,
-          height: l.lane.height,
-          quantity: l.quantity,
-        })) ||
-        [];
+      const lanes =
+        storageMean.laneGroups?.flatMap((lg) =>
+          lg.lanes.map((l) => ({
+            lengthMm: l.lengthMm,
+            widthMm: l.widthMm,
+            heightMm: l.heightMm,
+            numberOfLanes: l.numberOfLanes,
+          }))
+        ) ?? [];
       const sop = storageMean.sop ? new Date(storageMean.sop).toISOString().slice(0, 10) : "";
-      const exists = String(storageMean.status) === "PROJECT" ? "project" : "existing";
       useCreateStorageMeanStore.setState({
         step: 1,
         name: storageMean.name ?? "",
@@ -150,10 +187,30 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
         supplierId: storageMean.supplierId ?? "",
         price: storageMean.price ?? 0,
         sop,
-        flowId: storageMean.flowId ?? "",
-        exists,
-        plcType: storageMean.autoTranstocker?.plcType ?? "",
+        flowIds: storageMean.flows?.map((f) => f.flowId) ?? [],
+        exists: "existing",
         lanes,
+        highBaySpec: storageMean.highBayRack
+          ? {
+              numberOfLevels: storageMean.highBayRack.numberOfLevels,
+              numberOfBays: storageMean.highBayRack.numberOfBays,
+              slotLengthMm: storageMean.highBayRack.slotLengthMm,
+              slotWidthMm: storageMean.highBayRack.slotWidthMm,
+              slotHeightMm: storageMean.highBayRack.slotHeightMm,
+              numberOfSlots: storageMean.highBayRack.numberOfSlots,
+            }
+          : { numberOfLevels: 0, numberOfBays: 0, slotLengthMm: 0, slotWidthMm: 0, slotHeightMm: 0, numberOfSlots: 0 },
+        staffingLines:
+          storageMean.staffingLines?.map((s) => ({
+            shift: s.shift,
+            workforceType: s.workforceType,
+            qty: Number(s.qty),
+            role: s.role,
+            description: s.description ?? "",
+          })) ?? [],
+        heightMm: storageMean.heightMm ?? 0,
+        usefulSurfaceM2: Number(storageMean.usefulSurfaceM2 ?? 0),
+        grossSurfaceM2: Number(storageMean.grossSurfaceM2 ?? 0),
         images: [],
         existingImages:
           storageMean.images?.map((img) => ({
@@ -166,40 +223,56 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
   }, [mode, resetStore, storageMean]);
 
   const handleBasicsNext = () => {
-    const plcSchema = isAuto ? z.string().min(2, "PLC brand is required") : z.string().optional();
-    const basicsSchema = stepOneSchema.extend({ plcType: plcSchema });
     const result = basicsSchema.safeParse({
       name: store.name,
       description: store.description,
       plantId: store.plantId,
       price: store.price,
       sop: store.sop,
-      flowId: store.flowId,
+      flowIds: store.flowIds,
       supplierId: store.supplierId || undefined,
-      exists: store.exists,
-      plcType: store.plcType || "",
+      heightMm: store.heightMm,
+      usefulSurfaceM2: store.usefulSurfaceM2,
+      grossSurfaceM2: store.grossSurfaceM2,
     });
     if (!result.success) {
       setStepError(result.error.issues[0]?.message ?? "Please fill all required fields");
-      const nextErrors: Partial<typeof fieldErrors> = {};
+      const nextErrors: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
         const key = issue.path[0];
-        if (typeof key === "string" && (key as keyof typeof fieldErrors)) {
-          nextErrors[key as keyof typeof fieldErrors] = issue.message;
-        }
+        if (typeof key === "string") nextErrors[key] = issue.message;
       });
       setFieldErrors(nextErrors);
       return;
     }
-    setStepError(null);
     setFieldErrors({});
+    setStepError(null);
     store.next();
   };
 
-  const handleStepTwoNext = () => {
-    const result = stepTwoSchema.safeParse(store.lanes);
-    if (!result.success) {
-      setStepError(result.error.issues[0]?.message ?? "Please add at least one lane or leave empty.");
+  const handleSpecsNext = () => {
+    if (specType === "lanes") {
+      const result = lanesSpecSchema.safeParse(store.lanes);
+      if (!result.success) {
+        setStepError(result.error.issues[0]?.message ?? "Please add at least one lane.");
+        return;
+      }
+    } else {
+      const result = highBaySpecSchema.safeParse(store.highBaySpec);
+      if (!result.success) {
+        setStepError(result.error.issues[0]?.message ?? "Please complete high-bay specs.");
+        return;
+      }
+    }
+    setStepError(null);
+    store.next();
+  };
+
+  const handleImagesNext = () => {
+    const totalImages = store.existingImages.length + store.images.length;
+    const validation = imageSchema.safeParse(store.images);
+    if (!validation.success || totalImages < 1) {
+      setStepError("Add at least one image.");
       return;
     }
     setStepError(null);
@@ -208,32 +281,27 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
 
   const handleSubmit = async (formData: FormData) => {
     if (store.step < totalSteps) return;
-    const imageFiles = store.images;
-    const imageValidation = stepThreeSchema.safeParse(imageFiles);
-    const totalImages = store.existingImages.length + imageFiles.length;
-    if (!imageValidation.success || totalImages < 1) {
-      setStepError("Add at least one image.");
-      return;
-    }
-    setStepError(null);
     formData.set("categoryId", categoryId);
-    if (isEdit && storageMean?.id) formData.set("id", storageMean.id);
+    formData.set("categorySlug", categorySlug);
+    formData.set("specType", specType);
+    if (mode === "edit" && storageMean?.id) formData.set("id", storageMean.id);
     formData.set("name", store.name);
     formData.set("description", store.description);
     formData.set("price", String(store.price));
     formData.set("plantId", store.plantId);
     formData.set("sop", store.sop);
-    if (store.flowId) formData.set("flowId", store.flowId);
+    formData.set("flowIds", JSON.stringify(store.flowIds));
     if (store.supplierId) formData.set("supplierId", store.supplierId);
-    if (isAuto && store.plcType) formData.set("plcType", store.plcType);
     formData.set("status", "DRAFT");
+    formData.set("heightMm", String(store.heightMm));
+    formData.set("usefulSurfaceM2", String(store.usefulSurfaceM2));
+    formData.set("grossSurfaceM2", String(store.grossSurfaceM2));
     formData.set("lanes", JSON.stringify(store.lanes));
-    if (store.removedImageIds.length) {
-      formData.set("removeImageIds", JSON.stringify(store.removedImageIds));
-    }
-    imageFiles.forEach((file, idx) => {
-      formData.set(`imageFile_${idx}`, file);
-    });
+    formData.set("highBaySpec", JSON.stringify(store.highBaySpec));
+    formData.set("staffingLines", JSON.stringify(store.staffingLines));
+    if (store.removedImageIds.length) formData.set("removeImageIds", JSON.stringify(store.removedImageIds));
+    store.images.forEach((file, idx) => formData.set(`imageFile_${idx}`, file));
+
     await new Promise<void>((resolve) => {
       startTransition(() => {
         Promise.resolve(formAction(formData)).finally(resolve);
@@ -241,549 +309,430 @@ export function SharedStorageMeanForm({ mode, categoryId, categorySlug, storageM
     });
   };
 
-  const guidancePrep = (
-    <div>
-      <h3 className="text-sm font-semibold text-smc-text">Guidance</h3>
-      <ul className="mt-2 space-y-1 text-sm text-smc-text-muted">
-        <li>Collect plant/flow info beforehand to speed up creation.</li>
-        <li>Have lane measurements ready to avoid guesswork.</li>
-        <li>Choose high-quality images for better cards.</li>
-      </ul>
-    </div>
-  );
+  const updateHighBay = (field: keyof typeof store.highBaySpec, value: number) =>
+    useCreateStorageMeanStore.setState({ highBaySpec: { ...store.highBaySpec, [field]: value } });
 
-  const guidanceBasics = (
-    <div>
-      <h3 className="text-sm font-semibold text-smc-text">Guidance</h3>
-      <ul className="mt-2 space-y-1 text-sm text-smc-text-muted">
-        <li>Pick an existing plant or create one inline if it is missing.</li>
-        <li>Provide a realistic SOP date for this {categorySlug}.</li>
-        <li>Keep the name and description concise and specific.</li>
-      </ul>
-    </div>
-  );
+  const updateLane = (idx: number, field: keyof (typeof store.lanes)[number], value: number) => {
+    const next = [...store.lanes];
+    next[idx] = { ...next[idx], [field]: value };
+    useCreateStorageMeanStore.setState({ lanes: next });
+  };
 
-  const guidanceLanes = (
-    <div>
-      <h3 className="text-sm font-semibold text-smc-text">Guidance</h3>
-      <ul className="mt-2 space-y-1 text-sm text-smc-text-muted">
-        <li>Add lane dimensions (L/W/H) that match this {categorySlug}.</li>
-        <li>Use numeric quantities only.</li>
-        <li>Remove unnecessary lanes before continuing.</li>
-      </ul>
-    </div>
-  );
+  const handleAddStaffLine = () =>
+    useCreateStorageMeanStore.setState({
+      staffingLines: [
+        ...store.staffingLines,
+        { shift: "SHIFT_1", workforceType: "DIRECT", qty: 1, role: "Operator", description: "" },
+      ],
+    });
 
-  const guidanceImages = (
-    <div>
-      <h3 className="text-sm font-semibold text-smc-text">Guidance</h3>
-      <ul className="mt-2 space-y-1 text-sm text-smc-text-muted">
-        <li>Add at least one representative image.</li>
-        <li>Prefer common formats (jpg/png) for faster previews.</li>
-        <li>Ensure you have rights to use the selected images.</li>
-      </ul>
-    </div>
-  );
+  const handleStaffChange = (idx: number, field: keyof StaffLine, value: StaffLine[keyof StaffLine]) => {
+    const next = [...store.staffingLines];
+    next[idx] = { ...next[idx], [field]: value };
+    useCreateStorageMeanStore.setState({ staffingLines: next });
+  };
 
-  const guidanceSummary = (
-    <div>
-      <h3 className="text-sm font-semibold text-smc-text">Guidance</h3>
-      <ul className="mt-2 space-y-1 text-sm text-smc-text-muted">
-        <li>Double-check lanes and prices before submit.</li>
-        <li>Ensure plant/flow are correct; go back if needed.</li>
-        <li>Confirm at least one image is present.</li>
-      </ul>
-    </div>
-  );
+  const handleRemoveStaff = (idx: number) =>
+    useCreateStorageMeanStore.setState({ staffingLines: store.staffingLines.filter((_, i) => i !== idx) });
 
-  const defaultSteps: StepItem[] = [
+  const basicsResult = basicsSchema.safeParse({
+    name: store.name,
+    description: store.description,
+    plantId: store.plantId,
+    price: store.price,
+    sop: store.sop,
+    flowIds: store.flowIds,
+    supplierId: store.supplierId || undefined,
+    heightMm: store.heightMm,
+    usefulSurfaceM2: store.usefulSurfaceM2,
+    grossSurfaceM2: store.grossSurfaceM2,
+  });
+  const isBasicsValid = basicsResult.success;
+
+  const heroTitle = `${mode === "edit" ? "Update" : "Create"} ${categorySlug.replace(/-/g, " ")}`;
+  const heroSubtitle = mode === "edit" ? "Follow the steps to update this storage mean." : "Follow the steps to configure this storage mean.";
+  const stepConfigMap = new Map((stepConfig ?? []).map((item) => [item.key, item]));
+
+  const stepsLookup: Record<StepKey, number> = {
+    preparation: 1,
+    basics: 2,
+    specs: 3,
+    staff: 4,
+    images: 5,
+    summary: 6,
+  };
+
+  const renderStepError = (matchStep: StepKey) =>
+    stepError && store.step === stepsLookup[matchStep] ? (
+      <p className="text-sm font-semibold text-red-600">{stepError}</p>
+    ) : null;
+
+  const steps: StepItem[] = [
     {
       key: "preparation",
-      label: "Preparation",
-      description: isEdit
-        ? "What to review before updating this storage mean."
-        : "What to prepare before creating this storage mean.",
+      label: stepConfigMap.get("preparation")?.label ?? "Preparation",
+      description: stepConfigMap.get("preparation")?.description ?? "Checklist before starting",
       body: (
-        <div className="space-y-3 rounded-xl border border-smc-border/70 bg-white p-4">
-          <h3 className="text-base font-semibold text-smc-text">Preparation checklist</h3>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-smc-text-muted">
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-smc-text">Preparation checklist</h3>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-smc-text">
             <li>Basic details: name, description, SOP date, estimated price.</li>
-            <li>Existing plant and flow to associate (or be ready to create them).</li>
-            <li>Lane dimensions (length/width/height in mm) and quantities.</li>
-            <li>At least one image that represents the storage mean.</li>
+            <li>Existing plant/flow to associate (or be ready to create them).</li>
+            <li>Dimensions (H, surface) and the specification inputs for this category.</li>
+            <li>At least one representative image.</li>
           </ul>
         </div>
       ),
+      guidance:
+        stepConfigMap.get("preparation")?.guidance ?? (
+          <div className="space-y-2 text-sm text-smc-text">
+            <p className="font-semibold">Guidance</p>
+            <p>Collect plant/flow info beforehand to speed up creation.</p>
+            <p>Have dimensions and lane or high-bay specs ready to avoid guesswork.</p>
+            <p>Choose high-quality images for better cards.</p>
+          </div>
+        ),
       footer: (
-        <div className="flex justify-end rounded-xl bg-smc-border/40 px-4 py-3 shadow-inner">
-          <Button
-            type="button"
-            onClick={() => {
-              setStepError(null);
-              store.next();
-            }}
-          >
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => store.setStep(2)}>
             Start
           </Button>
         </div>
       ),
-      guidance: guidancePrep,
     },
     {
       key: "basics",
-      label: "Basics",
-      description: isEdit ? "Review and adjust details before saving updates." : "Details & context",
+      label: stepConfigMap.get("basics")?.label ?? "Basics",
+      description: stepConfigMap.get("basics")?.description ?? "Fill the storage mean details",
       body: (
-        <div className="space-y-3 rounded-xl border border-smc-border/70 bg-white p-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <NameInput
-              value={store.name}
-              onChange={(val) => {
-                store.updateField("name", val);
-                const parsed = storageMeanNameSchema.safeParse(val);
-                setFieldErrors((prev) => ({ ...prev, name: parsed.success ? undefined : parsed.error.issues[0]?.message }));
-              }}
-              error={fieldErrors.name}
-            />
-            <PriceInput
-              value={store.price}
-              onChange={(val) => {
-                store.updateField("price", val);
-                const parsed = storageMeanPriceSchema.safeParse(val);
-                setFieldErrors((prev) => ({ ...prev, price: parsed.success ? undefined : parsed.error.issues[0]?.message }));
-              }}
-              error={fieldErrors.price}
-            />
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <NameInput value={store.name} onChange={(v) => store.updateField("name", v)} error={fieldErrors.name} />
+            <PriceInput value={store.price} onChange={(v) => store.updateField("price", v)} />
           </div>
-          <DescriptionInput
-            value={store.description}
-            onChange={(val) => {
-              store.updateField("description", val);
-              const parsed = storageMeanDescriptionSchema.safeParse(val);
-              setFieldErrors((prev) => ({
-                ...prev,
-                description: parsed.success ? undefined : parsed.error.issues[0]?.message,
-              }));
-            }}
-            error={fieldErrors.description}
-          />
-          <div className="space-y-3">
+          <DescriptionInput value={store.description} onChange={(v) => store.updateField("description", v)} error={fieldErrors.description} />
+          <div className="grid gap-4 sm:grid-cols-2">
             <PlantInput
               value={store.plantId}
-              onChange={(id) => {
-                store.updateField("plantId", id);
-              }}
-              plants={plantsList}
+              plants={plantsList ?? []}
               countries={countries}
+              onChange={(id) => store.updateField("plantId", id)}
+              onCreated={(newPlant) => setPlantsList((prev) => [...(prev ?? []), newPlant])}
               required
-              onCreated={(plant) => setPlantsList((prev) => [...prev, plant])}
             />
             <SupplierInput
               value={store.supplierId ?? ""}
-              onChange={(id) => store.updateField("supplierId", id)}
-              suppliers={suppliersList}
+              suppliers={suppliersList ?? []}
               countries={countries}
-              onCreated={(supplier) => setSuppliersList((prev) => [...prev, supplier])}
-              label="Supplier (optional)"
+              onChange={(id) => store.updateField("supplierId", id)}
+              onCreated={(newSupplier) => setSuppliersList((prev) => [...(prev ?? []), newSupplier])}
             />
-            <FlowInput
-              value={store.flowId ?? ""}
-              onChange={(id) => store.updateField("flowId", id)}
-              flows={flowsList}
-              onCreated={(flow) => setFlowsList((prev) => [...prev, flow])}
-            />
-            {isAuto ? (
-              <div>
-                <label className="block text-sm font-semibold text-smc-text">PLC Brand</label>
-                <input
-                  type="text"
-                  value={store.plcType || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    store.updateField("plcType", val);
-                    const parsed = z.string().min(2, "PLC brand is required").safeParse(val);
-                    setFieldErrors((prev) => ({ ...prev, plcType: parsed.success ? undefined : parsed.error.issues[0]?.message }));
-                  }}
-                  placeholder="e.g. Siemens"
-                  className="mt-1 w-full rounded-lg border border-smc-border/80 px-3 py-2"
-                />
-                {fieldErrors.plcType ? <p className="text-sm text-red-600">{fieldErrors.plcType}</p> : null}
-              </div>
-            ) : null}
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <SopInput
-              value={store.sop}
-              onChange={(val) => {
-                store.updateField("sop", val);
-                const parsed = storageMeanSopSchema.safeParse(val);
-                setFieldErrors((prev) => ({ ...prev, sop: parsed.success ? undefined : parsed.error.issues[0]?.message }));
-              }}
-              error={fieldErrors.sop}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SopInput value={store.sop} onChange={(v) => store.updateField("sop", v)} error={fieldErrors.sop} />
+            <FlowMultiInput
+              value={store.flowIds}
+              onChange={(ids) => store.updateField("flowIds", ids)}
+              flows={flowsList ?? []}
             />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="block text-sm font-semibold text-smc-text">Existence</label>
-              <div className="mt-1 flex flex-col gap-2">
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="exists"
-                    value="existing"
-                    checked={store.exists === "existing"}
-                    onChange={() => store.updateField("exists", "existing")}
-                  />
-                  Already exists (status DRAFT)
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="exists"
-                    value="project"
-                    checked={store.exists === "project"}
-                    onChange={() => store.updateField("exists", "project")}
-                  />
-                  In project (status DRAFT)
-                </label>
-              </div>
+              <label className="text-sm font-semibold text-smc-text">Height (mm)</label>
+              <input
+                className="mt-1 w-full rounded-md border border-smc-border px-3 py-2 text-sm"
+                type="number"
+                value={store.heightMm}
+                onChange={(e) => store.updateField("heightMm", Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-smc-text">Useful surface (m²)</label>
+              <input
+                className="mt-1 w-full rounded-md border border-smc-border px-3 py-2 text-sm"
+                type="number"
+                value={store.usefulSurfaceM2}
+                onChange={(e) => store.updateField("usefulSurfaceM2", Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-smc-text">Gross surface (m²)</label>
+              <input
+                className="mt-1 w-full rounded-md border border-smc-border px-3 py-2 text-sm"
+                type="number"
+                value={store.grossSurfaceM2}
+                onChange={(e) => store.updateField("grossSurfaceM2", Number(e.target.value))}
+              />
             </div>
           </div>
+          {renderStepError("basics")}
         </div>
       ),
+      guidance:
+        stepConfigMap.get("basics")?.guidance ?? (
+          <div className="space-y-2 text-sm text-smc-text">
+            <p className="font-semibold">Guidance</p>
+            <p>Pick the right plant and flows. Add supplier only if applicable.</p>
+            <p>Provide realistic surfaces and dimensions for accurate KPIs.</p>
+          </div>
+        ),
       footer: (
-        <div className="flex justify-between rounded-xl bg-smc-border/40 px-4 py-3 shadow-inner">
-          <Button
+        <div className="flex justify-end gap-2">
+          <CustomButton text="Back" type="button" variant="secondary" onClick={() => store.prev()} />
+          <CustomButton
+            text="Continue"
             type="button"
-            variant="ghost"
-            onClick={() => {
-              setStepError(null);
-              store.prev();
-            }}
-          >
-            Previous
-          </Button>
-          <Button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              handleBasicsNext();
-            }}
-          >
-            Next
-          </Button>
+            onClick={handleBasicsNext}
+            disabled={!isBasicsValid}
+          />
         </div>
       ),
-      guidance: guidanceBasics,
     },
     {
-      key: "lanes",
-      label: "Lanes",
-      description: "Dimensions & counts",
-      body: (
-        <div className="space-y-3 rounded-xl border border-smc-border/70 bg-white p-4">
-          {store.lanes.map((lane, index) => (
-            <div key={index} className="grid grid-cols-5 items-center gap-2 rounded-lg border border-smc-border/70 bg-white px-3 py-2">
-              <label className="flex flex-col gap-1 text-xs font-semibold text-smc-text">
-                Length
-                <input
-                  type="number"
-                  className="w-full rounded border border-smc-border/70 px-2 py-1 text-sm"
-                  value={lane.length}
-                  onChange={(e) =>
-                    store.updateField(
-                      "lanes",
-                      store.lanes.map((l, i) => (i === index ? { ...l, length: Number(e.target.value) || 0 } : l))
-                    )
-                  }
-                  placeholder="Length (mm)"
-                  aria-label="Length in millimeters"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs font-semibold text-smc-text">
-                Width
-                <input
-                  type="number"
-                  className="w-full rounded border border-smc-border/70 px-2 py-1 text-sm"
-                  value={lane.width}
-                  onChange={(e) =>
-                    store.updateField(
-                      "lanes",
-                      store.lanes.map((l, i) => (i === index ? { ...l, width: Number(e.target.value) || 0 } : l))
-                    )
-                  }
-                  placeholder="Width (mm)"
-                  aria-label="Width in millimeters"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs font-semibold text-smc-text">
-                Height
-                <input
-                  type="number"
-                  className="w-full rounded border border-smc-border/70 px-2 py-1 text-sm"
-                  value={lane.height}
-                  onChange={(e) =>
-                    store.updateField(
-                      "lanes",
-                      store.lanes.map((l, i) => (i === index ? { ...l, height: Number(e.target.value) || 0 } : l))
-                    )
-                  }
-                  placeholder="Height (mm)"
-                  aria-label="Height in millimeters"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs font-semibold text-smc-text">
-                Quantity
-                <input
-                  type="number"
-                  className="w-full rounded border border-smc-border/70 px-2 py-1 text-sm"
-                  value={lane.quantity}
-                  onChange={(e) =>
-                    store.updateField(
-                      "lanes",
-                      store.lanes.map((l, i) => (i === index ? { ...l, quantity: Number(e.target.value) || 0 } : l))
-                    )
-                  }
-                  placeholder="Qty"
-                />
-              </label>
-              <div className="flex items-center justify-center">
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={() => store.removeLane(index)}
-                  title="Remove lanes"
-                  aria-label="Remove lane"
-                  className="h-9 w-10 rounded-full"
-                >
-                  ×
-                </Button>
-              </div>
+      key: "specs",
+      label: stepConfigMap.get("specs")?.label ?? "Specifications",
+      description:
+        stepConfigMap.get("specs")?.description ??
+        (specType === "highbay" ? "High-bay rack specifications" : "Lane group specifications"),
+      body:
+        specType === "highbay" ? (
+          <div className="space-y-4">
+            {renderStepError("specs")}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <NumberField label="Levels" value={store.highBaySpec.numberOfLevels} onChange={(v) => updateHighBay("numberOfLevels", v)} />
+              <NumberField label="Bays" value={store.highBaySpec.numberOfBays} onChange={(v) => updateHighBay("numberOfBays", v)} />
+              <NumberField label="Slots" value={store.highBaySpec.numberOfSlots} onChange={(v) => updateHighBay("numberOfSlots", v)} />
             </div>
-          ))}
-          <div className="flex items-center justify-between rounded-lg bg-smc-bg/80 px-3 py-2">
-            <div className="text-sm text-smc-text">Add another lane with dimensions in mm.</div>
-            <Button
-              type="button"
-              size="icon"
-              variant="secondary"
-              aria-label="Add lane"
-              title="Add lane"
-              className="h-10 w-10 rounded-full"
-              onClick={() => store.addLane({ length: 0, width: 0, height: 0, quantity: 1 })}
-            >
-              +
-            </Button>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <NumberField label="Slot length (mm)" value={store.highBaySpec.slotLengthMm} onChange={(v) => updateHighBay("slotLengthMm", v)} />
+              <NumberField label="Slot width (mm)" value={store.highBaySpec.slotWidthMm} onChange={(v) => updateHighBay("slotWidthMm", v)} />
+              <NumberField label="Slot height (mm)" value={store.highBaySpec.slotHeightMm} onChange={(v) => updateHighBay("slotHeightMm", v)} />
+            </div>
           </div>
-          {store.lanes.length === 0 ? <p className="text-sm text-smc-text-muted">No lanes added yet.</p> : null}
-        </div>
-      ),
+        ) : (
+          <div className="space-y-4">
+            {renderStepError("specs")}
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => store.addLane({ lengthMm: 0, widthMm: 0, heightMm: 0, numberOfLanes: 1 })}
+            >
+              Add lane
+            </Button>
+            {store.lanes.length === 0 ? <p className="text-sm text-smc-text-muted">No lanes yet.</p> : null}
+            <div className="space-y-3">
+              {store.lanes.map((lane, idx) => (
+                <div key={idx} className="grid gap-3 rounded-lg border border-smc-border p-3 sm:grid-cols-4">
+                  <NumberField label="Length (mm)" value={lane.lengthMm} onChange={(v) => updateLane(idx, "lengthMm", v)} />
+                  <NumberField label="Width (mm)" value={lane.widthMm} onChange={(v) => updateLane(idx, "widthMm", v)} />
+                  <NumberField label="Height (mm)" value={lane.heightMm} onChange={(v) => updateLane(idx, "heightMm", v)} />
+                  <NumberField label="# Lanes" value={lane.numberOfLanes} onChange={(v) => updateLane(idx, "numberOfLanes", v)} />
+                  <div className="sm:col-span-4 flex justify-end">
+                    <Button type="button" variant="destructive" size="sm" onClick={() => store.removeLane(idx)}>
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ),
+      guidance:
+        stepConfigMap.get("specs")?.guidance ?? (
+          <div className="space-y-2 text-sm text-smc-text">
+            <p className="font-semibold">Guidance</p>
+            {specType === "highbay" ? (
+              <>
+                <p>Capture realistic rack dimensions to size the storage properly.</p>
+                <p>Use average slot size if there is variation.</p>
+              </>
+            ) : (
+              <>
+                <p>Add lanes with consistent dimensions; one row per unique lane size.</p>
+                <p>Keep number of lanes coherent with actual layout.</p>
+              </>
+            )}
+          </div>
+        ),
       footer: (
-        <div className="flex justify-between rounded-xl bg-smc-border/40 px-4 py-3 shadow-inner">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setStepError(null);
-              store.prev();
-            }}
-          >
-            Previous
-          </Button>
-          <Button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              handleStepTwoNext();
-            }}
-          >
-            Next
-          </Button>
+        <div className="flex justify-end gap-2">
+          <CustomButton text="Back" type="button" variant="secondary" onClick={() => store.prev()} />
+          <CustomButton text="Continue" type="button" onClick={handleSpecsNext} />
         </div>
       ),
-      guidance: guidanceLanes,
+    },
+    {
+      key: "staff",
+      label: stepConfigMap.get("staff")?.label ?? "Staff",
+      description: stepConfigMap.get("staff")?.description ?? "Optional staffing lines",
+      body: (
+        <div className="space-y-4">
+          <Button size="sm" variant="outline" type="button" onClick={handleAddStaffLine}>
+            Add staffing line
+          </Button>
+          {store.staffingLines.length === 0 ? <p className="text-sm text-smc-text-muted">Optional: add staffing lines.</p> : null}
+          <div className="space-y-3">
+            {store.staffingLines.map((line, idx) => (
+              <div key={idx} className="grid gap-3 rounded-lg border border-smc-border p-3 sm:grid-cols-4">
+                <div>
+                  <label className="text-sm font-semibold text-smc-text">Shift</label>
+                  <select
+                    className="mt-1 w-full rounded-md border border-smc-border px-3 py-2 text-sm"
+                    value={line.shift}
+                    onChange={(e) => handleStaffChange(idx, "shift", e.target.value as StaffLine["shift"])}
+                  >
+                    <option value="SHIFT_1">Shift 1</option>
+                    <option value="SHIFT_2">Shift 2</option>
+                    <option value="SHIFT_3">Shift 3</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-smc-text">Workforce</label>
+                  <select
+                    className="mt-1 w-full rounded-md border border-smc-border px-3 py-2 text-sm"
+                    value={line.workforceType}
+                    onChange={(e) => handleStaffChange(idx, "workforceType", e.target.value as StaffLine["workforceType"])}
+                  >
+                    <option value="DIRECT">Direct</option>
+                    <option value="INDIRECT">Indirect</option>
+                  </select>
+                </div>
+                <NumberField label="Qty" value={line.qty} onChange={(v) => handleStaffChange(idx, "qty", v)} />
+                <div>
+                  <label className="text-sm font-semibold text-smc-text">Role</label>
+                  <input
+                    className="mt-1 w-full rounded-md border border-smc-border px-3 py-2 text-sm"
+                    value={line.role}
+                    onChange={(e) => handleStaffChange(idx, "role", e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-4">
+                  <label className="text-sm font-semibold text-smc-text">Description</label>
+                  <textarea
+                    className="mt-1 w-full rounded-md border border-smc-border px-3 py-2 text-sm"
+                    value={line.description ?? ""}
+                    onChange={(e) => handleStaffChange(idx, "description", e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-4 flex justify-end">
+                  <Button type="button" variant="destructive" size="sm" onClick={() => handleRemoveStaff(idx)}>
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+      guidance:
+        stepConfigMap.get("staff")?.guidance ?? (
+          <div className="space-y-2 text-sm text-smc-text">
+            <p className="font-semibold">Guidance</p>
+            <p>Optional: list staffing per shift and workforce type.</p>
+            <p>Describe the role to keep context for future reviews.</p>
+          </div>
+        ),
+      footer: (
+        <div className="flex justify-end gap-2">
+          <CustomButton text="Back" type="button" variant="secondary" onClick={() => store.prev()} />
+          <CustomButton text="Continue" type="button" onClick={() => store.next()} />
+        </div>
+      ),
     },
     {
       key: "images",
-      label: "Images",
-      description: isEdit ? "Review or replace visuals." : "Upload visuals",
+      label: stepConfigMap.get("images")?.label ?? "Images",
+      description: stepConfigMap.get("images")?.description ?? "Add at least one image",
       body: (
-        <div className="space-y-3 rounded-xl border border-smc-border/70 bg-white p-4">
+        <div className="space-y-4">
+          {renderStepError("images")}
           <ImageInput
             files={store.images}
-            onChange={(files) => store.setImages(files)}
-            error={store.existingImages.length + store.images.length < 1 ? "Please add at least one image." : null}
             existingImages={store.existingImages}
+            onChange={(files) => store.setImages(files)}
             onRemoveExisting={(id) => store.removeExistingImage(id)}
           />
         </div>
       ),
+      guidance:
+        stepConfigMap.get("images")?.guidance ?? (
+          <div className="space-y-2 text-sm text-smc-text">
+            <p className="font-semibold">Guidance</p>
+            <p>Use clear images to help teams identify the storage mean.</p>
+            <p>Include at least one photo; multiple angles are better.</p>
+          </div>
+        ),
       footer: (
-        <div className="flex justify-between rounded-xl bg-smc-border/40 px-4 py-3 shadow-inner">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setStepError(null);
-              store.prev();
-            }}
-          >
-            Previous
-          </Button>
-          <Button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              setStepError(null);
-              store.next();
-            }}
-          >
-            Next
-          </Button>
+        <div className="flex justify-end gap-2">
+          <CustomButton text="Back" type="button" variant="secondary" onClick={() => store.prev()} />
+          <CustomButton text="Continue" type="button" onClick={handleImagesNext} />
         </div>
       ),
-      guidance: guidanceImages,
     },
     {
       key: "summary",
-      label: "Summary",
-      description: isEdit ? "Review and confirm before saving updates." : "Review and confirm before submit.",
+      label: stepConfigMap.get("summary")?.label ?? "Summary",
+      description: stepConfigMap.get("summary")?.description ?? "Review before saving",
       body: (
-        <div className="space-y-2 rounded-xl border border-smc-border/70 bg-white p-4 text-sm text-smc-text">
-          <h3 className="text-base font-semibold text-smc-text">Summary</h3>
-          <div className="grid gap-2 md:grid-cols-2">
-            <div>
-              <span className="font-semibold">Name:</span> {store.name || "—"}
-            </div>
-            <div>
-              <span className="font-semibold">Price:</span> {store.price || "—"}
-            </div>
-            <div>
-              <span className="font-semibold">Plant:</span> {plantsList.find((p) => p.id === store.plantId)?.name || "—"}
-            </div>
-          <div>
-            <span className="font-semibold">Flow:</span> {flowsList.find((f) => f.id === store.flowId)?.slug || "—"}
-          </div>
-          <div>
-            <span className="font-semibold">Supplier:</span> {suppliersList.find((s) => s.id === store.supplierId)?.name || "—"}
-          </div>
-          {isAuto ? (
-            <div>
-              <span className="font-semibold">PLC Brand:</span> {store.plcType || "—"}
-            </div>
-          ) : null}
-          <div>
-            <span className="font-semibold">SOP:</span> {store.sop || "—"}
-          </div>
-          <div>
-            <span className="font-semibold">Exists:</span> {store.exists}
-            </div>
-          </div>
-          <div>
-            <span className="font-semibold">Description:</span>{" "}
-            <span className="text-smc-text-muted">{store.description || "—"}</span>
-          </div>
-          <div>
-            <span className="font-semibold">Lanes:</span>
-            {store.lanes.length ? (
-              <ul className="mt-1 space-y-1 text-smc-text-muted">
-                {store.lanes.map((l, idx) => (
-                  <li key={idx}>
-                    #{idx + 1}: {l.length} x {l.width} x {l.height} mm — qty {l.quantity}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <span className="text-smc-text-muted"> None</span>
-            )}
-          </div>
-          <div>
-            <span className="font-semibold">Images:</span>
-            {store.images.length || store.existingImages.length ? (
-              <div className="mt-1 flex flex-wrap gap-2">
-                {store.existingImages.length ? (
-                  <span className="rounded bg-smc-secondary/10 px-2 py-1 text-xs font-semibold text-smc-text">
-                    Existing images kept ({store.existingImages.length})
-                  </span>
-                ) : null}
-                {store.images.length ? (
-                  <span className="rounded bg-smc-primary/10 px-2 py-1 text-xs font-semibold text-smc-primary">
-                    {isEdit ? "New images" : "Images"}: {store.images.length}
-                  </span>
-                ) : null}
-              </div>
-            ) : (
-              <span className="text-smc-text-muted"> None</span>
-            )}
-          </div>
+        <div className="space-y-2 text-sm text-smc-text">
+          <p>
+            <strong>Name:</strong> {store.name}
+          </p>
+          <p>
+            <strong>Plant:</strong> {plantsList.find((p) => p.id === store.plantId)?.name ?? "n/a"}
+          </p>
+          <p>
+            <strong>Flows:</strong> {flowsList.filter((f) => store.flowIds.includes(f.id)).map((f) => f.slug).join(", ") || "n/a"}
+          </p>
+          <p>
+            <strong>Price:</strong> {store.price}
+          </p>
+          <p>
+            <strong>Lanes:</strong> {store.lanes.length}
+          </p>
+          <p>
+            <strong>Images:</strong> {store.images.length + store.existingImages.length}
+          </p>
         </div>
       ),
       footer: (
-        <div className="flex justify-between rounded-xl bg-smc-border/40 px-4 py-3 shadow-inner">
-          <Button
+        <div className="flex justify-end gap-2">
+          <CustomButton text="Back" type="button" variant="secondary" onClick={() => store.prev()} />
+          <CustomButton
+            text={pending ? "Saving..." : mode === "edit" ? "Update" : "Create"}
             type="button"
-            variant="ghost"
-            onClick={() => {
-              setStepError(null);
-              store.prev();
-            }}
-          >
-            Previous
-          </Button>
-          <Button type="submit" disabled={pending} data-final="true">
-            {pending ? "Saving..." : isEdit ? "Update" : "Create"}
-          </Button>
+            onClick={() => handleSubmit(new FormData())}
+            disabled={pending}
+          />
         </div>
       ),
-      guidance: guidanceSummary,
     },
   ];
 
-  const stepsByKey = defaultSteps.reduce<Record<string, StepItem>>((acc, step) => {
-    acc[step.key] = step;
-    return acc;
-  }, {});
-
-  const steps = stepConfig?.length
-    ? stepConfig
-        .map((cfg) => {
-          const base = stepsByKey[cfg.key];
-          if (!base) return null;
-          return {
-            ...base,
-            label: cfg.label ?? base.label,
-            description: cfg.description ?? base.description,
-            guidance: cfg.guidance ?? base.guidance,
-          };
-        })
-        .filter(Boolean) as StepItem[]
-    : defaultSteps;
-
-  totalSteps = steps.length || totalSteps;
-
   return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
-        if (submitter?.dataset?.inline === "true") return;
-        if (!submitter?.dataset?.final) return;
-        await handleSubmit(new FormData(e.currentTarget));
-      }}
-      className="space-y-4 rounded-2xl border border-smc-border/70 bg-white/90 p-4 shadow-soft"
-    >
-      <input type="hidden" name="categoryId" value={categoryId} />
-      <input type="hidden" name="categorySlug" value={categorySlug} />
-      {isEdit && storageMean?.id ? <input type="hidden" name="id" value={storageMean.id} /> : null}
+    <MeanMultistepForm
+      steps={steps}
+      currentIndex={store.step - 1}
+      onStepChange={(s) => store.setStep((Math.min(6, Math.max(1, s + 1)) as 1 | 2 | 3 | 4 | 5 | 6))}
+      heroTitle={heroTitle}
+      heroSubtitle={heroSubtitle}
+      modeLabel={mode === "edit" ? "Update" : "Create"}
+      onSubmit={handleSubmit}
+    />
+  );
+}
 
-      <MeanMultistepForm
-        heroTitle={heroTitle}
-        heroSubtitle={heroSubtitle}
-        modeLabel={isEdit ? "Edit mode" : "Create mode"}
-        steps={steps}
-        currentIndex={Math.max(0, store.step - 1)}
+function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div>
+      <label className="text-sm font-semibold text-smc-text">{label}</label>
+      <input
+        className="mt-1 w-full rounded-md border border-smc-border px-3 py-2 text-sm"
+        type="number"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
       />
-
-      {stepError ? <p className="text-sm text-red-600">{stepError}</p> : null}
-      {state.message && !stepError ? <p className="text-sm text-red-600">{state.message}</p> : null}
-    </form>
+    </div>
   );
 }

@@ -1,72 +1,123 @@
-import { z } from "zod";
 import type { Prisma } from "@prisma/client";
-import ManualTranstockerForm from "./manual-transtocker.form";
-import AutoTranstockerForm from "./auto-transtocker.form";
+import SharedStorageMeanForm from "./shared-storage-mean-form";
 
-export const baseStorageMeanSchema = z.object({
-  name: z.string().min(2),
-  price: z.coerce.number().int().min(0),
-  description: z.string().optional(),
-  supplierId: z.string().uuid().optional().nullable(),
-  plantId: z.string().uuid(),
-  flowId: z.string().uuid().optional().nullable(),
-});
-
-export const manualTranstockerSchema = baseStorageMeanSchema.extend({
-  emptyReturnLanes: z.coerce.number().int().min(0),
-  lanes: z.array(
-    z.object({
-      laneId: z.string().uuid(),
-      quantity: z.coerce.number().int().min(0),
-    })
-  ).default([]),
-});
-
-export const autoTranstockerSchema = baseStorageMeanSchema.extend({
-  emptyReturnLanes: z.coerce.number().int().min(0),
-  lanes: z.array(
-    z.object({
-      laneId: z.string().uuid(),
-      quantity: z.coerce.number().int().min(0),
-    })
-  ).default([]),
-});
+type SpecType = "lanes" | "highbay";
 
 export type StorageMeanRegistryEntry = {
-  Form: typeof ManualTranstockerForm | typeof AutoTranstockerForm;
-  schema: typeof manualTranstockerSchema | typeof autoTranstockerSchema;
+  Form: typeof SharedStorageMeanForm;
+  specType: SpecType;
   include: Prisma.StorageMeanInclude;
 };
 
 export const storageMeanRegistry = {
   "manual-transtocker": {
-    Form: ManualTranstockerForm,
-    schema: manualTranstockerSchema,
+    Form: SharedStorageMeanForm,
+    specType: "lanes",
     include: {
-      manualTranstocker: { include: { lanes: { include: { lane: true } } } },
+      laneGroups: { include: { lanes: true } },
+      highBayRack: true,
       images: { include: { image: true }, orderBy: { sortOrder: "asc" } },
       storageMeanCategory: true,
       plant: true,
-      flow: true,
       supplier: true,
+      flows: { include: { flow: true } },
+      staffingLines: true,
     },
   },
   "auto-transtocker": {
-    Form: AutoTranstockerForm,
-    schema: autoTranstockerSchema,
+    Form: SharedStorageMeanForm,
+    specType: "lanes",
     include: {
-      autoTranstocker: { include: { lanes: { include: { lane: true } } } },
+      laneGroups: { include: { lanes: true } },
+      highBayRack: true,
       images: { include: { image: true }, orderBy: { sortOrder: "asc" } },
       storageMeanCategory: true,
       plant: true,
-      flow: true,
       supplier: true,
+      flows: { include: { flow: true } },
+      staffingLines: true,
     },
   },
-} satisfies Record<"manual-transtocker" | "auto-transtocker", StorageMeanRegistryEntry>;
+  "manual-hanging-shopstock": {
+    Form: SharedStorageMeanForm,
+    specType: "lanes",
+    include: {
+      laneGroups: { include: { lanes: true } },
+      highBayRack: true,
+      images: { include: { image: true }, orderBy: { sortOrder: "asc" } },
+      storageMeanCategory: true,
+      plant: true,
+      supplier: true,
+      flows: { include: { flow: true } },
+      staffingLines: true,
+    },
+  },
+  "automated-hanging-shopstock": {
+    Form: SharedStorageMeanForm,
+    specType: "lanes",
+    include: {
+      laneGroups: { include: { lanes: true } },
+      highBayRack: true,
+      images: { include: { image: true }, orderBy: { sortOrder: "asc" } },
+      storageMeanCategory: true,
+      plant: true,
+      supplier: true,
+      flows: { include: { flow: true } },
+      staffingLines: true,
+    },
+  },
+  crm: {
+    Form: SharedStorageMeanForm,
+    specType: "lanes",
+    include: {
+      laneGroups: { include: { lanes: true } },
+      highBayRack: true,
+      images: { include: { image: true }, orderBy: { sortOrder: "asc" } },
+      storageMeanCategory: true,
+      plant: true,
+      supplier: true,
+      flows: { include: { flow: true } },
+      staffingLines: true,
+    },
+  },
+  "high-bay-rack": {
+    Form: SharedStorageMeanForm,
+    specType: "highbay",
+    include: {
+      laneGroups: { include: { lanes: true } },
+      highBayRack: true,
+      images: { include: { image: true }, orderBy: { sortOrder: "asc" } },
+      storageMeanCategory: true,
+      plant: true,
+      supplier: true,
+      flows: { include: { flow: true } },
+      staffingLines: true,
+    },
+  },
+  arsr: {
+    Form: SharedStorageMeanForm,
+    specType: "highbay",
+    include: {
+      laneGroups: { include: { lanes: true } },
+      highBayRack: true,
+      images: { include: { image: true }, orderBy: { sortOrder: "asc" } },
+      storageMeanCategory: true,
+      plant: true,
+      supplier: true,
+      flows: { include: { flow: true } },
+      staffingLines: true,
+    },
+  },
+} satisfies Record<string, StorageMeanRegistryEntry>;
 
 const storageMeanSlugAliases: Record<string, keyof typeof storageMeanRegistry> = {
   "automated-transtocker": "auto-transtocker",
+  "manual-transtocker": "manual-transtocker",
+  "manual-hanging-shopstock": "manual-hanging-shopstock",
+  "automated-hanging-shopstock": "automated-hanging-shopstock",
+  crm: "crm",
+  "high-bay-rack": "high-bay-rack",
+  arsr: "arsr",
 };
 
 export type StorageMeanCategorySlug = keyof typeof storageMeanRegistry;

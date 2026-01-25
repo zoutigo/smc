@@ -12,9 +12,6 @@ model TransportMean {
   plantId String @db.Char(36)
   plant   Plant  @relation(fields: [plantId], references: [id])
 
-  flowId String? @db.Char(36)
-  flow   Flow?   @relation(fields: [flowId], references: [id])
-
   supplierId String?   @db.Char(36)
   supplier   Supplier? @relation(fields: [supplierId], references: [id])
 
@@ -43,7 +40,6 @@ model TransportMean {
   @@unique([plantId, slug])
   @@index([transportMeanCategoryId])
   @@index([plantId])
-  @@index([flowId])
   @@index([supplierId])
 }
 
@@ -111,4 +107,5 @@ model TransportMeanFlow {
 
   @@id([transportMeanId, flowId])
   @@index([flowId])
+  @@index([transportMeanId])
 }

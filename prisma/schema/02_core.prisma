@@ -60,10 +60,9 @@ model Flow {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  storageMeans       StorageMean[]
+  storageMeanLinks   StorageMeanFlow[]
   packagingMeans     PackagingMean[]
   transportMeanLinks TransportMeanFlow[]
-  transportMeans     TransportMean[]
 
   @@unique([from, to])
 }

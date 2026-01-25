@@ -6,7 +6,7 @@ export type StepItem = {
   key: string;
   label: string;
   description?: React.ReactNode;
-  body: React.ReactNode;
+  body?: React.ReactNode;
   guidance?: React.ReactNode;
   footer?: React.ReactNode;
 };
@@ -16,7 +16,16 @@ type MeanMultistepFormProps = {
   heroSubtitle: string;
   modeLabel: string;
   steps: StepItem[];
-  currentIndex: number; // zero-based
+  currentIndex?: number; // zero-based
+  currentStep?: number; // 1-based
+  onStepChange?: (step: number) => void;
+  children?: (step: StepItem) => React.ReactNode;
+  stepError?: string | null;
+  isSubmitting?: boolean;
+  onNext?: (key: string) => void;
+  onPrev?: () => void;
+  onSubmit?: (formData: FormData) => void;
+  formData?: unknown;
 };
 
 const StepBanner = ({ steps, currentIndex }: { steps: StepItem[]; currentIndex: number }) => {
@@ -43,8 +52,17 @@ const StepBanner = ({ steps, currentIndex }: { steps: StepItem[]; currentIndex: 
   );
 };
 
-export function MeanMultistepForm({ heroTitle, heroSubtitle, modeLabel, steps, currentIndex }: MeanMultistepFormProps) {
-  const current = steps[currentIndex] ?? steps[0];
+export function MeanMultistepForm({
+  heroTitle,
+  heroSubtitle,
+  modeLabel,
+  steps,
+  currentIndex,
+  currentStep,
+  children,
+}: MeanMultistepFormProps) {
+  const index = typeof currentIndex === "number" ? currentIndex : currentStep ? currentStep - 1 : 0;
+  const current = steps[index] ?? steps[0];
 
   return (
     <div className="space-y-4">
@@ -63,18 +81,22 @@ export function MeanMultistepForm({ heroTitle, heroSubtitle, modeLabel, steps, c
         <p className="text-sm text-smc-text-muted">{heroSubtitle}</p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[4fr_1fr]">
-        <div className="space-y-3">
-          <div className="rounded-xl bg-smc-primary/15 p-3 shadow-inner">
-            <StepBanner steps={steps} currentIndex={currentIndex} />
-            <div className="mt-2 text-xs text-smc-text-muted">{current.description ?? current.label}</div>
-          </div>
-          {current.body}
-          {current.footer}
+      <div className="space-y-4">
+        <div className="rounded-xl bg-smc-primary/15 p-3 shadow-inner">
+          <StepBanner steps={steps} currentIndex={index} />
+          <div className="mt-2 text-xs text-smc-text-muted">{current.description ?? current.label}</div>
         </div>
-        <aside className="rounded-2xl border border-smc-border/70 bg-smc-bg/70 p-4 shadow-inner">
-          {current.guidance}
-        </aside>
+        <div className="grid gap-4 lg:grid-cols-[4fr_1fr]">
+          <div className="space-y-3">
+            {children ? children(current) : current.body}
+            {current.footer}
+          </div>
+          {current.guidance ? (
+            <aside className="rounded-2xl border border-smc-border/70 bg-smc-bg/70 p-4 shadow-inner">
+              {current.guidance}
+            </aside>
+          ) : null}
+        </div>
       </div>
     </div>
   );

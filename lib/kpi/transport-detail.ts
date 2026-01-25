@@ -26,7 +26,6 @@ export async function getTransportDetailKpi(transportMeanId: string): Promise<Tr
       transportMeanCategory: { select: { name: true, slug: true } },
       plant: { select: { name: true } },
       supplier: { select: { name: true } },
-      flow: { select: { slug: true } },
       flows: { select: { flow: { select: { slug: true } } } },
       packagingLinks: { include: { packagingMean: { select: { name: true } } } },
       images: { include: { image: { select: { imageUrl: true } } }, orderBy: { sortOrder: "asc" } },
@@ -46,8 +45,8 @@ export async function getTransportDetailKpi(transportMeanId: string): Promise<Tr
     cruiseSpeedKmh: tm.cruiseSpeedKmh,
     maxSpeedKmh: tm.maxSpeedKmh,
     packagingCount: new Set(tm.packagingLinks.map((l) => l.packagingMeanId)).size,
-    flowsCount: new Set([...tm.flows.map((f) => f.flow?.slug).filter(Boolean), tm.flow?.slug].filter(Boolean) as string[]).size,
-    flowSlug: tm.flow?.slug,
+    flowsCount: new Set(tm.flows.map((f) => f.flow?.slug).filter((slug): slug is string => Boolean(slug))).size,
+    flowSlug: tm.flows.find((f) => f.flow?.slug)?.flow?.slug ?? null,
     packagingLinks: tm.packagingLinks.map((l) => ({
       packagingMean: l.packagingMean?.name ?? "—",
       maxQty: l.maxQty,

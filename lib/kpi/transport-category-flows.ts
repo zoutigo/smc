@@ -21,7 +21,6 @@ export async function getTransportCategoryFlowsKpis(categorySlug: string): Promi
   const transportMeans = await prisma.transportMean.findMany({
     where: { transportMeanCategory: { slug: categorySlug } },
     include: {
-      flow: { select: { id: true, slug: true } },
       flows: { select: { flow: { select: { id: true, slug: true } } } },
     },
   });
@@ -36,16 +35,21 @@ export async function getTransportCategoryFlowsKpis(categorySlug: string): Promi
   let monoFlow = 0;
 
   transportMeans.forEach((tm) => {
-    const pivotFlows = tm.flows.map((f) => f.flow).filter(Boolean) as { id: string; slug: string }[];
-    if (!pivotFlows.length) withoutPivot += 1;
-    if (!tm.flow) withoutMainFlow += 1;
+    const pivotFlows = tm.flows
+      .map((f) => f.flow)
+      .filter((flow): flow is { id: string; slug: string } => Boolean(flow));
+    if (!pivotFlows.length) {
+      withoutPivot += 1;
+      withoutMainFlow += 1;
+    }
 
     const totalFlows = new Set<string>();
-    if (tm.flow) {
-      totalFlows.add(tm.flow.id);
-      mainFlowCount.set(tm.flow.id, {
-        slug: tm.flow.slug,
-        count: (mainFlowCount.get(tm.flow.id)?.count ?? 0) + 1,
+    const mainFlow = pivotFlows[0];
+    if (mainFlow) {
+      totalFlows.add(mainFlow.id);
+      mainFlowCount.set(mainFlow.id, {
+        slug: mainFlow.slug,
+        count: (mainFlowCount.get(mainFlow.id)?.count ?? 0) + 1,
       });
     }
 

@@ -8,10 +8,8 @@ import { getPrisma } from "@/lib/prisma";
 import { resolveStorageMeanSlug, storageMeanRegistry, type StorageMeanCategorySlug } from "@/app/storage-means/_registry/storageMean.registry";
 
 type Params = { slug: string; id: string } | Promise<{ slug: string; id: string }>;
-type ManualStorageMean = Prisma.StorageMeanGetPayload<{ include: (typeof storageMeanRegistry)["manual-transtocker"]["include"] }>;
-type AutoStorageMean = Prisma.StorageMeanGetPayload<{ include: (typeof storageMeanRegistry)["auto-transtocker"]["include"] }>;
-type StorageMeanWithRelations = ManualStorageMean | AutoStorageMean;
-type LaneRow = { lane: { length: number; width: number; height: number }; quantity: number };
+type StorageMeanWithRelations = Prisma.StorageMeanGetPayload<{ include: (typeof storageMeanRegistry)["manual-transtocker"]["include"] }>;
+type LaneRow = { lengthMm: number; widthMm: number; heightMm: number; numberOfLanes: number };
 
 const resolveParams = async (params: Params) => (params instanceof Promise ? params : Promise.resolve(params));
 
@@ -37,10 +35,18 @@ export default async function Detail({ params }: { params: Params }) {
   })) as StorageMeanWithRelations | null;
   if (!sm) return notFound();
 
-  const manual = "manualTranstocker" in sm ? sm.manualTranstocker : undefined;
-  const auto = "autoTranstocker" in sm ? sm.autoTranstocker : undefined;
-  const lanes: LaneRow[] = manual?.lanes ?? auto?.lanes ?? [];
-  const plcBrand = auto?.plcType ?? undefined;
+  const lanes: LaneRow[] =
+    sm.laneGroups?.flatMap((lg) =>
+      lg.lanes.map((l) => ({
+        lengthMm: l.lengthMm,
+        widthMm: l.widthMm,
+        heightMm: l.heightMm,
+        numberOfLanes: l.numberOfLanes,
+      }))
+    ) ?? [];
+  const flows = sm.flows ?? [];
+  const highBay = sm.highBayRack;
+  const staffing = sm.staffingLines ?? [];
   const galleryImages = (sm.images ?? []).map((img) => ({ id: img.imageId, url: img.image.imageUrl }));
 
   return (
@@ -73,54 +79,83 @@ export default async function Detail({ params }: { params: Params }) {
                 <DetailItem label="SOP" value={formatDate(sm.sop as Date)} />
                 <DetailItem label="Exists" value={sm.status?.toLowerCase() ?? "—"} />
                 <DetailItem label="Plant" value={sm.plant?.name ?? "—"} />
-                <DetailItem label="Flow" value={sm.flow ? `${sm.flow.from} → ${sm.flow.to}` : "—"} />
+                <DetailItem
+                  label="Flows"
+                  value={
+                    flows.length
+                      ? flows
+                          .map((f) => `${f.flow.from} → ${f.flow.to}`)
+                          .join(", ")
+                      : "—"
+                  }
+                />
                 <DetailItem label="Supplier" value={sm.supplier?.name ?? "—"} />
-                {plcBrand ? <DetailItem label="PLC Brand" value={plcBrand} /> : null}
               </div>
             </div>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-smc-text">Lanes</h3>
-              <span className="text-xs font-semibold text-smc-text-muted">{lanes.length} item(s)</span>
-            </div>
-            <div className="overflow-hidden rounded-xl border border-smc-border/70">
-              <table className="min-w-full text-sm">
-                <thead className="bg-smc-bg/80 text-xs uppercase tracking-wide text-smc-text-muted">
-                  <tr>
-                    <th className="px-4 py-2 text-left">Length (mm)</th>
-                    <th className="px-4 py-2 text-left">Width (mm)</th>
-                    <th className="px-4 py-2 text-left">Height (mm)</th>
-                    <th className="px-4 py-2 text-left">Qty</th>
-                    <th className="px-4 py-2 text-left">Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lanes.length === 0 ? (
+          {lanes.length > 0 && (
+            <div className="space-y-4 rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-smc-text">Lanes</h3>
+                <span className="text-xs font-semibold text-smc-text-muted">{lanes.length} item(s)</span>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-smc-border/70">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-smc-bg/80 text-xs uppercase tracking-wide text-smc-text-muted">
                     <tr>
-                      <td className="px-4 py-3 text-sm text-smc-text-muted" colSpan={5}>
-                        No lanes defined.
-                      </td>
+                      <th className="px-4 py-2 text-left">Length (mm)</th>
+                      <th className="px-4 py-2 text-left">Width (mm)</th>
+                      <th className="px-4 py-2 text-left">Height (mm)</th>
+                      <th className="px-4 py-2 text-left">Qty</th>
                     </tr>
-                  ) : (
-                    lanes.map((lane, idx) => (
-                      <tr
-                        key={`${lane.lane.length}-${lane.lane.width}-${lane.lane.height}-${idx}`}
-                        className={cn(idx % 2 === 0 ? "bg-white" : "bg-smc-bg/70")}
-                      >
-                        <td className="px-4 py-3">{lane.lane.length}</td>
-                        <td className="px-4 py-3">{lane.lane.width}</td>
-                        <td className="px-4 py-3">{lane.lane.height}</td>
-                        <td className="px-4 py-3">{lane.quantity}</td>
-                        <td className="px-4 py-3">Lane</td>
+                  </thead>
+                  <tbody>
+                    {lanes.map((lane, idx) => (
+                      <tr key={`${lane.lengthMm}-${lane.widthMm}-${lane.heightMm}-${idx}`} className={cn(idx % 2 === 0 ? "bg-white" : "bg-smc-bg/70")}>
+                        <td className="px-4 py-3">{lane.lengthMm}</td>
+                        <td className="px-4 py-3">{lane.widthMm}</td>
+                        <td className="px-4 py-3">{lane.heightMm}</td>
+                        <td className="px-4 py-3">{lane.numberOfLanes}</td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
+
+          {highBay && (
+            <div className="rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
+              <h3 className="text-lg font-semibold text-smc-text">High-bay specs</h3>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                <DetailItem label="Levels" value={String(highBay.numberOfLevels)} />
+                <DetailItem label="Bays" value={String(highBay.numberOfBays)} />
+                <DetailItem label="Slots" value={String(highBay.numberOfSlots)} />
+                <DetailItem label="Slot length" value={`${highBay.slotLengthMm} mm`} />
+                <DetailItem label="Slot width" value={`${highBay.slotWidthMm} mm`} />
+                <DetailItem label="Slot height" value={`${highBay.slotHeightMm} mm`} />
+              </div>
+            </div>
+          )}
+
+          {staffing.length > 0 && (
+            <div className="rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
+              <h3 className="text-lg font-semibold text-smc-text">Staffing</h3>
+              <ul className="mt-2 space-y-2 text-sm text-smc-text">
+                {staffing.map((s, idx) => (
+                  <li key={`${s.shift}-${s.workforceType}-${idx}`} className="rounded border border-smc-border px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">{s.role}</span>
+                      <span className="text-smc-text-muted">{s.shift.replace("_", " ")} · {s.workforceType.toLowerCase()}</span>
+                    </div>
+                    <div className="text-smc-text-muted">Qty: {Number(s.qty)}</div>
+                    {s.description ? <div className="text-smc-text-muted">{s.description}</div> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
             <h3 className="text-lg font-semibold text-smc-text">Meta</h3>

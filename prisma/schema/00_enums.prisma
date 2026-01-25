@@ -32,3 +32,20 @@ enum NoteTargetType {
   PACKAGING_MEAN
   TRANSPORT_MEAN
 }
+
+enum ShiftType {
+  SHIFT_1
+  SHIFT_2
+  SHIFT_3
+}
+
+enum WorkforceType {
+  DIRECT
+  INDIRECT
+}
+
+enum LaneType {
+  EMPTIES
+  ACCUMULATION
+  EMPTIES_AND_ACCUMULATION
+}
