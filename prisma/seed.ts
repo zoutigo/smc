@@ -990,10 +990,29 @@ async function seedPackagingMeans() {
       const eop = new Date(sop);
       eop.setFullYear(eop.getFullYear() + 5);
 
-      let packaging = null;
-      try {
-        packaging = await prisma.packagingMean.create({
-          data: {
+      const packaging = await retry(() =>
+        prisma.packagingMean.upsert({
+          where: {
+            plantId_name_packagingMeanCategoryId: {
+              plantId: plant.id,
+              name,
+              packagingMeanCategoryId: category.id,
+            },
+          },
+          update: {
+            description: `Seeded ${category.name.toLowerCase()} packaging #${i + 1}`,
+            price,
+            width,
+            length,
+            height,
+            numberOfPackagings,
+            status: $Enums.PackagingStatus.ACTIVE,
+            sop,
+            eop,
+            supplierId: supplier.id,
+            flowId: flow.id,
+          },
+          create: {
             name,
             description: `Seeded ${category.name.toLowerCase()} packaging #${i + 1}`,
             price,
@@ -1009,14 +1028,8 @@ async function seedPackagingMeans() {
             flowId: flow.id,
             packagingMeanCategoryId: category.id,
           },
-        });
-      } catch (error) {
-        if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
-          continue; // duplicate, skip children
-        }
-        throw error;
-      }
-      if (!packaging) continue;
+        })
+      );
 
       const images = Array.from({ length: 5 }, (_v, idx) => ({
         url: `${packagingImagePool[(i + idx) % packagingImagePool.length]}?auto=format&fit=crop&w=1200&q=80&sig=${category.slug}-${i}-${idx}`,
@@ -1175,36 +1188,45 @@ async function seedTransportMeans() {
       }))
       .filter((l) => Boolean(l.packagingMeanId)) as Array<{ packagingMeanId: string; maxQty: number }>;
 
-    const tm = await ignoreDuplicate(
-      prisma.transportMean.create({
-        data: {
-          name: seed.name,
-          slug,
-          description: `Seeded ${seed.categoryName.toLowerCase()} transport mean`,
-          transportMeanCategoryId: categoryId,
-          supplierId: supplierId ?? null,
-          plantId,
-          loadCapacityKg: seed.loadCapacityKg,
-          units: seed.units,
-          cruiseSpeedKmh: seed.cruiseSpeedKmh,
-          maxSpeedKmh: seed.maxSpeedKmh,
-          sop: seed.sop,
-          eop: seed.eop,
-          packagingLinks: packagingLinks.length
-            ? {
-                create: packagingLinks.map((l) => ({
-                  packagingMeanId: l.packagingMeanId,
-                  maxQty: l.maxQty,
-                })),
-              }
-            : undefined,
-        },
-      })
-    );
-    if (tm) {
-      created += 1;
-      await pauseEvery(created, 50, 300);
-    }
+    await prisma.transportMean.upsert({
+      where: { slug },
+      update: {
+        description: `Seeded ${seed.categoryName.toLowerCase()} transport mean`,
+        transportMeanCategoryId: categoryId,
+        supplierId: supplierId ?? null,
+        plantId,
+        loadCapacityKg: seed.loadCapacityKg,
+        units: seed.units,
+        cruiseSpeedKmh: seed.cruiseSpeedKmh,
+        maxSpeedKmh: seed.maxSpeedKmh,
+        sop: seed.sop,
+        eop: seed.eop,
+      },
+      create: {
+        name: seed.name,
+        slug,
+        description: `Seeded ${seed.categoryName.toLowerCase()} transport mean`,
+        transportMeanCategoryId: categoryId,
+        supplierId: supplierId ?? null,
+        plantId,
+        loadCapacityKg: seed.loadCapacityKg,
+        units: seed.units,
+        cruiseSpeedKmh: seed.cruiseSpeedKmh,
+        maxSpeedKmh: seed.maxSpeedKmh,
+        sop: seed.sop,
+        eop: seed.eop,
+        packagingLinks: packagingLinks.length
+          ? {
+              create: packagingLinks.map((l) => ({
+                packagingMeanId: l.packagingMeanId!,
+                maxQty: l.maxQty,
+              })),
+            }
+          : undefined,
+      },
+    });
+    created += 1;
+    await pauseEvery(created, 50, 300);
   }
   console.info(`Seeded ${created} transport means.`);
 }
