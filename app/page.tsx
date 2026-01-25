@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getDashboardData } from "@/lib/dashboard-data";
 
 const Pill = ({ children, tone = "primary" }: { children: React.ReactNode; tone?: "primary" | "secondary" | "accent" }) => (
   <span
@@ -45,7 +46,12 @@ const TinyIcon = ({ variant }: { variant: "grid" | "bolt" | "cloud" | "shield" |
   );
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Warm up dashboard data cache so subsequent dashboard visits are instant
+  void getDashboardData().catch(() => {
+    // ignore failures on landing warmup to avoid blocking the page
+  });
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_20%_20%,rgba(8,108,125,0.08),transparent_40%),radial-gradient(circle_at_80%_10%,rgba(86,132,175,0.12),transparent_45%),linear-gradient(180deg,rgb(244,247,252),rgba(244,247,252,0.65))] text-sm text-[rgb(var(--smc-text))]">
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_70%,rgba(248,163,112,0.08),transparent_38%)]" aria-hidden />
