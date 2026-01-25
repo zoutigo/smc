@@ -1,9 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { PrismaClient, $Enums } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import bcrypt from "bcryptjs";
 import { slugifyValue } from "../lib/utils";
 
 const prisma = new PrismaClient();
+
+async function ignoreDuplicate<T>(promise: Promise<T>): Promise<T | null> {
+  try {
+    return await promise;
+  } catch (error) {
+    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+      return null;
+    }
+    throw error;
+  }
+}
 
 async function retry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 500): Promise<T> {
   let lastError: unknown;
@@ -20,21 +32,10 @@ async function retry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 500): Prom
   throw lastError;
 }
 
-async function truncateAllTables() {
-  const tables: Array<{ TABLE_NAME: string }> = await prisma.$queryRaw`
-    SELECT TABLE_NAME
-    FROM information_schema.tables
-    WHERE table_schema = database()
-      AND TABLE_NAME NOT LIKE '_prisma_migrations'
-  `;
-
-  if (!tables.length) return;
-
-  await prisma.$transaction([
-    prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS=0"),
-    ...tables.map((t) => prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${t.TABLE_NAME}\``)),
-    prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS=1"),
-  ]);
+async function pauseEvery(count: number, every: number, ms = 250) {
+  if (count > 0 && count % every === 0) {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
 }
 
 const transportMeanCategoriesSeedData = [
@@ -960,12 +961,6 @@ async function seedAccessories() {
 }
 
 async function seedPackagingMeans() {
-  const existing = await prisma.packagingMean.count();
-  if (existing > 0) {
-    console.info(`Skipping packaging mean seed: ${existing} record(s) already present.`);
-    return;
-  }
-
   const categories = await prisma.packagingMeanCategory.findMany();
   const plants = await prisma.plant.findMany();
   const flows = await prisma.flow.findMany();
@@ -996,25 +991,28 @@ async function seedPackagingMeans() {
       eop.setFullYear(eop.getFullYear() + 5);
 
       const packaging = await retry(() =>
-        prisma.packagingMean.create({
-          data: {
-            name,
-            description: `Seeded ${category.name.toLowerCase()} packaging #${i + 1}`,
-            price,
-            width,
-            length,
-            height,
-            numberOfPackagings,
-            status: $Enums.PackagingStatus.ACTIVE,
-            sop,
-            eop,
-            supplierId: supplier.id,
-            plantId: plant.id,
-            flowId: flow.id,
-            packagingMeanCategoryId: category.id,
-          },
-        })
+        ignoreDuplicate(
+          prisma.packagingMean.create({
+            data: {
+              name,
+              description: `Seeded ${category.name.toLowerCase()} packaging #${i + 1}`,
+              price,
+              width,
+              length,
+              height,
+              numberOfPackagings,
+              status: $Enums.PackagingStatus.ACTIVE,
+              sop,
+              eop,
+              supplierId: supplier.id,
+              plantId: plant.id,
+              flowId: flow.id,
+              packagingMeanCategoryId: category.id,
+            },
+          })
+        )
       );
+      if (!packaging) continue;
 
       const images = Array.from({ length: 5 }, (_v, idx) => ({
         url: `${packagingImagePool[(i + idx) % packagingImagePool.length]}?auto=format&fit=crop&w=1200&q=80&sig=${category.slug}-${i}-${idx}`,
@@ -1078,6 +1076,7 @@ async function seedPackagingMeans() {
       }
 
       packagingCreated += 1;
+      await pauseEvery(packagingCreated, 50, 300);
     }
   }
   console.info(`Seeded ${packagingCreated} packaging means with parts, accessories, and images.`);
@@ -1166,31 +1165,36 @@ async function seedTransportMeans() {
       }))
       .filter((l) => Boolean(l.packagingMeanId)) as Array<{ packagingMeanId: string; maxQty: number }>;
 
-    await prisma.transportMean.create({
-      data: {
-        name: seed.name,
-        slug,
-        description: `Seeded ${seed.categoryName.toLowerCase()} transport mean`,
-        transportMeanCategoryId: categoryId,
-        supplierId: supplierId ?? null,
-        plantId,
-        loadCapacityKg: seed.loadCapacityKg,
-        units: seed.units,
-        cruiseSpeedKmh: seed.cruiseSpeedKmh,
-        maxSpeedKmh: seed.maxSpeedKmh,
-        sop: seed.sop,
-        eop: seed.eop,
-        packagingLinks: packagingLinks.length
-          ? {
-              create: packagingLinks.map((l) => ({
-                packagingMeanId: l.packagingMeanId,
-                maxQty: l.maxQty,
-              })),
-            }
-          : undefined,
-      },
-    });
-    created += 1;
+    const tm = await ignoreDuplicate(
+      prisma.transportMean.create({
+        data: {
+          name: seed.name,
+          slug,
+          description: `Seeded ${seed.categoryName.toLowerCase()} transport mean`,
+          transportMeanCategoryId: categoryId,
+          supplierId: supplierId ?? null,
+          plantId,
+          loadCapacityKg: seed.loadCapacityKg,
+          units: seed.units,
+          cruiseSpeedKmh: seed.cruiseSpeedKmh,
+          maxSpeedKmh: seed.maxSpeedKmh,
+          sop: seed.sop,
+          eop: seed.eop,
+          packagingLinks: packagingLinks.length
+            ? {
+                create: packagingLinks.map((l) => ({
+                  packagingMeanId: l.packagingMeanId,
+                  maxQty: l.maxQty,
+                })),
+              }
+            : undefined,
+        },
+      })
+    );
+    if (tm) {
+      created += 1;
+      await pauseEvery(created, 50, 300);
+    }
   }
   console.info(`Seeded ${created} transport means.`);
 }
@@ -1252,18 +1256,13 @@ async function seedStorageMeanCategories() {
 }
 
 async function seedFlows() {
-  const existingCount = await prisma.flow.count();
-  if (existingCount > 0) {
-    console.info(`Skipping flow seed: ${existingCount} record(s) already present.`);
-    return;
-  }
-
   await prisma.flow.createMany({
     data: flowSeedData.map((flow) => ({
       slug: flow.slug,
       from: flow.from as $Enums.FlowStation,
       to: flow.to as $Enums.FlowStation,
     })),
+    skipDuplicates: true,
   });
 
   console.info(`Seeded ${flowSeedData.length} flows.`);
@@ -1286,18 +1285,12 @@ async function seedUsers() {
 }
 
 async function seedPlants() {
-  const plantCount = await prisma.plant.count();
-  if (plantCount > 0) {
-    console.info(`Skipping plant seed: ${plantCount} record(s) already present.`);
-    return;
-  }
-
   const countryCodes = new Set(plantSeedData.map((plant) => plant.address.countryCode));
   const countryMap = await getCountryMap(countryCodes);
 
   for (const plant of plantSeedData) {
     const countryId = countryMap.get(plant.address.countryCode)!;
-    await prisma.plant.create({
+    await ignoreDuplicate(prisma.plant.create({
       data: {
         name: plant.name,
         address: {
@@ -1309,19 +1302,13 @@ async function seedPlants() {
           },
         },
       },
-    });
+    }));
   }
 
   console.info(`Seeded ${plantSeedData.length} plants with addresses.`);
 }
 
 async function seedSuppliers() {
-  const supplierCount = await prisma.supplier.count();
-  if (supplierCount > 0) {
-    console.info(`Skipping supplier seed: ${supplierCount} record(s) already present.`);
-    return;
-  }
-
   const allowedCountries = new Set(plantSeedData.map((plant) => plant.address.countryCode));
   const supplierCodes = new Set(supplierSeedData.map((supplier) => supplier.address.countryCode));
 
@@ -1334,7 +1321,7 @@ async function seedSuppliers() {
 
   for (const supplier of supplierSeedData) {
     const countryId = countryMap.get(supplier.address.countryCode)!;
-    await prisma.supplier.create({
+    await ignoreDuplicate(prisma.supplier.create({
       data: {
         name: supplier.name,
         address: {
@@ -1346,7 +1333,7 @@ async function seedSuppliers() {
           },
         },
       },
-    });
+    }));
   }
 
   console.info(`Seeded ${supplierSeedData.length} suppliers with addresses.`);
@@ -1463,37 +1450,23 @@ async function seedStorageMeans() {
 }
 
 async function seedProjects() {
-  const projectCount = await prisma.project.count();
-  if (projectCount > 0) {
-    console.info(`Skipping project seed: ${projectCount} record(s) already present.`);
-    return;
-  }
-
   await prisma.project.createMany({
     data: projectSeedData.map((project) => ({
       ...project,
       slug: buildSlug(project.name, "project"),
     })),
+    skipDuplicates: true,
   });
 
   console.info(`Seeded ${projectSeedData.length} projects.`);
 }
 
 async function seedCountries() {
-  const existingCount = await prisma.country.count();
-  if (existingCount > 0) {
-    console.info(`Skipping country seed: ${existingCount} record(s) already present.`);
-    return;
-  }
-
-  await prisma.country.createMany({ data: countriesSeedData });
+  await prisma.country.createMany({ data: countriesSeedData, skipDuplicates: true });
   console.info(`Seeded ${countriesSeedData.length} countries.`);
 }
 
 async function main() {
-  // Start fresh: truncate all tables so seed is always deterministic
-  await truncateAllTables();
-
   await seedCountries();
   await seedPlants();
   await seedSuppliers();

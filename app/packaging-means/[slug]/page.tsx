@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { Prisma } from "@prisma/client";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -56,20 +57,32 @@ export default async function PackagingMeanCategoryPage({ params, searchParams }
   }
 
   const prisma = getPrisma();
-  const [plants, flows] = await Promise.all([
-    prisma.plant.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    prisma.flow.findMany({ select: { id: true, slug: true }, orderBy: { slug: "asc" } }),
-  ]);
+  let plants: { id: string; name: string }[] = [];
+  let flows: { id: string; slug: string }[] = [];
+  let packagingMeans: Prisma.PackagingMeanGetPayload<{
+    include: { plant: true; flow: true; parts: true };
+  }>[] = [];
 
-  const packagingMeans = await prisma.packagingMean.findMany({
-    where: {
-      packagingMeanCategory: { slug },
-      ...(plantId ? { plantId } : {}),
-      ...(flowId ? { flowId } : {}),
-    },
-    orderBy: { updatedAt: "desc" },
-    include: { plant: true, flow: true, parts: true },
-  });
+  try {
+    [plants, flows, packagingMeans] = await Promise.all([
+      prisma.plant.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+      prisma.flow.findMany({ select: { id: true, slug: true }, orderBy: { slug: "asc" } }),
+      prisma.packagingMean.findMany({
+        where: {
+          packagingMeanCategory: { slug },
+          ...(plantId ? { plantId } : {}),
+          ...(flowId ? { flowId } : {}),
+        },
+        orderBy: { updatedAt: "desc" },
+        include: { plant: true, flow: true, parts: true },
+      }),
+    ]);
+  } catch (err) {
+    console.error("[packaging-means/[slug]] failed to load from DB, rendering fallback", err);
+    plants = [];
+    flows = [];
+    packagingMeans = [];
+  }
 
   const fallbackText = resolvedCategory.name.slice(0, 2).toUpperCase();
 

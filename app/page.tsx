@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getDashboardData } from "@/lib/dashboard-data";
 import { getPackagingDashboardFilters, getTransportDashboardFilters } from "@/lib/dashboard-filters";
+import { getPackagingMeansKpis, parsePackagingKpiFilters } from "@/lib/kpi/packaging-means";
+import { getTransportMeansKpis, parseTransportKpiFilters } from "@/lib/kpi/transport-means";
 
 const Pill = ({ children, tone = "primary" }: { children: React.ReactNode; tone?: "primary" | "secondary" | "accent" }) => (
   <span
@@ -54,6 +56,9 @@ export default async function HomePage() {
   });
   void getPackagingDashboardFilters().catch(() => {});
   void getTransportDashboardFilters().catch(() => {});
+  // Warm KPI caches with default filters
+  void getPackagingMeansKpis(parsePackagingKpiFilters({})).catch(() => {});
+  void getTransportMeansKpis(parseTransportKpiFilters({})).catch(() => {});
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_20%_20%,rgba(8,108,125,0.08),transparent_40%),radial-gradient(circle_at_80%_10%,rgba(86,132,175,0.12),transparent_45%),linear-gradient(180deg,rgb(244,247,252),rgba(244,247,252,0.65))] text-sm text-[rgb(var(--smc-text))]">

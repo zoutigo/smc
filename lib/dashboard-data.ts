@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 
 type DashboardData = {
@@ -44,21 +45,59 @@ let cache: { data: DashboardData; expiresAt: number } | null = null;
 async function computeDashboardData(): Promise<DashboardData> {
   const prisma = getPrisma();
 
-  const [plants, suppliers, flows, packagingMeans, storageMeansCount, transportMeans] = await Promise.all([
-    prisma.plant.findMany({ select: { id: true, name: true } }),
-    prisma.supplier.findMany({ select: { id: true, name: true } }),
-    prisma.flow.findMany({ select: { id: true, slug: true } }),
-    prisma.packagingMean.findMany({
-      include: {
-        plant: true,
-        packagingMeanCategory: true,
-        supplier: true,
-        accessories: { include: { accessory: true } },
-      },
-    }),
-    prisma.storageMean.count(),
-    prisma.transportMean.findMany({ include: { plant: true, transportMeanCategory: true, supplier: true } }),
-  ]);
+  let plants: Array<{ id: string; name: string }> = [];
+  let suppliers: Array<{ id: string; name: string }> = [];
+  let flows: Array<{ id: string; slug: string }> = [];
+  let packagingMeans: Prisma.PackagingMeanGetPayload<{
+    include: {
+      plant: true;
+      packagingMeanCategory: true;
+      supplier: true;
+      accessories: { include: { accessory: true } };
+    };
+  }>[] = [];
+  let storageMeansCount = 0;
+  let transportMeans: Prisma.TransportMeanGetPayload<{
+    include: { plant: true; transportMeanCategory: true; supplier: true };
+  }>[] = [];
+
+  try {
+    [plants, suppliers, flows, packagingMeans, storageMeansCount, transportMeans] = await Promise.all([
+      prisma.plant.findMany({ select: { id: true, name: true } }),
+      prisma.supplier.findMany({ select: { id: true, name: true } }),
+      prisma.flow.findMany({ select: { id: true, slug: true } }),
+      prisma.packagingMean.findMany({
+        include: {
+          plant: true,
+          packagingMeanCategory: true,
+          supplier: true,
+          accessories: { include: { accessory: true } },
+        },
+      }),
+      prisma.storageMean.count(),
+      prisma.transportMean.findMany({ include: { plant: true, transportMeanCategory: true, supplier: true } }),
+    ]);
+  } catch (err) {
+    console.error("[computeDashboardData] failed to load from DB, returning empty cache", err);
+    return {
+      plants: 0,
+      suppliers: 0,
+      flows: 0,
+      packagingMeans: 0,
+      storageMeans: 0,
+      transportMeans: 0,
+      totalPackagingValue: 0,
+      totalPackagingVolume: 0,
+      totalTransportCapacity: 0,
+      avgMaxSpeed: 0,
+      valueByPlant: [],
+      capacityByPlant: [],
+      packagingByCategory: [],
+      volumeByCategory: [],
+      topPackaging: [],
+      topTransport: [],
+    };
+  }
 
   const packagingTotals = packagingMeans.map((pm) => {
     const accessoryCostUnit = pm.accessories.reduce((acc, link) => {

@@ -3,6 +3,9 @@ import { z } from "zod";
 
 import { getPrisma } from "@/lib/prisma";
 
+const KPI_TTL_MS = 1000 * 60 * 5;
+let cachedTransportKpi: { data: TransportKpiResponse; key: string; expiresAt: number } | null = null;
+
 export const transportKpiFiltersSchema = z.object({
   plantId: z.string().uuid().optional(),
   categorySlug: z.string().optional(),
@@ -80,21 +83,61 @@ export type TransportKpiResponse = {
 
 export async function getTransportMeansKpis(filters: TransportKpiFilters): Promise<TransportKpiResponse> {
   const prisma = getPrisma();
+  const cacheKey = JSON.stringify(filters);
+  const now = Date.now();
+  if (cachedTransportKpi && cachedTransportKpi.key === cacheKey && cachedTransportKpi.expiresAt > now) {
+    return cachedTransportKpi.data;
+  }
+  const empty: TransportKpiResponse = {
+    overview: {
+      countTransportMeans: 0,
+      countCategories: 0,
+      countPlants: 0,
+      totalLoadCapacityKg: 0,
+      avgMaxSpeedKmh: 0,
+      packagingCoverage: 0,
+      flowsCoverage: 0,
+      multiFlowCount: 0,
+    },
+    charts: {
+      countByCategory: [],
+      capacityByPlant: [],
+      capacityByCategory: [],
+      supplierDonut: [],
+      capacitySpeedScatter: [],
+    },
+    table: [],
+  };
 
   const where: Prisma.TransportMeanWhereInput = {};
   if (filters.plantId) where.plantId = filters.plantId;
   if (filters.categorySlug) where.transportMeanCategory = { slug: filters.categorySlug };
 
-  const transportMeans = await prisma.transportMean.findMany({
-    where,
+  let transportMeans: Prisma.TransportMeanGetPayload<{
     include: {
-      transportMeanCategory: { select: { id: true, name: true, slug: true } },
-      plant: { select: { id: true, name: true } },
-      supplier: { select: { name: true } },
-      packagingLinks: { select: { packagingMeanId: true } },
-      flows: { select: { flowId: true } },
-    },
-  });
+      transportMeanCategory: { select: { id: true; name: true; slug: true } };
+      plant: { select: { id: true; name: true } };
+      supplier: { select: { name: true } };
+      packagingLinks: { select: { packagingMeanId: true } };
+      flows: { select: { flowId: true } };
+    };
+  }>[] = [];
+
+  try {
+    transportMeans = await prisma.transportMean.findMany({
+      where,
+      include: {
+        transportMeanCategory: { select: { id: true, name: true, slug: true } },
+        plant: { select: { id: true, name: true } },
+        supplier: { select: { name: true } },
+        packagingLinks: { select: { packagingMeanId: true } },
+        flows: { select: { flowId: true } },
+      },
+    });
+  } catch (error) {
+    console.error("[getTransportMeansKpis] query failed, returning empty KPIs", error);
+    return empty;
+  }
 
   const computed: TransportComputed[] = transportMeans.map((tm) => ({
     id: tm.id,
@@ -203,9 +246,12 @@ export async function getTransportMeansKpis(filters: TransportKpiFilters): Promi
       maxSpeedKmh: tm.maxSpeedKmh,
     }));
 
-  return {
+  const result: TransportKpiResponse = {
     overview,
     charts,
     table,
   };
+
+  cachedTransportKpi = { data: result, key: cacheKey, expiresAt: now + KPI_TTL_MS };
+  return result;
 }

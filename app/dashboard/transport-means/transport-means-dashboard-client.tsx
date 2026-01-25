@@ -28,12 +28,22 @@ export function TransportMeansDashboardClient({ plants, categories }: Props) {
       if (filters.plantId) params.set("plantId", filters.plantId);
       if (filters.categorySlug) params.set("categorySlug", filters.categorySlug);
 
-      const response = await fetch(`/api/kpi/transport-means?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error("Unable to load transport KPIs");
+      const empty: TransportKpiResponse = {
+        overview: { countTransportMeans: 0, countCategories: 0, countPlants: 0, totalLoadCapacityKg: 0, avgMaxSpeedKmh: 0, packagingCoverage: 0, flowsCoverage: 0, multiFlowCount: 0 },
+        charts: { countByCategory: [], capacityByPlant: [], capacityByCategory: [], supplierDonut: [], capacitySpeedScatter: [] },
+        table: [],
+      };
+
+      try {
+        const response = await fetch(`/api/kpi/transport-means?${params.toString()}`);
+        if (!response.ok) {
+          return empty;
+        }
+        const json = (await response.json()) as { data: TransportKpiResponse };
+        return json.data ?? empty;
+      } catch {
+        return empty;
       }
-      const json = (await response.json()) as { data: TransportKpiResponse };
-      return json.data;
     },
     staleTime: 60_000,
   });

@@ -25,6 +25,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ data });
   } catch (error) {
     console.error("[api/kpi/packaging-means] error", error);
-    return NextResponse.json({ error: "Unable to load KPIs" }, { status: 500 });
+    return NextResponse.json({ data: { overview: { countPackagingMeans: 0, countCategories: 0, totalValueBase: 0, totalValueFull: 0, totalVolumeM3: 0, totalCapacity: 0 }, charts: { valueByCategory: [], volumeByCategory: [], priceVolumeScatter: [], statusDonut: [] }, categories: [] } });
   }
 }

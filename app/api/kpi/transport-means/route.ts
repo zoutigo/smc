@@ -21,6 +21,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ data });
   } catch (error) {
     console.error("[api/kpi/transport-means] error", error);
-    return NextResponse.json({ error: "Unable to load KPIs" }, { status: 500 });
+    return NextResponse.json({
+      data: {
+        overview: { countTransportMeans: 0, countCategories: 0, countPlants: 0, totalLoadCapacityKg: 0, avgMaxSpeedKmh: 0, packagingCoverage: 0, flowsCoverage: 0, multiFlowCount: 0 },
+        charts: { countByCategory: [], capacityByPlant: [], capacityByCategory: [], supplierDonut: [], capacitySpeedScatter: [] },
+        table: [],
+      },
+    });
   }
 }

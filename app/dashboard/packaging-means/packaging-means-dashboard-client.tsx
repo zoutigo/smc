@@ -66,13 +66,22 @@ export function PackagingMeansDashboardClient({ plants, flows }: PackagingMeansD
       if (filters.flowId) params.set("flowId", filters.flowId);
       if (filters.status) params.set("status", filters.status);
 
-      const response = await fetch(`/api/kpi/packaging-means?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error("Unable to load KPIs");
-      }
+      const empty: PackagingKpiResponse = {
+        overview: { countPackagingMeans: 0, countCategories: 0, totalValueBase: 0, totalValueFull: 0, totalVolumeM3: 0, totalCapacity: 0 },
+        charts: { valueByCategory: [], volumeByCategory: [], priceVolumeScatter: [], statusDonut: [] },
+        categories: [],
+      };
 
-      const json = (await response.json()) as { data: PackagingKpiResponse };
-      return json.data;
+      try {
+        const response = await fetch(`/api/kpi/packaging-means?${params.toString()}`);
+        if (!response.ok) {
+          return empty;
+        }
+        const json = (await response.json()) as { data: PackagingKpiResponse };
+        return json.data ?? empty;
+      } catch {
+        return empty;
+      }
     },
     staleTime: 60_000,
   });
