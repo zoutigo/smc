@@ -2724,8 +2724,10 @@ async function seedPackagingMeans() {
         const partName = `${category.name} Part ${p + 1} #${i + 1}`;
         const partSlug = buildSlug(`${partName}-${project.code}`, "part");
         const part = await retry(
-          () => prisma.part.create({
-            data: {
+          () => prisma.part.upsert({
+            where: { projectId_slug: { projectId: project.id, slug: partSlug } },
+            update: { name: partName, partFamilyId: family.id },
+            create: {
               name: partName,
               slug: partSlug,
               partFamilyId: family.id,
@@ -2734,27 +2736,31 @@ async function seedPackagingMeans() {
           })
         );
         await retry(
-          () => prisma.packagingMeanPart.create({
-            data: {
-              packagingMeanId: packaging.id,
-              partId: part.id,
-              partsPerPackaging: 1 + p % 4,
-              levelsPerPackaging: 1 + p % 2,
-              verticalPitch: 50 + p * 10,
-              horizontalPitch: 40 + p * 8,
-              notes: "Seeded part link"
-            }
-          })
+          () => ignoreDuplicate(
+            prisma.packagingMeanPart.create({
+              data: {
+                packagingMeanId: packaging.id,
+                partId: part.id,
+                partsPerPackaging: 1 + p % 4,
+                levelsPerPackaging: 1 + p % 2,
+                verticalPitch: 50 + p * 10,
+                horizontalPitch: 40 + p * 8,
+                notes: "Seeded part link"
+              }
+            })
+          )
         );
         const acc = accessories[(i + p + 1) % accessories.length];
         await retry(
-          () => prisma.partAccessory.create({
-            data: {
-              partId: part.id,
-              accessoryId: acc.id,
-              qtyPerPart: 1 + p % 2
-            }
-          })
+          () => ignoreDuplicate(
+            prisma.partAccessory.create({
+              data: {
+                partId: part.id,
+                accessoryId: acc.id,
+                qtyPerPart: 1 + p % 2
+              }
+            })
+          )
         );
       }
       packagingCreated += 1;
