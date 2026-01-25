@@ -990,28 +990,32 @@ async function seedPackagingMeans() {
       const eop = new Date(sop);
       eop.setFullYear(eop.getFullYear() + 5);
 
-      const packaging = await retry(() =>
-        ignoreDuplicate(
-          prisma.packagingMean.create({
-            data: {
-              name,
-              description: `Seeded ${category.name.toLowerCase()} packaging #${i + 1}`,
-              price,
-              width,
-              length,
-              height,
-              numberOfPackagings,
-              status: $Enums.PackagingStatus.ACTIVE,
-              sop,
-              eop,
-              supplierId: supplier.id,
-              plantId: plant.id,
-              flowId: flow.id,
-              packagingMeanCategoryId: category.id,
-            },
-          })
-        )
-      );
+      let packaging = null;
+      try {
+        packaging = await prisma.packagingMean.create({
+          data: {
+            name,
+            description: `Seeded ${category.name.toLowerCase()} packaging #${i + 1}`,
+            price,
+            width,
+            length,
+            height,
+            numberOfPackagings,
+            status: $Enums.PackagingStatus.ACTIVE,
+            sop,
+            eop,
+            supplierId: supplier.id,
+            plantId: plant.id,
+            flowId: flow.id,
+            packagingMeanCategoryId: category.id,
+          },
+        });
+      } catch (error) {
+        if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+          continue; // duplicate, skip children
+        }
+        throw error;
+      }
       if (!packaging) continue;
 
       const images = Array.from({ length: 5 }, (_v, idx) => ({
