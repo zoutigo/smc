@@ -1825,7 +1825,28 @@ var transportMeansSeedData = [
   { name: "Forklift Nordic 02", categoryName: "Forklift", supplierName: "Nordic Foams", plantName: "Stockholm Lines", loadCapacityKg: 2050, units: 4, cruiseSpeedKmh: 13, maxSpeedKmh: 20, sop: /* @__PURE__ */ new Date("2026-05-15"), eop: /* @__PURE__ */ new Date("2032-05-15"), packagingMeanNames: ["Plastic Box 09"] },
   { name: "Tugger Nordic 01", categoryName: "Tugger Train", supplierName: "Baltic Fasteners", plantName: "Stockholm Lines", loadCapacityKg: 1500, units: 6, cruiseSpeedKmh: 9, maxSpeedKmh: 14, sop: /* @__PURE__ */ new Date("2026-06-15"), eop: /* @__PURE__ */ new Date("2032-06-15"), packagingMeanNames: ["Picking Cart 15"] },
   { name: "Tugger Nordic 02", categoryName: "Tugger Train", supplierName: "Nordic Foams", plantName: "Stockholm Lines", loadCapacityKg: 1450, units: 5, cruiseSpeedKmh: 8, maxSpeedKmh: 13, sop: /* @__PURE__ */ new Date("2026-07-15"), eop: /* @__PURE__ */ new Date("2032-07-15"), packagingMeanNames: ["Utility Cart 10"] },
-  { name: "AMR Shuttle Nordic", categoryName: "AGV-AMR", supplierName: "Baltic Fasteners", plantName: "Stockholm Lines", loadCapacityKg: 900, units: 3, cruiseSpeedKmh: 7, maxSpeedKmh: 12, sop: /* @__PURE__ */ new Date("2026-08-15"), eop: /* @__PURE__ */ new Date("2032-08-15"), packagingMeanNames: ["Kitting Cart 15"] }
+  { name: "AMR Shuttle Nordic", categoryName: "AGV-AMR", supplierName: "Baltic Fasteners", plantName: "Stockholm Lines", loadCapacityKg: 900, units: 3, cruiseSpeedKmh: 7, maxSpeedKmh: 12, sop: /* @__PURE__ */ new Date("2026-08-15"), eop: /* @__PURE__ */ new Date("2032-08-15"), packagingMeanNames: ["Kitting Cart 15"] },
+  // Extra heterogeneous fleet (20)
+  { name: "Forklift BCN Demo", categoryName: "Forklift", supplierName: "Catalunya Metals", plantName: "Barcelona Assembly", loadCapacityKg: 2400, units: 3, cruiseSpeedKmh: 12, maxSpeedKmh: 20, sop: /* @__PURE__ */ new Date("2027-01-05"), eop: /* @__PURE__ */ new Date("2033-01-05"), packagingMeanNames: ["HD Rack 10"], flowSlug: "assembly-to-warehouse", secondaryFlowSlug: "assembly-to-customer" },
+  { name: "AGV Night Runner", categoryName: "AGV-AMR", supplierName: "North Steel", plantName: "Detroit Assembly", loadCapacityKg: 650, units: 6, cruiseSpeedKmh: 6, maxSpeedKmh: 10, sop: /* @__PURE__ */ new Date("2027-02-10"), eop: /* @__PURE__ */ new Date("2033-02-10"), packagingMeanNames: ["Picking Cart 18"], flowSlug: "injection-to-assembly", secondaryFlowSlug: "assembly-to-customer" },
+  { name: "Tugger Sunrise", categoryName: "Tugger Train", supplierName: "Midwest Machining", plantName: "Montreal Plastics", loadCapacityKg: 1300, units: 4, cruiseSpeedKmh: 8, maxSpeedKmh: 12, sop: /* @__PURE__ */ new Date("2027-03-15"), eop: /* @__PURE__ */ new Date("2033-03-15"), packagingMeanNames: ["Utility Cart 12"], flowSlug: "paint-to-assembly" },
+  { name: "Forklift Rio", categoryName: "Forklift", supplierName: "Paulista Coatings", plantName: "Sao Paulo Molding", loadCapacityKg: 2100, units: 5, cruiseSpeedKmh: 11, maxSpeedKmh: 18, sop: /* @__PURE__ */ new Date("2027-04-20"), eop: /* @__PURE__ */ new Date("2033-04-20"), packagingMeanNames: ["Tallboy 05"], flowSlug: "assembly-to-warehouse" },
+  { name: "AMR Queretaro Express", categoryName: "AGV-AMR", supplierName: "Aztec Fasteners", plantName: "Queretaro Trim", loadCapacityKg: 720, units: 5, cruiseSpeedKmh: 7, maxSpeedKmh: 11, sop: /* @__PURE__ */ new Date("2027-05-25"), eop: /* @__PURE__ */ new Date("2033-05-25"), packagingMeanNames: ["Picking Cart 20"], flowSlug: "injection-to-assembly" },
+  { name: "Tugger Atlas", categoryName: "Tugger Train", supplierName: "Atlas Metals", plantName: "Casablanca Interiors", loadCapacityKg: 1480, units: 6, cruiseSpeedKmh: 8, maxSpeedKmh: 13, sop: /* @__PURE__ */ new Date("2027-06-30"), eop: /* @__PURE__ */ new Date("2033-06-30"), packagingMeanNames: ["Utility Cart 14"], flowSlug: "paint-to-assembly" },
+  { name: "Forklift NordX", categoryName: "Forklift", supplierName: "Baltic Fasteners", plantName: "Stockholm Lines", loadCapacityKg: 2250, units: 4, cruiseSpeedKmh: 12, maxSpeedKmh: 19, sop: /* @__PURE__ */ new Date("2027-07-05"), eop: /* @__PURE__ */ new Date("2033-07-05"), packagingMeanNames: ["HD Rack 20"], flowSlug: "assembly-to-warehouse" },
+  { name: "AGV Harbour", categoryName: "AGV-AMR", supplierName: "Harbour Composites", plantName: "Sydney Kitting", loadCapacityKg: 680, units: 4, cruiseSpeedKmh: 6, maxSpeedKmh: 10, sop: /* @__PURE__ */ new Date("2027-08-10"), eop: /* @__PURE__ */ new Date("2033-08-10"), packagingMeanNames: ["Picking Cart 25"], flowSlug: "assembly-to-customer" },
+  { name: "Tugger Desert", categoryName: "Tugger Train", supplierName: "Gauteng Rubber", plantName: "Johannesburg Components", loadCapacityKg: 1550, units: 5, cruiseSpeedKmh: 8, maxSpeedKmh: 12, sop: /* @__PURE__ */ new Date("2027-09-15"), eop: /* @__PURE__ */ new Date("2033-09-15"), packagingMeanNames: ["Kitting Cart 22"], flowSlug: "injection-to-assembly" },
+  { name: "Forklift Alpine", categoryName: "Forklift", supplierName: "Rhone Textiles", plantName: "Lyon Composites", loadCapacityKg: 2050, units: 4, cruiseSpeedKmh: 11, maxSpeedKmh: 17, sop: /* @__PURE__ */ new Date("2027-10-20"), eop: /* @__PURE__ */ new Date("2033-10-20"), packagingMeanNames: ["Plastic Box 15"], flowSlug: "paint-to-assembly" },
+  { name: "AMR Pudong", categoryName: "AGV-AMR", supplierName: "Pudong Fasteners", plantName: "Shanghai Stamping", loadCapacityKg: 850, units: 5, cruiseSpeedKmh: 7, maxSpeedKmh: 12, sop: /* @__PURE__ */ new Date("2027-11-25"), eop: /* @__PURE__ */ new Date("2033-11-25"), packagingMeanNames: ["Tallboy 12"], flowSlug: "assembly-to-customer" },
+  { name: "Tugger Sakura", categoryName: "Tugger Train", supplierName: "Chubu Springs", plantName: "Nagoya Plastics", loadCapacityKg: 1420, units: 4, cruiseSpeedKmh: 8, maxSpeedKmh: 13, sop: /* @__PURE__ */ new Date("2027-12-30"), eop: /* @__PURE__ */ new Date("2033-12-30"), packagingMeanNames: ["Utility Cart 16"], flowSlug: "injection-to-assembly" },
+  { name: "Forklift Thames", categoryName: "Forklift", supplierName: "Pennine Glass", plantName: "Manchester Modules", loadCapacityKg: 2150, units: 5, cruiseSpeedKmh: 12, maxSpeedKmh: 18, sop: /* @__PURE__ */ new Date("2028-01-04"), eop: /* @__PURE__ */ new Date("2034-01-04"), packagingMeanNames: ["HD Rack 25"], flowSlug: "assembly-to-warehouse" },
+  { name: "AGV Cascades", categoryName: "AGV-AMR", supplierName: "Maple Resin", plantName: "Montreal Plastics", loadCapacityKg: 760, units: 6, cruiseSpeedKmh: 6, maxSpeedKmh: 10, sop: /* @__PURE__ */ new Date("2028-02-09"), eop: /* @__PURE__ */ new Date("2034-02-09"), packagingMeanNames: ["Picking Cart 28"], flowSlug: "injection-to-assembly" },
+  { name: "Tugger Riviera", categoryName: "Tugger Train", supplierName: "Ligurian Plastics", plantName: "Lyon Composites", loadCapacityKg: 1520, units: 5, cruiseSpeedKmh: 8, maxSpeedKmh: 12, sop: /* @__PURE__ */ new Date("2028-03-15"), eop: /* @__PURE__ */ new Date("2034-03-15"), packagingMeanNames: ["Kitting Cart 30"], flowSlug: "paint-to-assembly" },
+  { name: "Forklift Atlas Heavy", categoryName: "Forklift", supplierName: "Atlas Metals", plantName: "Casablanca Interiors", loadCapacityKg: 2450, units: 3, cruiseSpeedKmh: 11, maxSpeedKmh: 19, sop: /* @__PURE__ */ new Date("2028-04-20"), eop: /* @__PURE__ */ new Date("2034-04-20"), packagingMeanNames: ["Plastic Box 18"], flowSlug: "assembly-to-customer" },
+  { name: "AMR Coral", categoryName: "AGV-AMR", supplierName: "Harbour Composites", plantName: "Sydney Kitting", loadCapacityKg: 700, units: 5, cruiseSpeedKmh: 6, maxSpeedKmh: 10, sop: /* @__PURE__ */ new Date("2028-05-25"), eop: /* @__PURE__ */ new Date("2034-05-25"), packagingMeanNames: ["Utility Cart 18"], flowSlug: "assembly-to-warehouse" },
+  { name: "Tugger Andes", categoryName: "Tugger Train", supplierName: "Andes Fibers", plantName: "Sao Paulo Molding", loadCapacityKg: 1490, units: 6, cruiseSpeedKmh: 8, maxSpeedKmh: 12, sop: /* @__PURE__ */ new Date("2028-06-30"), eop: /* @__PURE__ */ new Date("2034-06-30"), packagingMeanNames: ["Picking Cart 30"], flowSlug: "paint-to-assembly" },
+  { name: "Forklift Delta", categoryName: "Forklift", supplierName: "Neckar Plast", plantName: "Stuttgart Paint", loadCapacityKg: 2180, units: 4, cruiseSpeedKmh: 12, maxSpeedKmh: 18, sop: /* @__PURE__ */ new Date("2028-07-05"), eop: /* @__PURE__ */ new Date("2034-07-05"), packagingMeanNames: ["HD Rack 30"], flowSlug: "assembly-to-customer" },
+  { name: "AMR Atlas Mini", categoryName: "AGV-AMR", supplierName: "North Steel", plantName: "Detroit Assembly", loadCapacityKg: 600, units: 4, cruiseSpeedKmh: 6, maxSpeedKmh: 9, sop: /* @__PURE__ */ new Date("2028-08-10"), eop: /* @__PURE__ */ new Date("2034-08-10"), packagingMeanNames: ["Utility Cart 20"], flowSlug: "injection-to-assembly" }
 ];
 var packagingMeanCategoriesSeedData = [
   {
@@ -2216,7 +2237,9 @@ var storageMeansSeedData = [...baseStorageMeansSeedData, ...manualTranstockerSee
 var flowSeedData = [
   { slug: "injection-to-paint", from: "INJECTION", to: "PAINT" },
   { slug: "paint-to-assembly", from: "PAINT", to: "ASSEMBLY" },
-  { slug: "assembly-to-warehouse", from: "ASSEMBLY", to: "WAREHOUSE" }
+  { slug: "assembly-to-warehouse", from: "ASSEMBLY", to: "WAREHOUSE" },
+  { slug: "injection-to-assembly", from: "INJECTION", to: "ASSEMBLY" },
+  { slug: "assembly-to-customer", from: "ASSEMBLY", to: "CUSTOMER" }
 ];
 var plantSeedData = [
   { name: "Detroit Assembly", address: { street: "1200 Industrial Dr", city: "Detroit", zipcode: "48201", countryCode: "US" } },
@@ -2804,6 +2827,101 @@ async function seedPackagingMeans() {
       await pauseEvery(packagingCreated, 50, 300);
     }
   }
+  const extraPackagingSeeds = [
+    { name: "Utility Cart Special A", categoryName: "Utility Cart", plantName: "Detroit Assembly", supplierName: "North Steel", flowSlug: "injection-to-assembly", price: 720, width: 850, length: 1250, height: 1020, numberOfPackagings: 3 },
+    { name: "Utility Cart Special B", categoryName: "Utility Cart", plantName: "Barcelona Assembly", supplierName: "Catalunya Metals", flowSlug: "assembly-to-customer", price: 740, width: 860, length: 1260, height: 1030, numberOfPackagings: 4 },
+    { name: "Kitting Cart Special A", categoryName: "Kitting Cart", plantName: "Montreal Plastics", supplierName: "Maple Resin", flowSlug: "injection-to-assembly", price: 780, width: 870, length: 1240, height: 980, numberOfPackagings: 5 },
+    { name: "Kitting Cart Special B", categoryName: "Kitting Cart", plantName: "Stockholm Lines", supplierName: "Baltic Fasteners", flowSlug: "assembly-to-customer", price: 795, width: 880, length: 1255, height: 990, numberOfPackagings: 6 },
+    { name: "Picking Cart Special A", categoryName: "Picking Cart", plantName: "Casablanca Interiors", supplierName: "Atlas Metals", flowSlug: "paint-to-assembly", price: 820, width: 840, length: 1230, height: 970, numberOfPackagings: 3 },
+    { name: "Picking Cart Special B", categoryName: "Picking Cart", plantName: "Sydney Kitting", supplierName: "Harbour Composites", flowSlug: "assembly-to-customer", price: 845, width: 850, length: 1245, height: 975, numberOfPackagings: 4 },
+    { name: "HD Rack Special A", categoryName: "HD Rack", plantName: "Lyon Composites", supplierName: "Rhone Textiles", flowSlug: "assembly-to-warehouse", price: 1250, width: 900, length: 1400, height: 1200, numberOfPackagings: 2 },
+    { name: "HD Rack Special B", categoryName: "HD Rack", plantName: "Stuttgart Paint", supplierName: "Neckar Plast", flowSlug: "assembly-to-customer", price: 1300, width: 920, length: 1420, height: 1220, numberOfPackagings: 2 },
+    { name: "Plastic Box Special", categoryName: "Plastic Box", plantName: "Nagoya Plastics", supplierName: "Chubu Springs", flowSlug: "injection-to-assembly", price: 310, width: 650, length: 900, height: 650, numberOfPackagings: 30 },
+    { name: "Tallboy Special", categoryName: "Tallboy", plantName: "Shanghai Stamping", supplierName: "Pudong Fasteners", flowSlug: "assembly-to-customer", price: 980, width: 780, length: 1100, height: 1800, numberOfPackagings: 3 },
+    { name: "Transtocker Hook Special", categoryName: "Transtocker Hook", plantName: "Queretaro Trim", supplierName: "Aztec Fasteners", flowSlug: "injection-to-assembly", price: 860, width: 760, length: 1080, height: 900, numberOfPackagings: 4 },
+    { name: "Shopstock Hook Special", categoryName: "Shopstock Hook", plantName: "Manchester Modules", supplierName: "Pennine Glass", flowSlug: "assembly-to-warehouse", price: 840, width: 750, length: 1070, height: 880, numberOfPackagings: 5 },
+    { name: "High Density Tower Special", categoryName: "High Density Tower", plantName: "Barcelona Assembly", supplierName: "Catalunya Metals", flowSlug: "assembly-to-customer", price: 2100, width: 950, length: 1350, height: 1900, numberOfPackagings: 1 },
+    { name: "Utility Cart Coastal", categoryName: "Utility Cart", plantName: "Sydney Kitting", supplierName: "Harbour Composites", flowSlug: "paint-to-assembly", price: 765, width: 860, length: 1250, height: 1040, numberOfPackagings: 3 },
+    { name: "Kitting Cart Atlas", categoryName: "Kitting Cart", plantName: "Casablanca Interiors", supplierName: "Atlas Metals", flowSlug: "assembly-to-warehouse", price: 810, width: 870, length: 1260, height: 1e3, numberOfPackagings: 4 }
+  ];
+  for (const [idx, seed] of extraPackagingSeeds.entries()) {
+    const category = categories.find((c) => c.name === seed.categoryName);
+    const plant = plants.find((p) => p.name === seed.plantName);
+    const supplier = suppliers.find((s) => s.name === seed.supplierName);
+    const flow = flows.find((f) => f.slug === seed.flowSlug) ?? flows[(idx + categories.length) % flows.length];
+    if (!category || !plant || !flow || !supplier) continue;
+    const name = seed.name;
+    const packaging = await retry(
+      () => prisma.packagingMean.upsert({
+        where: {
+          plantId_name_packagingMeanCategoryId: {
+            plantId: plant.id,
+            name,
+            packagingMeanCategoryId: category.id
+          }
+        },
+        update: {
+          description: `${seed.categoryName} special seed`,
+          price: seed.price,
+          width: seed.width,
+          length: seed.length,
+          height: seed.height,
+          numberOfPackagings: seed.numberOfPackagings,
+          status: import_client.$Enums.PackagingStatus.ACTIVE,
+          sop: /* @__PURE__ */ new Date("2027-01-01"),
+          eop: /* @__PURE__ */ new Date("2032-01-01"),
+          supplierId: supplier.id,
+          flowId: flow.id
+        },
+        create: {
+          name,
+          description: `${seed.categoryName} special seed`,
+          price: seed.price,
+          width: seed.width,
+          length: seed.length,
+          height: seed.height,
+          numberOfPackagings: seed.numberOfPackagings,
+          status: import_client.$Enums.PackagingStatus.ACTIVE,
+          sop: /* @__PURE__ */ new Date("2027-01-01"),
+          eop: /* @__PURE__ */ new Date("2032-01-01"),
+          supplierId: supplier.id,
+          plantId: plant.id,
+          flowId: flow.id,
+          packagingMeanCategoryId: category.id
+        }
+      })
+    );
+    const imageUrl = `${packagingImagePool[(idx + 2) % packagingImagePool.length]}?auto=format&fit=crop&w=1200&q=80&sig=special-${idx}`;
+    const image = await prisma.image.create({ data: { imageUrl } });
+    await ignoreDuplicate(
+      prisma.packagingMeanImage.create({
+        data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: 0 }
+      })
+    );
+    const accessoryLinks = accessories.slice(idx % accessories.length, idx % accessories.length + 2).map((a, aIdx) => ({
+      packagingMeanId: packaging.id,
+      accessoryId: a.id,
+      qtyPerPackaging: 1 + aIdx % 2
+    }));
+    if (accessoryLinks.length) {
+      await prisma.packagingMeanAccessory.createMany({ data: accessoryLinks, skipDuplicates: true });
+    }
+    const family = partFamilies[(idx + 1) % partFamilies.length];
+    const project = projects[(idx + 2) % projects.length];
+    const partName = `${seed.categoryName} Special Part ${idx + 1}`;
+    const partSlug = buildSlug(`${partName}-${project.code}`, "part");
+    const part = await prisma.part.upsert({
+      where: { projectId_slug: { projectId: project.id, slug: partSlug } },
+      update: { name: partName, partFamilyId: family.id },
+      create: { name: partName, slug: partSlug, partFamilyId: family.id, projectId: project.id }
+    });
+    await prisma.packagingMeanPart.upsert({
+      where: { packagingMeanId_partId: { packagingMeanId: packaging.id, partId: part.id } },
+      update: { partsPerPackaging: 2, levelsPerPackaging: 1, verticalPitch: 55, horizontalPitch: 45, notes: "Special seed link" },
+      create: { packagingMeanId: packaging.id, partId: part.id, partsPerPackaging: 2, levelsPerPackaging: 1, verticalPitch: 55, horizontalPitch: 45, notes: "Special seed link" }
+    });
+    packagingCreated += 1;
+  }
   console.info(`Seeded ${packagingCreated} packaging means with parts, accessories, and images.`);
 }
 async function seedTransportMeanCategories() {
@@ -2870,6 +2988,7 @@ async function seedTransportMeans() {
   const packagingMeans = await prisma.packagingMean.findMany({ select: { id: true, name: true } });
   packagingMeans.forEach((pm) => packagingMap.set(pm.name, pm.id));
   const flows = await prisma.flow.findMany({ select: { id: true, slug: true } });
+  const flowMap = new Map(flows.map((f) => [f.slug, f]));
   let created = 0;
   for (const seed of transportMeansSeedData) {
     const plantId = plantMap.get(seed.plantName);
@@ -2881,8 +3000,8 @@ async function seedTransportMeans() {
       packagingMeanId: packagingMap.get(name),
       maxQty: 1 + idx % 3
     })).filter((l) => Boolean(l.packagingMeanId));
-    const primaryFlow = flows[(created + seed.name.length) % flows.length];
-    const secondaryFlow = flows[(created + seed.name.length + 1) % flows.length];
+    const primaryFlow = (seed.flowSlug ? flowMap.get(seed.flowSlug) : void 0) ?? flows[(created + seed.name.length) % flows.length] ?? flows[0];
+    const secondaryFlow = (seed.secondaryFlowSlug ? flowMap.get(seed.secondaryFlowSlug) : void 0) ?? flows[(created + seed.name.length + 1) % flows.length] ?? primaryFlow;
     const tm = await prisma.transportMean.upsert({
       where: { slug },
       update: {
@@ -2921,14 +3040,17 @@ async function seedTransportMeans() {
       }
     });
     created += 1;
-    await ignoreDuplicate(
-      prisma.transportMeanFlow.create({
-        data: {
-          transportMeanId: tm.id,
-          flowId: secondaryFlow.id
-        }
-      })
-    );
+    if (secondaryFlow && secondaryFlow.id !== primaryFlow.id) {
+      await prisma.transportMeanFlow.createMany({
+        data: [
+          {
+            transportMeanId: tm.id,
+            flowId: secondaryFlow.id
+          }
+        ],
+        skipDuplicates: true
+      });
+    }
     await pauseEvery(created, 50, 300);
   }
   console.info(`Seeded ${created} transport means.`);
