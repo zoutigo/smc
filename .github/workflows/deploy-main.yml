@@ -6,6 +6,9 @@ on:
 
 jobs:
   deploy:
+    concurrency:
+      group: smc-deploy
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
