@@ -1,7 +1,6 @@
-import { getPrisma } from "@/lib/prisma";
-
 import { QueryClientWrapper } from "@/components/providers/query-client-provider";
 import { PackagingMeansDashboardClient } from "./packaging-means-dashboard-client";
+import { getPackagingDashboardFilters } from "@/lib/dashboard-filters";
 
 export const metadata = {
   title: "Packaging means dashboard",
@@ -11,22 +10,16 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function PackagingMeansDashboardPage() {
-  const prisma = getPrisma();
+  let plantOptions: { value: string; label: string }[] = [];
+  let flowOptions: { value: string; label: string }[] = [];
 
-  const [plants, flows] = await Promise.all([
-    prisma.plant.findMany({ select: { id: true, name: true } }),
-    prisma.flow.findMany({ select: { id: true, from: true, to: true, slug: true } }),
-  ]);
-
-  const plantOptions = plants.map((plant) => ({
-    value: plant.id,
-    label: plant.name,
-  }));
-
-  const flowOptions = flows.map((flow) => ({
-    value: flow.id,
-    label: `${flow.from.toLowerCase()} → ${flow.to.toLowerCase()}`,
-  }));
+  try {
+    const filters = await getPackagingDashboardFilters();
+    plantOptions = filters.plants;
+    flowOptions = filters.flows;
+  } catch (err) {
+    console.error("Packaging dashboard filters failed, using empty filters", err);
+  }
 
   return (
     <main className="min-h-screen bg-smc-bg px-6 pb-10 pt-6">

@@ -360,6 +360,9 @@ jobs:
             exit 1
           fi
 
+          mkdir -p "$O2_TARGET_DIR/files"
+
+          # Only ensure node_modules symlink exists; no heavy reinstall
           if [ -e node_modules ] && [ ! -L node_modules ]; then
             echo "node_modules is a real directory/file -> removing"
             rm -rf node_modules
@@ -367,10 +370,13 @@ jobs:
           ln -sfn "$VENV/lib/node_modules" node_modules
           echo "node_modules -> $(readlink node_modules || true)"
 
-          mkdir -p "$O2_TARGET_DIR/files"
+          DB_HOST="$(printf '%s' "$DATABASE_URL" | sed -E 's|.*@([^/:]+).*|\1|')"
+          echo "DB host: $DB_HOST"
+          if ! nc -vz -w 5 "$DB_HOST" 3306; then
+            echo "ERROR: Database host $DB_HOST:3306 not reachable"
+            exit 1
+          fi
 
-          npm ci --include=dev
-          npx --no-install prisma generate
           npx --no-install prisma migrate deploy
 
           mkdir -p tmp
