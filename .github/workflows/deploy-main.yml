@@ -373,12 +373,12 @@ jobs:
           ln -sfn "$VENV/lib/node_modules" node_modules
           echo "node_modules -> $(readlink node_modules || true)"
 
-          DB_HOST="$(printf '%s' "$DATABASE_URL" | sed -E 's|.*@([^/:]+).*|\1|')"
-          echo "DB host: $DB_HOST"
-          if ! nc -vz -w 5 "$DB_HOST" 3306; then
-            echo "ERROR: Database host $DB_HOST:3306 not reachable"
-            exit 1
-          fi
+          echo "DB check (node + prisma)..."
+          node -e "
+            const { PrismaClient } = require('@prisma/client');
+            const p = new PrismaClient();
+            p.\$queryRaw\`SELECT 1\`.then(() => { console.log('DB OK'); }).catch(e => { console.error(e); process.exit(1); }).finally(() => p.\$disconnect());
+          "
 
           npx --no-install prisma migrate deploy
 
