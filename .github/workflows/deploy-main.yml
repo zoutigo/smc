@@ -376,8 +376,13 @@ jobs:
             p.\$queryRaw\`SELECT 1\`.then(() => { console.log('DB OK'); }).catch(e => { console.error(e); process.exit(1); }).finally(() => p.\$disconnect());
           "
 
+          echo "Resetting database (drop + recreate) ..."
+          npx --no-install prisma migrate reset --force --skip-seed
+
+          echo "Applying migrations..."
           npx --no-install prisma migrate deploy
 
+          echo "Seeding database..."
           npx --no-install prisma db seed
 
           mkdir -p tmp
