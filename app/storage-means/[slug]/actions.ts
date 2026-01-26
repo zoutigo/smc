@@ -32,17 +32,19 @@ const laneSchema = z.object({
   widthMm: z.number().int().min(1),
   heightMm: z.number().int().min(1),
   numberOfLanes: z.number().int().min(1),
+  level: z.number().int().min(0).default(0),
+  laneType: z.enum(["EMPTIES", "ACCUMULATION", "EMPTIES_AND_ACCUMULATION"]).default("ACCUMULATION"),
 });
 const lanesSchema = z.array(laneSchema);
 
-const highBaySpecSchema = z.object({
+const highBayBaySchema = z.object({
   numberOfLevels: z.number().int().min(0),
-  numberOfBays: z.number().int().min(0),
   slotLengthMm: z.number().int().min(0),
   slotWidthMm: z.number().int().min(0),
   slotHeightMm: z.number().int().min(0),
   numberOfSlots: z.number().int().min(0),
 });
+const highBaySpecSchema = z.array(highBayBaySchema).min(1);
 
 const staffingLineSchema = z.object({
   shift: z.enum(["SHIFT_1", "SHIFT_2", "SHIFT_3"]),
@@ -77,7 +79,7 @@ const parseFlows = (flowsRaw: string | undefined) => {
 
 const parseHighBay = (raw: string | undefined) => {
   try {
-    const parsed = raw ? JSON.parse(raw) : {};
+    const parsed = raw ? JSON.parse(raw) : [];
     return highBaySpecSchema.safeParse(parsed);
   } catch {
     const issue: ZodIssue = { code: "custom", message: "Invalid high bay specs", path: [] };
@@ -125,15 +127,14 @@ const mapFieldErrors = (issues: z.ZodIssue[]) => {
 async function syncLanesForCategory(params: {
   specType: "lanes" | "highbay";
   storageMeanId: string;
-  lanes: Array<{ lengthMm: number; widthMm: number; heightMm: number; numberOfLanes: number }>;
-  highBaySpec?: {
+  lanes: Array<{ lengthMm: number; widthMm: number; heightMm: number; numberOfLanes: number; level?: number; laneType?: "EMPTIES" | "ACCUMULATION" | "EMPTIES_AND_ACCUMULATION" }>;
+  highBaySpec?: Array<{
     numberOfLevels: number;
-    numberOfBays: number;
     slotLengthMm: number;
     slotWidthMm: number;
     slotHeightMm: number;
     numberOfSlots: number;
-  };
+  }>;
   prisma: PrismaClient;
 }) {
   const { specType, storageMeanId, lanes, prisma, highBaySpec } = params;
@@ -152,7 +153,8 @@ async function syncLanesForCategory(params: {
             widthMm: lane.widthMm,
             heightMm: lane.heightMm,
             numberOfLanes: lane.numberOfLanes,
-            level: 0,
+            level: lane.level ?? 0,
+            laneType: lane.laneType ?? "ACCUMULATION",
           },
         });
       }
@@ -164,11 +166,20 @@ async function syncLanesForCategory(params: {
 
   // highbay
   await prisma.laneGroup.deleteMany({ where: { storageMeanId } });
-  if (highBaySpec) {
+  if (highBaySpec && highBaySpec.length) {
+    const numberOfBays = highBaySpec.length;
+    const aggregate = {
+      numberOfBays,
+      numberOfLevels: highBaySpec[0]?.numberOfLevels ?? 0,
+      slotLengthMm: highBaySpec[0]?.slotLengthMm ?? 0,
+      slotWidthMm: highBaySpec[0]?.slotWidthMm ?? 0,
+      slotHeightMm: highBaySpec[0]?.slotHeightMm ?? 0,
+      numberOfSlots: highBaySpec.reduce((sum, b) => sum + (b.numberOfSlots ?? 0), 0),
+    };
     await prisma.highBayRackSpec.upsert({
       where: { storageMeanId },
-      update: highBaySpec,
-      create: { storageMeanId, ...highBaySpec },
+      update: aggregate,
+      create: { storageMeanId, ...aggregate },
     });
   }
 }

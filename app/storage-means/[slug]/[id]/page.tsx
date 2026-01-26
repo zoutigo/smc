@@ -1,15 +1,14 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 
-import { Gallery } from "@/components/media/Gallery";
+import { MeanDetailLayout } from "@/components/commonModule/MeanDetailLayout";
+import NotesSection from "./NotesSection";
 import { cn } from "@/lib/utils";
 import { getPrisma } from "@/lib/prisma";
 import { resolveStorageMeanSlug, storageMeanRegistry, type StorageMeanCategorySlug } from "@/app/storage-means/_registry/storageMean.registry";
 
 type Params = { slug: string; id: string } | Promise<{ slug: string; id: string }>;
 type StorageMeanWithRelations = Prisma.StorageMeanGetPayload<{ include: (typeof storageMeanRegistry)["manual-transtocker"]["include"] }>;
-type LaneRow = { lengthMm: number; widthMm: number; heightMm: number; numberOfLanes: number };
 
 const resolveParams = async (params: Params) => (params instanceof Promise ? params : Promise.resolve(params));
 
@@ -17,6 +16,13 @@ const formatDate = (value?: Date | string | null) => {
   if (!value) return "—";
   const d = typeof value === "string" ? new Date(value) : value;
   return d.toLocaleDateString();
+};
+
+const formatNumber = (value: unknown) => {
+  if (value === null || value === undefined) return "—";
+  const n = typeof value === "object" && "toNumber" in (value as never) ? (value as unknown as { toNumber: () => number }).toNumber() : Number(value);
+  if (Number.isNaN(n)) return "—";
+  return n.toLocaleString();
 };
 
 export default async function Detail({ params }: { params: Params }) {
@@ -35,72 +41,85 @@ export default async function Detail({ params }: { params: Params }) {
   })) as StorageMeanWithRelations | null;
   if (!sm) return notFound();
 
-  const lanes: LaneRow[] =
-    sm.laneGroups?.flatMap((lg) =>
-      lg.lanes.map((l) => ({
-        lengthMm: l.lengthMm,
-        widthMm: l.widthMm,
-        heightMm: l.heightMm,
-        numberOfLanes: l.numberOfLanes,
-      }))
-    ) ?? [];
+  const laneGroups = sm.laneGroups ?? [];
   const flows = sm.flows ?? [];
   const highBay = sm.highBayRack;
   const staffing = sm.staffingLines ?? [];
   const galleryImages = (sm.images ?? []).map((img) => ({ id: img.imageId, url: img.image.imageUrl }));
+  const noteLinks =
+    "noteLink" in prisma
+      ? await prisma.noteLink.findMany({
+          where: { targetType: "STORAGE_MEAN", targetId: id },
+          include: { note: true },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+  const initialNotes =
+    Array.isArray(noteLinks) && noteLinks.length
+      ? noteLinks.map((n) => ({
+          id: n.noteId,
+          title: n.note.title,
+          content: n.note.content,
+          createdAt: n.note.createdAt.toISOString(),
+        }))
+      : [];
+  const flowTags =
+    flows.length > 0
+      ? flows
+          .map((f) => f.flow?.slug)
+          .filter(Boolean)
+          .map((label) => (
+            <span
+              key={label}
+              className="rounded-full border border-smc-border/70 bg-smc-bg/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-smc-primary"
+            >
+              {label}
+            </span>
+          ))
+      : null;
 
-  return (
-    <main className="space-y-6 px-8 py-6">
+  const stats = [
+    { label: "Price", value: `$${sm.price?.toLocaleString?.() ?? sm.price ?? "—"}` },
+    { label: "SOP", value: formatDate(sm.sop as Date) },
+    { label: "EOP", value: formatDate(sm.eop as Date) },
+    { label: "Plant", value: sm.plant?.name ?? "—" },
+    { label: "Supplier", value: sm.supplier?.name ?? "—" },
+    { label: "Status", value: sm.status?.toLowerCase() ?? "—" },
+    { label: "Gross surface (m²)", value: formatNumber(sm.grossSurfaceM2) },
+    { label: "Useful surface (m²)", value: formatNumber(sm.usefulSurfaceM2) },
+    { label: "Height (mm)", value: formatNumber(sm.heightMm) },
+  ];
+
+  const flowContent = (
+    <>
       <div className="flex items-center justify-between">
-        <Link href={`/storage-means/${category.slug}`} className="text-sm font-semibold text-smc-primary hover:underline">
-          ← Back
-        </Link>
-        <Link className="text-sm font-semibold text-smc-primary hover:underline" href={`/storage-means/${category.slug}/${sm.id}/edit`}>
-          Edit
-        </Link>
+        <h3 className="text-lg font-semibold text-smc-text">Flows</h3>
+        <span className="text-xs text-smc-text-muted">{flows.length} item(s)</span>
       </div>
+      {flowTags ? <div className="flex flex-wrap gap-2">{flowTags}</div> : <p className="text-sm text-smc-text-muted">No flows.</p>}
+    </>
+  );
 
-      <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+  const sections = [];
+
+  sections.push({
+    title: "Lane groups",
+    countLabel: `${laneGroups.length} group(s)`,
+    children:
+      laneGroups.length === 0 ? (
+        <p className="text-sm text-smc-text-muted">No lane groups.</p>
+      ) : (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
-            <div className="flex items-center gap-3 text-xs font-semibold uppercase text-smc-text-muted">
-              <span>{category.name}</span>
-              <span className="rounded-full bg-smc-border/60 px-2 py-1 text-[11px] font-semibold text-smc-text">
-                {sm.status.toLowerCase()}
-              </span>
-            </div>
-            <div className="mt-2 space-y-2">
-              <h1 className="heading-2 text-smc-text">{sm.name}</h1>
-              <p className="text-sm text-smc-text-muted">{sm.description || "—"}</p>
-            </div>
-            <div className="mt-4 rounded-xl border border-smc-border/60 bg-smc-bg/60 p-4">
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <DetailItem label="Price" value={`$${sm.price?.toLocaleString?.() ?? sm.price ?? "—"}`} />
-                <DetailItem label="SOP" value={formatDate(sm.sop as Date)} />
-                <DetailItem label="Exists" value={sm.status?.toLowerCase() ?? "—"} />
-                <DetailItem label="Plant" value={sm.plant?.name ?? "—"} />
-                <DetailItem
-                  label="Flows"
-                  value={
-                    flows.length
-                      ? flows
-                          .map((f) => `${f.flow.from} → ${f.flow.to}`)
-                          .join(", ")
-                      : "—"
-                  }
-                />
-                <DetailItem label="Supplier" value={sm.supplier?.name ?? "—"} />
+          {laneGroups.map((group, idx) => (
+            <div key={group.id || idx} className="rounded-xl border border-smc-border/70 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-smc-text">{group.name || `Group ${idx + 1}`}</p>
+                  {group.description ? <p className="text-sm text-smc-text-muted">{group.description}</p> : null}
+                </div>
+                <span className="text-xs text-smc-text-muted">{group.lanes.length} lane(s)</span>
               </div>
-            </div>
-          </div>
-
-          {lanes.length > 0 && (
-            <div className="space-y-4 rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-smc-text">Lanes</h3>
-                <span className="text-xs font-semibold text-smc-text-muted">{lanes.length} item(s)</span>
-              </div>
-              <div className="overflow-hidden rounded-xl border border-smc-border/70">
+              <div className="overflow-hidden rounded-lg border border-smc-border/70">
                 <table className="min-w-full text-sm">
                   <thead className="bg-smc-bg/80 text-xs uppercase tracking-wide text-smc-text-muted">
                     <tr>
@@ -111,8 +130,8 @@ export default async function Detail({ params }: { params: Params }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {lanes.map((lane, idx) => (
-                      <tr key={`${lane.lengthMm}-${lane.widthMm}-${lane.heightMm}-${idx}`} className={cn(idx % 2 === 0 ? "bg-white" : "bg-smc-bg/70")}>
+                    {group.lanes.map((lane, laneIdx) => (
+                      <tr key={`${lane.lengthMm}-${lane.widthMm}-${lane.heightMm}-${laneIdx}`} className={cn(laneIdx % 2 === 0 ? "bg-white" : "bg-smc-bg/70")}>
                         <td className="px-4 py-3">{lane.lengthMm}</td>
                         <td className="px-4 py-3">{lane.widthMm}</td>
                         <td className="px-4 py-3">{lane.heightMm}</td>
@@ -123,55 +142,117 @@ export default async function Detail({ params }: { params: Params }) {
                 </table>
               </div>
             </div>
-          )}
+          ))}
+        </div>
+      ),
+  });
 
-          {highBay && (
-            <div className="rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
-              <h3 className="text-lg font-semibold text-smc-text">High-bay specs</h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <DetailItem label="Levels" value={String(highBay.numberOfLevels)} />
-                <DetailItem label="Bays" value={String(highBay.numberOfBays)} />
-                <DetailItem label="Slots" value={String(highBay.numberOfSlots)} />
-                <DetailItem label="Slot length" value={`${highBay.slotLengthMm} mm`} />
-                <DetailItem label="Slot width" value={`${highBay.slotWidthMm} mm`} />
-                <DetailItem label="Slot height" value={`${highBay.slotHeightMm} mm`} />
+  sections.push({
+    title: "Staffing",
+    children:
+      staffing.length === 0 ? (
+        <p className="text-sm text-smc-text-muted">No staffing lines.</p>
+      ) : (
+        <ul className="mt-2 space-y-2 text-sm text-smc-text">
+          {staffing.map((s, idx) => (
+            <li key={`${s.shift}-${s.workforceType}-${idx}`} className="rounded border border-smc-border px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold">{s.role}</span>
+                <span className="text-smc-text-muted">{s.shift.replace("_", " ")} · {s.workforceType.toLowerCase()}</span>
               </div>
-            </div>
-          )}
+              <div className="text-smc-text-muted">Qty: {Number(s.qty)}</div>
+              {s.description ? <div className="text-smc-text-muted">{s.description}</div> : null}
+            </li>
+          ))}
+        </ul>
+      ),
+  });
 
-          {staffing.length > 0 && (
-            <div className="rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
-              <h3 className="text-lg font-semibold text-smc-text">Staffing</h3>
-              <ul className="mt-2 space-y-2 text-sm text-smc-text">
-                {staffing.map((s, idx) => (
-                  <li key={`${s.shift}-${s.workforceType}-${idx}`} className="rounded border border-smc-border px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">{s.role}</span>
-                      <span className="text-smc-text-muted">{s.shift.replace("_", " ")} · {s.workforceType.toLowerCase()}</span>
-                    </div>
-                    <div className="text-smc-text-muted">Qty: {Number(s.qty)}</div>
-                    {s.description ? <div className="text-smc-text-muted">{s.description}</div> : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+  sections.push({
+    title: "High-bay rack specs",
+    children: highBay ? (
+      <div className="mt-1 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+        <DetailItem label="Levels" value={String(highBay.numberOfLevels)} />
+        <DetailItem label="Bays" value={String(highBay.numberOfBays)} />
+        <DetailItem label="Slots" value={String(highBay.numberOfSlots)} />
+        <DetailItem label="Slot length" value={`${highBay.slotLengthMm} mm`} />
+        <DetailItem label="Slot width" value={`${highBay.slotWidthMm} mm`} />
+        <DetailItem label="Slot height" value={`${highBay.slotHeightMm} mm`} />
+      </div>
+    ) : (
+      <p className="text-sm text-smc-text-muted">No high-bay specifications.</p>
+    ),
+  });
 
-          <div className="rounded-2xl border border-smc-border/70 bg-white p-5 shadow-card">
-            <h3 className="text-lg font-semibold text-smc-text">Meta</h3>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <MetaItem label="Created" value={formatDate(sm.createdAt as Date)} />
-              <MetaItem label="Updated" value={formatDate(sm.updatedAt as Date)} />
-              <MetaItem label="Category" value={category.name} />
-            </div>
-          </div>
+  const packagingLinks = sm.packagingLinks ?? [];
+  sections.push({
+    title: "Hosted packaging",
+    countLabel: `${packagingLinks.length} link(s)`,
+    children:
+      packagingLinks.length === 0 ? (
+        <p className="text-sm text-smc-text-muted">No packaging hosted.</p>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-smc-border/70">
+          <table className="min-w-full text-sm">
+            <thead className="bg-smc-bg/80 text-xs uppercase tracking-wide text-smc-text-muted">
+              <tr>
+                <th className="px-4 py-2 text-left">Packaging</th>
+                <th className="px-4 py-2 text-left">Category</th>
+                <th className="px-4 py-2 text-right">Qty</th>
+                <th className="px-4 py-2 text-right">MaxQty</th>
+                <th className="px-4 py-2 text-right">Occ. %</th>
+                <th className="px-4 py-2 text-right">Value €</th>
+                <th className="px-4 py-2 text-left">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {packagingLinks.map((link, idx) => {
+                const qty = link.qty ?? 0;
+                const maxQty = link.maxQty ?? 0;
+                const value = (link.packagingMean?.price ?? 0) * qty;
+                const occupancy = maxQty > 0 ? (qty / maxQty) * 100 : 0;
+                return (
+                  <tr key={link.packagingMeanId || idx} className={cn(idx % 2 === 0 ? "bg-white" : "bg-smc-bg/70")}>
+                    <td className="px-4 py-2 font-semibold text-smc-text">{link.packagingMean?.name ?? "—"}</td>
+                    <td className="px-4 py-2 text-smc-text-muted">{link.packagingMean?.packagingMeanCategory?.name ?? "—"}</td>
+                    <td className="px-4 py-2 text-right">{qty.toLocaleString("en-US")}</td>
+                    <td className="px-4 py-2 text-right">{maxQty.toLocaleString("en-US")}</td>
+                    <td className="px-4 py-2 text-right">{occupancy.toFixed(1)}%</td>
+                    <td className="px-4 py-2 text-right">€{value.toLocaleString("en-US")}</td>
+                    <td className="px-4 py-2 text-smc-text-muted">{link.notes ?? "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
+      ),
+  });
 
-        <div className="rounded-2xl border border-smc-border/70 bg-white p-3 shadow-card">
-          <Gallery images={galleryImages} title={sm.name} />
-        </div>
-      </section>
-    </main>
+  sections.push({
+    title: "Meta",
+    children: (
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <MetaItem label="Created" value={formatDate(sm.createdAt as Date)} />
+        <MetaItem label="Updated" value={formatDate(sm.updatedAt as Date)} />
+        <MetaItem label="Category" value={category.name} />
+      </div>
+    ),
+  });
+
+  return (
+    <MeanDetailLayout
+      categoryName={category.name}
+      name={sm.name}
+      description={sm.description}
+      backHref={`/storage-means/${category.slug}`}
+      editHref={`/storage-means/${category.slug}/${sm.id}/edit`}
+      stats={stats}
+      flowContent={flowContent}
+      notesContent={<NotesSection storageMeanId={sm.id} slug={category.slug} initialNotes={initialNotes} />}
+      sections={sections}
+      galleryImages={galleryImages}
+    />
   );
 }
 

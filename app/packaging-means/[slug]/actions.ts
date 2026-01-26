@@ -125,15 +125,17 @@ export async function createPackagingMeanAction(_: PackagingMeanActionState, for
     }
 
     if (parsed.data.accessories?.length) {
-      for (const acc of parsed.data.accessories) {
-        await prisma.packagingMeanAccessory.create({
-          data: {
-            packagingMeanId: created.id,
-            accessoryId: acc.accessoryId,
-            qtyPerPackaging: acc.qty ?? 1,
-          },
-        });
-      }
+      const uniqueAccessories = Array.from(
+        new Map(parsed.data.accessories.map((a) => [a.accessoryId, a])).values()
+      );
+      await prisma.packagingMeanAccessory.createMany({
+        data: uniqueAccessories.map((acc) => ({
+          packagingMeanId: created.id,
+          accessoryId: acc.accessoryId,
+          qtyPerPackaging: acc.qty ?? 1,
+        })),
+        skipDuplicates: true,
+      });
     }
 
     if (parsed.data.parts?.length) {
@@ -280,6 +282,7 @@ export async function updatePackagingMeanAction(_: PackagingMeanActionState, for
   if (!parsed.success || !parsed.data.id) {
     return { status: "error", fieldErrors: mapFieldErrors(parsed.error?.issues ?? []) };
   }
+  const packagingMeanId = parsed.data.id;
 
   const prisma = getPrisma() as PrismaClient;
   try {
@@ -321,7 +324,7 @@ export async function updatePackagingMeanAction(_: PackagingMeanActionState, for
           } catch {}
         }
       }
-      await prisma.packagingMeanImage.deleteMany({ where: { packagingMeanId: parsed.data.id, imageId: { in: removedIds } } });
+      await prisma.packagingMeanImage.deleteMany({ where: { packagingMeanId, imageId: { in: removedIds } } });
       await prisma.image.deleteMany({ where: { id: { in: removedIds } } });
     }
 
@@ -332,26 +335,26 @@ export async function updatePackagingMeanAction(_: PackagingMeanActionState, for
         const { url } = await persistUploadFile(file);
         const image = await prisma.image.create({ data: { imageUrl: url } });
         await prisma.packagingMeanImage.create({
-          data: { packagingMeanId: parsed.data.id, imageId: image.id, sortOrder: sortOffset + idx },
+          data: { packagingMeanId, imageId: image.id, sortOrder: sortOffset + idx },
         });
         idx += 1;
       }
     }
 
-    await prisma.packagingMeanAccessory.deleteMany({ where: { packagingMeanId: parsed.data.id } });
+    await prisma.packagingMeanAccessory.deleteMany({ where: { packagingMeanId } });
     if (accessories.length) {
-      for (const acc of accessories) {
-        await prisma.packagingMeanAccessory.create({
-          data: {
-            packagingMeanId: parsed.data.id,
-            accessoryId: acc.accessoryId,
-            qtyPerPackaging: acc.qty ?? 1,
-          },
-        });
-      }
+      const uniqueAccessories = Array.from(new Map(accessories.map((a) => [a.accessoryId, a])).values());
+      await prisma.packagingMeanAccessory.createMany({
+        data: uniqueAccessories.map((acc) => ({
+          packagingMeanId,
+          accessoryId: acc.accessoryId,
+          qtyPerPackaging: acc.qty ?? 1,
+        })),
+        skipDuplicates: true,
+      });
     }
 
-    await prisma.packagingMeanPart.deleteMany({ where: { packagingMeanId: parsed.data.id } });
+    await prisma.packagingMeanPart.deleteMany({ where: { packagingMeanId } });
     if (parts.length) {
       for (const part of parts) {
         if (!part.projectId) {
@@ -367,7 +370,7 @@ export async function updatePackagingMeanAction(_: PackagingMeanActionState, for
         const partRecord = await prisma.part.create({ data: partData });
         await prisma.packagingMeanPart.create({
           data: {
-            packagingMeanId: parsed.data.id,
+            packagingMeanId,
             partId: partRecord.id,
             partsPerPackaging: part.partsPerPackaging ?? 1,
             levelsPerPackaging: part.levelsPerPackaging ?? null,

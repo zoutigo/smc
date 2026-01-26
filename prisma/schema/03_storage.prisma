@@ -24,6 +24,9 @@ model StorageMean {
   storageMeanCategoryId String?              @db.Char(36)
   storageMeanCategory   StorageMeanCategory? @relation(fields: [storageMeanCategoryId], references: [id])
 
+  // ✅ packaging hébergés dans ce storage mean
+  packagingLinks StorageMeanPackagingMean[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -144,4 +147,25 @@ model StaffingLine {
   @@index([storageMeanId])
   @@index([storageMeanId, shift])
   @@index([storageMeanId, workforceType])
+}
+
+model StorageMeanPackagingMean {
+  storageMeanId   String @db.Char(36)
+  packagingMeanId String @db.Char(36)
+
+  // combien de packagings de ce type sont hébergés dans ce storageMean
+  qty Int @default(0)
+
+  // optionnel : capacité max autorisée (si tu veux comparer qty vs max)
+  maxQty Int?
+
+  // optionnel : emplacement / zone / précision
+  notes String?
+
+  storageMean   StorageMean   @relation(fields: [storageMeanId], references: [id], onDelete: Cascade)
+  packagingMean PackagingMean @relation(fields: [packagingMeanId], references: [id], onDelete: Cascade)
+
+  @@id([storageMeanId, packagingMeanId])
+  @@index([packagingMeanId])
+  @@index([storageMeanId])
 }

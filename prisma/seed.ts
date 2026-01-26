@@ -6,17 +6,6 @@ import { slugifyValue } from "../lib/utils";
 
 const prisma = new PrismaClient();
 
-async function ignoreDuplicate<T>(promise: Promise<T>): Promise<T | null> {
-  try {
-    return await promise;
-  } catch (error) {
-    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
-      return null;
-    }
-    throw error;
-  }
-}
-
 async function retry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 500): Promise<T> {
   let lastError: unknown;
   for (let i = 0; i < attempts; i++) {
@@ -36,6 +25,52 @@ async function pauseEvery(count: number, every: number, ms = 250) {
   if (count > 0 && count % every === 0) {
     await new Promise((resolve) => setTimeout(resolve, ms));
   }
+}
+
+async function resetDatabase() {
+  console.info("Resetting database: deleting existing rows from all tables...");
+  await prisma.$transaction([
+    prisma.noteLink.deleteMany(),
+    prisma.note.deleteMany(),
+    prisma.storageMeanPackagingMean.deleteMany(),
+    prisma.transportMeanPackagingMean.deleteMany(),
+    prisma.packagingMeanImage.deleteMany(),
+    prisma.storageMeanImage.deleteMany(),
+    prisma.transportMeanImage.deleteMany(),
+    prisma.plantImage.deleteMany(),
+    prisma.storageMeanCategoryImage.deleteMany(),
+    prisma.packagingMeanCategoryImage.deleteMany(),
+    prisma.transportMeanCategoryImage.deleteMany(),
+    prisma.storageMeanFlow.deleteMany(),
+    prisma.transportMeanFlow.deleteMany(),
+    prisma.staffingLine.deleteMany(),
+    prisma.lane.deleteMany(),
+    prisma.laneGroup.deleteMany(),
+    prisma.highBayRackSpec.deleteMany(),
+    prisma.packagingMeanAccessory.deleteMany(),
+    prisma.partAccessory.deleteMany(),
+    prisma.packagingMeanPart.deleteMany(),
+    prisma.accessory.deleteMany(),
+    prisma.transportMean.deleteMany(),
+    prisma.packagingMean.deleteMany(),
+    prisma.storageMean.deleteMany(),
+    prisma.transportMeanCategory.deleteMany(),
+    prisma.packagingMeanCategory.deleteMany(),
+    prisma.storageMeanCategory.deleteMany(),
+    prisma.part.deleteMany(),
+    prisma.partFamily.deleteMany(),
+    prisma.project.deleteMany(),
+    prisma.flow.deleteMany(),
+    prisma.supplier.deleteMany(),
+    prisma.plant.deleteMany(),
+    prisma.address.deleteMany(),
+    prisma.country.deleteMany(),
+    prisma.image.deleteMany(),
+    prisma.account.deleteMany(),
+    prisma.session.deleteMany(),
+    prisma.verificationToken.deleteMany(),
+    prisma.user.deleteMany(),
+  ]);
 }
 
 const transportMeanCategoriesSeedData = [
@@ -224,7 +259,16 @@ const usersSeedData = [
   },
 ];
 
-type LaneSeed = { length: number; width: number; height: number; quantity: number };
+type LaneSeed = { length: number; width: number; height: number; quantity: number; level?: number; laneType?: $Enums.LaneType };
+type LaneGroupSeed = { name?: string; description?: string; lanes: LaneSeed[] };
+type HighBaySpecSeed = {
+  numberOfLevels: number;
+  numberOfBays: number;
+  slotLengthMm: number;
+  slotWidthMm: number;
+  slotHeightMm: number;
+  numberOfSlots: number;
+};
 type StorageMeanSeed = {
   name: string;
   description: string;
@@ -238,6 +282,8 @@ type StorageMeanSeed = {
   storageMeanCategoryName: string;
   imageUrl?: string;
   lanes?: LaneSeed[];
+  laneGroups?: LaneGroupSeed[];
+  highBaySpec?: HighBaySpecSeed;
   heightMm?: number;
   usefulSurfaceM2?: number;
   grossSurfaceM2?: number;
@@ -249,6 +295,55 @@ const manualTranstockerDefaults: Pick<StorageMeanSeed, "imageUrl" | "lanes"> = {
     { length: 1200, width: 800, height: 600, quantity: 2 },
     { length: 1000, width: 600, height: 500, quantity: 1 },
   ],
+};
+
+const highBayCategories = new Set(["High Bay Rack", "ASRS"]);
+
+const buildHighBaySpec = (seedIndex: number): HighBaySpecSeed => {
+  const baseLevels = 4 + (seedIndex % 4);
+  const baseBays = 2 + (seedIndex % 3);
+  const baseSlots = 40 + (seedIndex % 6) * 5;
+  return {
+    numberOfLevels: baseLevels,
+    numberOfBays: baseBays,
+    slotLengthMm: 900 + (seedIndex % 5) * 50,
+    slotWidthMm: 800 + (seedIndex % 4) * 40,
+    slotHeightMm: 600 + (seedIndex % 5) * 30,
+    numberOfSlots: baseSlots,
+  };
+};
+
+const buildLaneGroups = (seed: StorageMeanSeed, seedIndex: number): LaneGroupSeed[] => {
+  if (highBayCategories.has(seed.storageMeanCategoryName)) return [];
+  const baseLanes =
+    seed.lanes?.length && seed.lanes[0]
+      ? seed.lanes
+      : [
+          { length: 1200 + (seedIndex % 3) * 50, width: 800 + (seedIndex % 2) * 40, height: 600, quantity: 2 },
+          { length: 1000 + (seedIndex % 4) * 30, width: 700, height: 550, quantity: 1 },
+        ];
+
+  const groups: LaneGroupSeed[] = [];
+  const groupCount = 2 + (seedIndex % 2); // 2 or 3 groups to stay reasonable but ensure multiplicity
+
+  for (let g = 0; g < groupCount; g++) {
+    const lanes = baseLanes.map((lane, laneIdx) => ({
+      ...lane,
+      level: (g + laneIdx) % 3,
+      laneType: (laneIdx + g) % 3 === 0 ? $Enums.LaneType.EMPTIES : (laneIdx + g) % 3 === 1 ? $Enums.LaneType.ACCUMULATION : $Enums.LaneType.EMPTIES_AND_ACCUMULATION,
+      quantity: Math.max(1, lane.quantity + ((g + laneIdx) % 2)),
+      width: lane.width + g * 10,
+      length: lane.length + g * 20,
+    }));
+
+    groups.push({
+      name: `Zone ${String.fromCharCode(65 + g)}`,
+      description: `Seeded lane group ${g + 1} for ${seed.storageMeanCategoryName}`,
+      lanes,
+    });
+  }
+
+  return groups;
 };
 
 const baseStorageMeansSeedData: StorageMeanSeed[] = [
@@ -590,8 +685,6 @@ const manualTranstockerSeeds: StorageMeanSeed[] = [
   },
 ].map((seed) => ({ ...manualTranstockerDefaults, ...seed }));
 
-const storageMeansSeedData: StorageMeanSeed[] = [...baseStorageMeansSeedData, ...manualTranstockerSeeds];
-
 const flowSeedData = [
   { slug: "injection-to-paint", from: "INJECTION", to: "PAINT" },
   { slug: "paint-to-assembly", from: "PAINT", to: "ASSEMBLY" },
@@ -640,6 +733,89 @@ const supplierSeedData = [
   { name: "Baltic Fasteners", address: { street: "23 Skeppsgatan", city: "Stockholm", zipcode: "116 30", countryCode: "SE" } },
   { name: "Danube Castings", address: { street: "9 Hafenstrasse", city: "Stuttgart", zipcode: "70180", countryCode: "DE" } },
 ] as const;
+
+const storageMeanCategoryImageMap = new Map(
+  storageMeanCategoriesSeedData.map((category) => [category.name, category.imageUrl])
+);
+
+const storageMeanCategoryNames = storageMeanCategoriesSeedData.map((category) => category.name);
+const flowSlugs = flowSeedData.map((flow) => flow.slug);
+
+const buildStorageMeansSeedData = (): StorageMeanSeed[] => {
+  const seeds: StorageMeanSeed[] = [...baseStorageMeansSeedData, ...manualTranstockerSeeds];
+  const counts = new Map<string, number>();
+  seeds.forEach((seed) => counts.set(seed.plantName, (counts.get(seed.plantName) ?? 0) + 1));
+
+  const suppliersByCountry = supplierSeedData.reduce((map, supplier) => {
+    const list = map.get(supplier.address.countryCode) ?? [];
+    list.push(supplier.name);
+    map.set(supplier.address.countryCode, list);
+    return map;
+  }, new Map<string, string[]>());
+
+  plantSeedData.forEach((plant, plantIndex) => {
+    let count = counts.get(plant.name) ?? 0;
+    let seq = 0;
+    while (count < 7) {
+      const categoryName = storageMeanCategoryNames[(count + plantIndex) % storageMeanCategoryNames.length];
+      const flowSlug = flowSlugs[(count + plantIndex * 2) % flowSlugs.length];
+      const suppliers = suppliersByCountry.get(plant.address.countryCode) ?? supplierSeedData.map((s) => s.name);
+      const supplierName = suppliers[(count + plantIndex) % suppliers.length];
+      const sop = new Date(2026, (count + plantIndex) % 12, 1 + ((count + plantIndex) % 20));
+      const eop = new Date(sop);
+      eop.setFullYear(eop.getFullYear() + 8);
+
+      const heightMm = 900 + ((plantIndex * 45 + count * 20) % 500);
+      const usefulSurfaceM2 = 20 + ((plantIndex * 4 + count * 7) % 40);
+      const grossSurfaceM2 = usefulSurfaceM2 + 8;
+
+      const isTranstocker = categoryName.toLowerCase().includes("transtocker");
+      const lanes = isTranstocker
+        ? [
+            { length: 1200, width: 800, height: 600, quantity: 2 },
+            { length: 1000, width: 600, height: 500, quantity: 1 },
+          ]
+        : undefined;
+
+      const name = `${plant.name} ${categoryName} ${count + 1}`;
+
+      seeds.push({
+        name,
+        description: `Seeded ${categoryName.toLowerCase()} storage mean for ${plant.name}.`,
+        status: $Enums.StorageStatus.ACTIVE,
+        price: 4000 + (count + plantIndex) * 150,
+        plantName: plant.name,
+        supplierName,
+        flowSlug,
+        sop,
+        eop,
+        storageMeanCategoryName: categoryName,
+        imageUrl: storageMeanCategoryImageMap.get(categoryName),
+        lanes,
+        heightMm,
+        usefulSurfaceM2,
+        grossSurfaceM2,
+      });
+
+      count += 1;
+      seq += 1;
+      if (seq > 20) break;
+    }
+    counts.set(plant.name, count);
+  });
+
+  return seeds.map((seed, idx) => {
+    const laneGroups = seed.laneGroups ?? buildLaneGroups(seed, idx);
+    const highBaySpec = seed.highBaySpec ?? (highBayCategories.has(seed.storageMeanCategoryName) ? buildHighBaySpec(idx) : undefined);
+    return {
+      ...seed,
+      ...(laneGroups ? { laneGroups } : {}),
+      ...(highBaySpec ? { highBaySpec } : {}),
+    };
+  });
+};
+
+const storageMeansSeedData: StorageMeanSeed[] = buildStorageMeansSeedData();
 
 const projectSeedData = [
   { name: "Aurora Sedan Program", code: "AUR01", sop: new Date("2026-03-01"), eop: new Date("2032-12-31") },
@@ -1067,6 +1243,21 @@ async function seedAccessories() {
   console.info(`Seeded/ensured ${accessorySeedData.length} accessories.`);
 }
 
+async function ensureImageLinkForPackaging(packagingMeanId: string, imageUrl: string, sortOrder: number) {
+  const existingImage = await prisma.image.findFirst({ where: { imageUrl } });
+  const image =
+    existingImage ??
+    (await prisma.image.create({
+      data: { imageUrl },
+    }));
+
+  await prisma.packagingMeanImage.upsert({
+    where: { packagingMeanId_imageId: { packagingMeanId, imageId: image.id } },
+    update: { sortOrder },
+    create: { packagingMeanId, imageId: image.id, sortOrder },
+  });
+}
+
 async function seedPackagingMeans() {
   const categories = await prisma.packagingMeanCategory.findMany();
   const plants = await prisma.plant.findMany();
@@ -1143,14 +1334,7 @@ async function seedPackagingMeans() {
         sortOrder: idx,
       }));
       for (const img of images) {
-        await retry(async () => {
-          const image = await prisma.image.create({ data: { imageUrl: img.url } });
-          await ignoreDuplicate(
-            prisma.packagingMeanImage.create({
-              data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: img.sortOrder },
-            })
-          );
-        });
+        await retry(() => ensureImageLinkForPackaging(packaging.id, img.url, img.sortOrder));
       }
 
       const accessoryLinks = Array.from({ length: 2 }, (_v, a) => {
@@ -1284,12 +1468,7 @@ async function seedPackagingMeans() {
 
     // minimal image
     const imageUrl = `${packagingImagePool[(idx + 2) % packagingImagePool.length]}?auto=format&fit=crop&w=1200&q=80&sig=special-${idx}`;
-    const image = await prisma.image.create({ data: { imageUrl } });
-    await ignoreDuplicate(
-      prisma.packagingMeanImage.create({
-        data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: 0 },
-      })
-    );
+    await ensureImageLinkForPackaging(packaging.id, imageUrl, 0);
 
     // accessories
     const accessoryLinks = accessories.slice(idx % accessories.length, (idx % accessories.length) + 2).map((a, aIdx) => ({
@@ -1322,6 +1501,41 @@ async function seedPackagingMeans() {
   }
 
   console.info(`Seeded ${packagingCreated} packaging means with parts, accessories, and images.`);
+}
+
+async function linkPackagingToStorageMeans() {
+  const storageMeans = await prisma.storageMean.findMany({ select: { id: true, plantId: true, storageMeanCategoryId: true } });
+  const packagingMeans = await prisma.packagingMean.findMany({ select: { id: true, plantId: true, name: true } });
+
+  if (!storageMeans.length || !packagingMeans.length) {
+    console.info("Skipping packaging-storage linking; missing data.");
+    return;
+  }
+
+  const storageByPlant = new Map<string, typeof storageMeans>();
+  for (const sm of storageMeans) {
+    const list = storageByPlant.get(sm.plantId) ?? [];
+    list.push(sm);
+    storageByPlant.set(sm.plantId, list);
+  }
+
+  let links = 0;
+  for (const packaging of packagingMeans) {
+    const candidates = storageByPlant.get(packaging.plantId) ?? storageMeans;
+    const target = candidates[(packaging.name.length + links) % candidates.length];
+    const qty = 5 + ((packaging.name.length + links) % 25);
+
+    await prisma.storageMeanPackagingMean.upsert({
+      where: { storageMeanId_packagingMeanId: { storageMeanId: target.id, packagingMeanId: packaging.id } },
+      update: { qty },
+      create: { storageMeanId: target.id, packagingMeanId: packaging.id, qty },
+    });
+
+    links += 1;
+    await pauseEvery(links, 50, 50);
+  }
+
+  console.info(`Linked ${links} packaging means to storage means.`);
 }
 
 async function seedTransportMeanCategories() {
@@ -1660,7 +1874,10 @@ async function seedStorageMeans() {
   const storageMeanCategories = await prisma.storageMeanCategory.findMany({ select: { id: true, name: true } });
   storageMeanCategories.forEach((category) => storageMeanCategoryMap.set(category.name, category.id));
 
-  for (const storage of storageMeansSeedData) {
+  for (const [seedIndex, storage] of storageMeansSeedData.entries()) {
+    const isHighBayCategory = highBayCategories.has(storage.storageMeanCategoryName);
+    const laneGroups = storage.laneGroups ?? [];
+
     const status = storage.status as $Enums.StorageStatus;
     const plantId = plantMap.get(storage.plantName);
     const flowId = flowMap.get(storage.flowSlug);
@@ -1671,43 +1888,49 @@ async function seedStorageMeans() {
     if (!flowId) throw new Error(`Missing flow for storage mean seed: ${storage.flowSlug}`);
     if (!storageMeanCategoryId) throw new Error(`Missing storage mean category for storage mean seed: ${storage.storageMeanCategoryName}`);
 
-    const storageMean = await prisma.storageMean.upsert({
-      where: {
-        plantId_name_storageMeanCategoryId: {
-          plantId,
-          name: storage.name,
-          storageMeanCategoryId,
+    const baseData = {
+      description: storage.description,
+      status,
+      price: storage.price,
+      plantId,
+      supplierId,
+      sop: storage.sop,
+      eop: storage.eop,
+      storageMeanCategoryId,
+    };
+    const dimensionData = {
+      heightMm: storage.heightMm ?? 0,
+      usefulSurfaceM2: storage.usefulSurfaceM2 ?? 0,
+      grossSurfaceM2: storage.grossSurfaceM2 ?? 0,
+    };
+
+    const upsertStorageMean = async (data: typeof baseData & Partial<typeof dimensionData>) =>
+      prisma.storageMean.upsert({
+        where: {
+          plantId_name_storageMeanCategoryId: {
+            plantId,
+            name: storage.name,
+            storageMeanCategoryId,
+          },
         },
-      },
-      update: {
-        description: storage.description,
-        status,
-        price: storage.price,
-        plantId,
-        supplierId,
-        heightMm: storage.heightMm ?? 0,
-        usefulSurfaceM2: storage.usefulSurfaceM2 ?? 0,
-        grossSurfaceM2: storage.grossSurfaceM2 ?? 0,
-        sop: storage.sop,
-        eop: storage.eop,
-        storageMeanCategoryId,
-      },
-      create: {
-        name: storage.name,
-        description: storage.description,
-        status,
-        price: storage.price,
-        plantId,
-        supplierId,
-        heightMm: storage.heightMm ?? 0,
-        usefulSurfaceM2: storage.usefulSurfaceM2 ?? 0,
-        grossSurfaceM2: storage.grossSurfaceM2 ?? 0,
-        sop: storage.sop,
-        eop: storage.eop,
-        storageMeanCategoryId,
-      },
-      select: { id: true },
-    });
+        update: data,
+        create: {
+          name: storage.name,
+          ...data,
+        },
+        select: { id: true },
+      });
+
+    let storageMean;
+    try {
+      storageMean = await upsertStorageMean({ ...baseData, ...dimensionData });
+    } catch (error) {
+      if ((error instanceof PrismaClientKnownRequestError && error.code === "P2022") || (error as { code?: string }).code === "P2022") {
+        storageMean = await upsertStorageMean(baseData);
+      } else {
+        throw error;
+      }
+    }
 
     if (storage.imageUrl) {
       const existingImage = await prisma.image.findFirst({ where: { imageUrl: storage.imageUrl } });
@@ -1727,8 +1950,6 @@ async function seedStorageMeans() {
       });
     }
 
-
-
     await prisma.storageMeanFlow.createMany({
       data: [
         {
@@ -1740,36 +1961,59 @@ async function seedStorageMeans() {
       skipDuplicates: true,
     });
 
-    if (storage.lanes?.length) {
-      const laneGroupName = "Default";
-      const existingLaneGroup = await prisma.laneGroup.findFirst({
-        where: { storageMeanId: storageMean.id, name: laneGroupName },
-      });
+    if (laneGroups.length) {
+      await prisma.laneGroup.deleteMany({ where: { storageMeanId: storageMean.id } });
 
-      const laneGroup =
-        existingLaneGroup ??
-        (await prisma.laneGroup.create({
+      for (const [groupIdx, group] of laneGroups.entries()) {
+        const laneGroup = await prisma.laneGroup.create({
           data: {
             storageMeanId: storageMean.id,
-            name: laneGroupName,
-            description: "Seeded lane group",
-          },
-        }));
-
-      await prisma.lane.deleteMany({ where: { laneGroupId: laneGroup.id } });
-
-      for (const lane of storage.lanes) {
-        await prisma.lane.create({
-          data: {
-            laneGroupId: laneGroup.id,
-            lengthMm: lane.length,
-            widthMm: lane.width,
-            heightMm: lane.height,
-            numberOfLanes: lane.quantity,
+            name: group.name ?? `Group ${groupIdx + 1}`,
+            description: group.description ?? "Seeded lane group",
           },
         });
+
+        for (const lane of group.lanes ?? []) {
+          await prisma.lane.create({
+            data: {
+              laneGroupId: laneGroup.id,
+              lengthMm: lane.length,
+              widthMm: lane.width,
+              heightMm: lane.height,
+              numberOfLanes: lane.quantity,
+              level: lane.level ?? 0,
+              laneType: lane.laneType ?? $Enums.LaneType.ACCUMULATION,
+            },
+          });
+        }
       }
     }
+
+    const highBaySpec = storage.highBaySpec ?? (isHighBayCategory ? buildHighBaySpec(seedIndex) : undefined);
+    if (highBaySpec) {
+      await prisma.highBayRackSpec.upsert({
+        where: { storageMeanId: storageMean.id },
+        update: {
+          numberOfLevels: highBaySpec.numberOfLevels,
+          numberOfBays: highBaySpec.numberOfBays,
+          slotLengthMm: highBaySpec.slotLengthMm,
+          slotWidthMm: highBaySpec.slotWidthMm,
+          slotHeightMm: highBaySpec.slotHeightMm,
+          numberOfSlots: highBaySpec.numberOfSlots,
+        },
+        create: {
+          storageMeanId: storageMean.id,
+          numberOfLevels: highBaySpec.numberOfLevels,
+          numberOfBays: highBaySpec.numberOfBays,
+          slotLengthMm: highBaySpec.slotLengthMm,
+          slotWidthMm: highBaySpec.slotWidthMm,
+          slotHeightMm: highBaySpec.slotHeightMm,
+          numberOfSlots: highBaySpec.numberOfSlots,
+        },
+      });
+    }
+
+    await pauseEvery(seedIndex + 1, 25, 80);
   }
 
   console.info(`Upserted ${storageMeansSeedData.length} storage means.`);
@@ -1801,6 +2045,11 @@ async function seedCountries() {
 }
 
 async function main() {
+  try {
+    await resetDatabase();
+  } catch (error) {
+    console.warn("Database reset skipped (tables might not exist yet):", (error as Error).message);
+  }
   await seedCountries();
   await seedPlants();
   await seedSuppliers();
@@ -1813,6 +2062,7 @@ async function main() {
   await seedPartFamilies();
   await seedAccessories();
   await seedPackagingMeans();
+  await linkPackagingToStorageMeans();
   await seedTransportMeanCategories();
   await seedTransportMeans();
 }

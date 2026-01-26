@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
+import type { StorageDashboardData } from "@/lib/storage-dashboard-data";
+import { getStorageDashboardData } from "@/lib/storage-dashboard-data";
 
 type DashboardData = {
   plants: number;
@@ -16,6 +18,10 @@ type DashboardData = {
   capacityByPlant: Array<{ name: string; value: number }>;
   packagingByCategory: Array<{ name: string; value: number }>;
   volumeByCategory: Array<{ name: string; value: number }>;
+  storedPackagingQty: number;
+  storedPackagingValue: number;
+  overCapacityStorageMeans: number;
+  storageOccupancyByPlant: Array<{ name: string; occupancyPct: number; qty: number; maxQty: number }>;
   topPackaging: Array<{
     id: string;
     name: string;
@@ -60,9 +66,10 @@ async function computeDashboardData(): Promise<DashboardData> {
   let transportMeans: Prisma.TransportMeanGetPayload<{
     include: { plant: true; transportMeanCategory: true; supplier: true };
   }>[] = [];
+  let storageDashboard: StorageDashboardData | null = null;
 
   try {
-    [plants, suppliers, flows, packagingMeans, storageMeansCount, transportMeans] = await Promise.all([
+    [plants, suppliers, flows, packagingMeans, storageMeansCount, transportMeans, storageDashboard] = await Promise.all([
       prisma.plant.findMany({ select: { id: true, name: true } }),
       prisma.supplier.findMany({ select: { id: true, name: true } }),
       prisma.flow.findMany({ select: { id: true, slug: true } }),
@@ -76,6 +83,7 @@ async function computeDashboardData(): Promise<DashboardData> {
       }),
       prisma.storageMean.count(),
       prisma.transportMean.findMany({ include: { plant: true, transportMeanCategory: true, supplier: true } }),
+      getStorageDashboardData(),
     ]);
   } catch (err) {
     console.error("[computeDashboardData] failed to load from DB, returning empty cache", err);
@@ -94,6 +102,10 @@ async function computeDashboardData(): Promise<DashboardData> {
       capacityByPlant: [],
       packagingByCategory: [],
       volumeByCategory: [],
+      storedPackagingQty: 0,
+      storedPackagingValue: 0,
+      overCapacityStorageMeans: 0,
+      storageOccupancyByPlant: [],
       topPackaging: [],
       topTransport: [],
     };
@@ -174,6 +186,10 @@ async function computeDashboardData(): Promise<DashboardData> {
     capacityByPlant,
     packagingByCategory,
     volumeByCategory,
+    storedPackagingQty: storageDashboard?.occupancyCards.totalQty ?? 0,
+    storedPackagingValue: storageDashboard?.occupancyCards.totalValue ?? 0,
+    overCapacityStorageMeans: storageDashboard?.occupancyCards.overCapacityCount ?? 0,
+    storageOccupancyByPlant: storageDashboard?.occupancyByPlant ?? [],
     topPackaging,
     topTransport,
   };

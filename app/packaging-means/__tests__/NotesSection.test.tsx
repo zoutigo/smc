@@ -34,10 +34,7 @@ describe("NotesSection", () => {
   it("valide avec zod quand le formulaire est vide", async () => {
     render(<NotesSection {...defaultProps} />);
     await userEvent.click(screen.getByRole("button", { name: /add note/i }));
-    await userEvent.click(screen.getByRole("button", { name: /save note/i }));
-
-    expect(await screen.findByText(/Title is required/i)).toBeInTheDocument();
-    expect(await screen.findByText(/Note content is required/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save note/i })).toBeDisabled();
   });
 
   it("soumet et ajoute une note en succès", async () => {
@@ -56,7 +53,7 @@ describe("NotesSection", () => {
     render(<NotesSection {...defaultProps} />);
     await userEvent.click(screen.getByRole("button", { name: /add note/i }));
     await userEvent.type(screen.getByLabelText(/title/i), "New title");
-    await userEvent.type(screen.getByLabelText(/^note$/i), "New content");
+    await userEvent.type(screen.getByLabelText(/note/i), "New content");
     await userEvent.click(screen.getByRole("button", { name: /save note/i }));
 
     await waitFor(() => expect(mockCreateNote).toHaveBeenCalledTimes(1));
@@ -73,7 +70,7 @@ describe("NotesSection", () => {
     render(<NotesSection {...defaultProps} />);
     await userEvent.click(screen.getByRole("button", { name: /add note/i }));
     await userEvent.type(screen.getByLabelText(/title/i), "New title");
-    await userEvent.type(screen.getByLabelText(/^note$/i), "Ok");
+    await userEvent.type(screen.getByLabelText(/note/i), "Ok");
     await userEvent.click(screen.getByRole("button", { name: /save note/i }));
 
     expect(await screen.findByText(/Content is required/i)).toBeInTheDocument();

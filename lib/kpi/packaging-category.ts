@@ -163,6 +163,12 @@ export type PackagingCategoryKpiResponse = {
       parkCost: number;
     }[];
   };
+  storage: {
+    storageMeansHosting: number;
+    totalQtyStored: number;
+    topPlants: { plant: string; qty: number }[];
+    concentrationTop3: { storageMean: string; qty: number; pct: number }[];
+  };
 };
 
 type ComputedPm = {
@@ -606,6 +612,40 @@ export async function getPackagingCategoryKpis(
     });
   });
 
+  const packagingIds = computed.map((pm) => pm.id);
+  const storageLinks = packagingIds.length
+    ? await prisma.storageMeanPackagingMean.findMany({
+        where: { packagingMeanId: { in: packagingIds } },
+        include: { storageMean: { select: { id: true, name: true, plant: { select: { name: true } } } } },
+      })
+    : [];
+  const totalQtyStored = storageLinks.reduce((sum, link) => sum + (link.qty ?? 0), 0);
+  const storageMeansHosting = new Set(storageLinks.map((l) => l.storageMeanId)).size;
+  const qtyByPlantMap = new Map<string, { plant: string; qty: number }>();
+  storageLinks.forEach((link) => {
+    const plant = link.storageMean?.plant?.name ?? "Unknown";
+    const current = qtyByPlantMap.get(plant) ?? { plant, qty: 0 };
+    current.qty += link.qty ?? 0;
+    qtyByPlantMap.set(plant, current);
+  });
+  const topPlants = Array.from(qtyByPlantMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 8);
+  const qtyByStorage = new Map<string, { storageMean: string; qty: number }>();
+  storageLinks.forEach((link) => {
+    if (!link.storageMeanId) return;
+    const name = link.storageMean?.name ?? "Unknown storage";
+    qtyByStorage.set(link.storageMeanId, {
+      storageMean: name,
+      qty: (qtyByStorage.get(link.storageMeanId)?.qty ?? 0) + (link.qty ?? 0),
+    });
+  });
+  const concentrationTop3 = Array.from(qtyByStorage.values())
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 3)
+    .map((row) => ({
+      ...row,
+      pct: totalQtyStored > 0 ? (row.qty / totalQtyStored) * 100 : 0,
+    }));
+
   return {
     category,
     overview: {
@@ -693,6 +733,12 @@ export async function getPackagingCategoryKpis(
         donutWithAccessories,
       },
       table: accessoriesTable,
+    },
+    storage: {
+      storageMeansHosting,
+      totalQtyStored,
+      topPlants,
+      concentrationTop3,
     },
   };
 }

@@ -130,7 +130,7 @@ describe("SharedStorageMeanForm", () => {
       store.updateField("heightMm", 1200);
       store.updateField("usefulSurfaceM2", 10);
       store.updateField("grossSurfaceM2", 12);
-      store.addLane({ lengthMm: 500, widthMm: 300, heightMm: 200, numberOfLanes: 1 });
+      store.addLane({ lengthMm: 500, widthMm: 300, heightMm: 200, numberOfLanes: 1, level: 0, laneType: "ACCUMULATION" });
       store.setStep(6);
     });
     const file = new File([new Uint8Array([1, 2, 3])], "lane.png", { type: "image/png" });
@@ -142,7 +142,9 @@ describe("SharedStorageMeanForm", () => {
     const formData = dispatchMock.mock.calls[0]?.[0] as FormData;
     expect(formData.get("specType")).toBe("lanes");
     expect(formData.get("flowIds")).toBe(JSON.stringify(["flow-1"]));
-    expect(formData.get("lanes")).toBe(JSON.stringify([{ lengthMm: 500, widthMm: 300, heightMm: 200, numberOfLanes: 1 }]));
+    expect(formData.get("lanes")).toBe(
+      JSON.stringify([{ lengthMm: 500, widthMm: 300, heightMm: 200, numberOfLanes: 1, level: 0, laneType: "ACCUMULATION" }])
+    );
     expect(formData.get("imageFile_0")).toEqual(file);
   });
 
@@ -161,14 +163,22 @@ describe("SharedStorageMeanForm", () => {
       store.updateField("heightMm", 2000);
       store.updateField("usefulSurfaceM2", 20);
       store.updateField("grossSurfaceM2", 25);
-      store.updateField("highBaySpec", {
-        numberOfLevels: 5,
-        numberOfBays: 3,
-        slotLengthMm: 400,
-        slotWidthMm: 300,
-        slotHeightMm: 250,
-        numberOfSlots: 60,
-      });
+      store.setHighBayBays([
+        {
+          numberOfLevels: 5,
+          numberOfSlots: 60,
+          slotLengthMm: 400,
+          slotWidthMm: 300,
+          slotHeightMm: 250,
+        },
+        {
+          numberOfLevels: 4,
+          numberOfSlots: 40,
+          slotLengthMm: 380,
+          slotWidthMm: 280,
+          slotHeightMm: 230,
+        },
+      ]);
       store.setStep(6);
     });
     const file = new File([new Uint8Array([4, 5, 6])], "highbay.png", { type: "image/png" });
@@ -181,14 +191,22 @@ describe("SharedStorageMeanForm", () => {
     expect(formData.get("specType")).toBe("highbay");
     expect(formData.get("flowIds")).toBe(JSON.stringify(["flow-2"]));
     expect(formData.get("highBaySpec")).toBe(
-      JSON.stringify({
-        numberOfLevels: 5,
-        numberOfBays: 3,
-        slotLengthMm: 400,
-        slotWidthMm: 300,
-        slotHeightMm: 250,
-        numberOfSlots: 60,
-      })
+      JSON.stringify([
+        {
+          numberOfLevels: 5,
+          numberOfSlots: 60,
+          slotLengthMm: 400,
+          slotWidthMm: 300,
+          slotHeightMm: 250,
+        },
+        {
+          numberOfLevels: 4,
+          numberOfSlots: 40,
+          slotLengthMm: 380,
+          slotWidthMm: 280,
+          slotHeightMm: 230,
+        },
+      ])
     );
     expect(formData.get("imageFile_0")).toEqual(file);
   });
@@ -206,7 +224,7 @@ describe("SharedStorageMeanForm", () => {
       store.updateField("heightMm", 800);
       store.updateField("usefulSurfaceM2", 8);
       store.updateField("grossSurfaceM2", 9);
-      store.addLane({ lengthMm: 300, widthMm: 200, heightMm: 150, numberOfLanes: 1 });
+      store.addLane({ lengthMm: 300, widthMm: 200, heightMm: 150, numberOfLanes: 1, level: 0, laneType: "ACCUMULATION" });
       store.setStaffingLines([
         { shift: "SHIFT_2", workforceType: "INDIRECT", qty: 3, role: "Maintenance", description: "Night shift" },
       ]);
@@ -238,14 +256,15 @@ describe("SharedStorageMeanForm", () => {
       store.updateField("heightMm", 1000);
       store.updateField("usefulSurfaceM2", 11);
       store.updateField("grossSurfaceM2", 13);
-      store.updateField("highBaySpec", {
-        numberOfLevels: 2,
-        numberOfBays: 2,
-        slotLengthMm: 100,
-        slotWidthMm: 90,
-        slotHeightMm: 80,
-        numberOfSlots: 10,
-      });
+      store.setHighBayBays([
+        {
+          numberOfLevels: 2,
+          numberOfSlots: 10,
+          slotLengthMm: 100,
+          slotWidthMm: 90,
+          slotHeightMm: 80,
+        },
+      ]);
       store.updateField("existingImages", [{ id: "img-old", url: "/old.png" }]);
       store.updateField("removedImageIds", ["img-old"]);
       store.setStep(6);

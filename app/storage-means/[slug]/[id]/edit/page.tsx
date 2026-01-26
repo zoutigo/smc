@@ -31,6 +31,15 @@ export default async function Edit({ params }: { params: Params }) {
   ]);
   if (!sm) return notFound();
 
+  const serializedSm = JSON.parse(
+    JSON.stringify(sm, (_key, value) => {
+      if (value && typeof value === "object" && "toNumber" in (value as Record<string, unknown>) && typeof (value as { toNumber: unknown }).toNumber === "function") {
+        return (value as { toNumber: () => number }).toNumber();
+      }
+      return value;
+    })
+  );
+
   const Form = entry.Form;
   return (
     <ConfirmProvider>
@@ -39,7 +48,7 @@ export default async function Edit({ params }: { params: Params }) {
         categoryId={category.id}
         categorySlug={category.slug}
         specType={entry.specType}
-        storageMean={sm}
+        storageMean={serializedSm}
         plants={plants}
         flows={flows}
         suppliers={suppliers}

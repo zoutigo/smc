@@ -53,7 +53,7 @@ describe("TransportMeans pages", () => {
     expect(screen.getByRole("link", { name: /Back/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Create AGV-AMR/i })).toBeInTheDocument();
     expect(screen.getByText("AMR Alpha")).toBeInTheDocument();
-    expect(screen.getByText(/Load capacity/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Units/i).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /View/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Edit/i })).toBeInTheDocument();
   });

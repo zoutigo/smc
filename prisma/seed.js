@@ -1754,16 +1754,6 @@ var slugifyValue = (value) => value.toLowerCase().trim().replace(/[^a-z0-9\s-]/g
 
 // prisma/seed.ts
 var prisma = new import_client.PrismaClient();
-async function ignoreDuplicate(promise) {
-  try {
-    return await promise;
-  } catch (error) {
-    if (error instanceof import_library.PrismaClientKnownRequestError && error.code === "P2002") {
-      return null;
-    }
-    throw error;
-  }
-}
 async function retry(fn, attempts = 3, delayMs = 500) {
   let lastError;
   for (let i = 0; i < attempts; i++) {
@@ -1782,6 +1772,15 @@ async function pauseEvery(count, every, ms = 250) {
   if (count > 0 && count % every === 0) {
     await new Promise((resolve) => setTimeout(resolve, ms));
   }
+}
+async function ensurePackagingImage(packagingMeanId, imageUrl, sortOrder) {
+  const existingImage = await prisma.image.findFirst({ where: { imageUrl } });
+  const image = existingImage ?? await prisma.image.create({ data: { imageUrl } });
+  await prisma.packagingMeanImage.upsert({
+    where: { packagingMeanId_imageId: { packagingMeanId, imageId: image.id } },
+    update: { sortOrder },
+    create: { packagingMeanId, imageId: image.id, sortOrder }
+  });
 }
 var transportMeanCategoriesSeedData = [
   {
@@ -2289,7 +2288,6 @@ var manualTranstockerSeeds = [
     grossSurfaceM2: 48
   }
 ].map((seed) => ({ ...manualTranstockerDefaults, ...seed }));
-var storageMeansSeedData = [...baseStorageMeansSeedData, ...manualTranstockerSeeds];
 var flowSeedData = [
   { slug: "injection-to-paint", from: "INJECTION", to: "PAINT" },
   { slug: "paint-to-assembly", from: "PAINT", to: "ASSEMBLY" },
@@ -2336,6 +2334,65 @@ var supplierSeedData = [
   { name: "Baltic Fasteners", address: { street: "23 Skeppsgatan", city: "Stockholm", zipcode: "116 30", countryCode: "SE" } },
   { name: "Danube Castings", address: { street: "9 Hafenstrasse", city: "Stuttgart", zipcode: "70180", countryCode: "DE" } }
 ];
+var storageMeanCategoryImageMap = new Map(storageMeanCategoriesSeedData.map((category) => [category.name, category.imageUrl]));
+var storageMeanCategoryNames = storageMeanCategoriesSeedData.map((category) => category.name);
+var flowSlugs = flowSeedData.map((flow) => flow.slug);
+var buildStorageMeansSeedData = () => {
+  const seeds = [...baseStorageMeansSeedData, ...manualTranstockerSeeds];
+  const counts = /* @__PURE__ */ new Map();
+  seeds.forEach((seed) => counts.set(seed.plantName, (counts.get(seed.plantName) ?? 0) + 1));
+  const suppliersByCountry = supplierSeedData.reduce((map, supplier) => {
+    const list = map.get(supplier.address.countryCode) ?? [];
+    list.push(supplier.name);
+    map.set(supplier.address.countryCode, list);
+    return map;
+  }, /* @__PURE__ */ new Map());
+  plantSeedData.forEach((plant, plantIndex) => {
+    let count = counts.get(plant.name) ?? 0;
+    let seq = 0;
+    while (count < 7) {
+      const categoryName = storageMeanCategoryNames[(count + plantIndex) % storageMeanCategoryNames.length];
+      const flowSlug = flowSlugs[(count + plantIndex * 2) % flowSlugs.length];
+      const suppliers = suppliersByCountry.get(plant.address.countryCode) ?? supplierSeedData.map((s) => s.name);
+      const supplierName = suppliers[(count + plantIndex) % suppliers.length];
+      const sop = new Date(2026, (count + plantIndex) % 12, 1 + (count + plantIndex) % 20);
+      const eop = new Date(sop);
+      eop.setFullYear(eop.getFullYear() + 8);
+      const heightMm = 900 + (plantIndex * 45 + count * 20) % 500;
+      const usefulSurfaceM2 = 20 + (plantIndex * 4 + count * 7) % 40;
+      const grossSurfaceM2 = usefulSurfaceM2 + 8;
+      const isTranstocker = categoryName.toLowerCase().includes("transtocker");
+      const lanes = isTranstocker ? [
+        { length: 1200, width: 800, height: 600, quantity: 2 },
+        { length: 1e3, width: 600, height: 500, quantity: 1 }
+      ] : void 0;
+      const name = `${plant.name} ${categoryName} ${count + 1}`;
+      seeds.push({
+        name,
+        description: `Seeded ${categoryName.toLowerCase()} storage mean for ${plant.name}.`,
+        status: import_client.$Enums.StorageStatus.ACTIVE,
+        price: 4e3 + (count + plantIndex) * 150,
+        plantName: plant.name,
+        supplierName,
+        flowSlug,
+        sop,
+        eop,
+        storageMeanCategoryName: categoryName,
+        imageUrl: storageMeanCategoryImageMap.get(categoryName),
+        lanes,
+        heightMm,
+        usefulSurfaceM2,
+        grossSurfaceM2
+      });
+      count += 1;
+      seq += 1;
+      if (seq > 20) break;
+    }
+    counts.set(plant.name, count);
+  });
+  return seeds;
+};
+var storageMeansSeedData = buildStorageMeansSeedData();
 var projectSeedData = [
   { name: "Aurora Sedan Program", code: "AUR01", sop: /* @__PURE__ */ new Date("2026-03-01"), eop: /* @__PURE__ */ new Date("2032-12-31") },
   { name: "Beacon SUV Refresh", code: "BEC11", sop: /* @__PURE__ */ new Date("2026-07-01"), eop: /* @__PURE__ */ new Date("2031-06-30") },
@@ -2818,14 +2875,7 @@ async function seedPackagingMeans() {
         sortOrder: idx
       }));
       for (const img of images) {
-        await retry(async () => {
-          const image = await prisma.image.create({ data: { imageUrl: img.url } });
-          await ignoreDuplicate(
-            prisma.packagingMeanImage.create({
-              data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: img.sortOrder }
-            })
-          );
-        });
+        await retry(() => ensurePackagingImage(packaging.id, img.url, img.sortOrder));
       }
       const accessoryLinks = Array.from({ length: 2 }, (_v, a) => {
         const accessory = accessories[(i + a) % accessories.length];
@@ -2948,12 +2998,7 @@ async function seedPackagingMeans() {
       })
     );
     const imageUrl = `${packagingImagePool[(idx + 2) % packagingImagePool.length]}?auto=format&fit=crop&w=1200&q=80&sig=special-${idx}`;
-    const image = await prisma.image.create({ data: { imageUrl } });
-    await ignoreDuplicate(
-      prisma.packagingMeanImage.create({
-        data: { packagingMeanId: packaging.id, imageId: image.id, sortOrder: 0 }
-      })
-    );
+    await ensurePackagingImage(packaging.id, imageUrl, 0);
     const accessoryLinks = accessories.slice(idx % accessories.length, idx % accessories.length + 2).map((a, aIdx) => ({
       packagingMeanId: packaging.id,
       accessoryId: a.id,
@@ -3282,7 +3327,22 @@ async function seedStorageMeans() {
     if (!plantId) throw new Error(`Missing plant for storage mean seed: ${storage.plantName}`);
     if (!flowId) throw new Error(`Missing flow for storage mean seed: ${storage.flowSlug}`);
     if (!storageMeanCategoryId) throw new Error(`Missing storage mean category for storage mean seed: ${storage.storageMeanCategoryName}`);
-    const storageMean = await prisma.storageMean.upsert({
+    const baseData = {
+      description: storage.description,
+      status,
+      price: storage.price,
+      plantId,
+      supplierId,
+      sop: storage.sop,
+      eop: storage.eop,
+      storageMeanCategoryId
+    };
+    const dimensionData = {
+      heightMm: storage.heightMm ?? 0,
+      usefulSurfaceM2: storage.usefulSurfaceM2 ?? 0,
+      grossSurfaceM2: storage.grossSurfaceM2 ?? 0
+    };
+    const upsertStorageMean = async (data) => prisma.storageMean.upsert({
       where: {
         plantId_name_storageMeanCategoryId: {
           plantId,
@@ -3290,35 +3350,23 @@ async function seedStorageMeans() {
           storageMeanCategoryId
         }
       },
-      update: {
-        description: storage.description,
-        status,
-        price: storage.price,
-        plantId,
-        supplierId,
-        heightMm: storage.heightMm ?? 0,
-        usefulSurfaceM2: storage.usefulSurfaceM2 ?? 0,
-        grossSurfaceM2: storage.grossSurfaceM2 ?? 0,
-        sop: storage.sop,
-        eop: storage.eop,
-        storageMeanCategoryId
-      },
+      update: data,
       create: {
         name: storage.name,
-        description: storage.description,
-        status,
-        price: storage.price,
-        plantId,
-        supplierId,
-        heightMm: storage.heightMm ?? 0,
-        usefulSurfaceM2: storage.usefulSurfaceM2 ?? 0,
-        grossSurfaceM2: storage.grossSurfaceM2 ?? 0,
-        sop: storage.sop,
-        eop: storage.eop,
-        storageMeanCategoryId
+        ...data
       },
       select: { id: true }
     });
+    let storageMean;
+    try {
+      storageMean = await upsertStorageMean({ ...baseData, ...dimensionData });
+    } catch (error) {
+      if (error instanceof import_library.PrismaClientKnownRequestError && error.code === "P2022" || error && error.code === "P2022") {
+        storageMean = await upsertStorageMean(baseData);
+      } else {
+        throw error;
+      }
+    }
     if (storage.imageUrl) {
       const existingImage = await prisma.image.findFirst({ where: { imageUrl: storage.imageUrl } });
       const image = existingImage ?? await prisma.image.create({

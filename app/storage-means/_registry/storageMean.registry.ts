@@ -22,6 +22,18 @@ export const storageMeanRegistry = {
       supplier: true,
       flows: { include: { flow: true } },
       staffingLines: true,
+      packagingLinks: {
+        include: {
+          packagingMean: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              packagingMeanCategory: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   },
   "auto-transtocker": {
@@ -36,6 +48,18 @@ export const storageMeanRegistry = {
       supplier: true,
       flows: { include: { flow: true } },
       staffingLines: true,
+      packagingLinks: {
+        include: {
+          packagingMean: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              packagingMeanCategory: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   },
   "manual-hanging-shopstock": {
@@ -50,6 +74,18 @@ export const storageMeanRegistry = {
       supplier: true,
       flows: { include: { flow: true } },
       staffingLines: true,
+      packagingLinks: {
+        include: {
+          packagingMean: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              packagingMeanCategory: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   },
   "automated-hanging-shopstock": {
@@ -64,6 +100,18 @@ export const storageMeanRegistry = {
       supplier: true,
       flows: { include: { flow: true } },
       staffingLines: true,
+      packagingLinks: {
+        include: {
+          packagingMean: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              packagingMeanCategory: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   },
   crm: {
@@ -78,6 +126,18 @@ export const storageMeanRegistry = {
       supplier: true,
       flows: { include: { flow: true } },
       staffingLines: true,
+      packagingLinks: {
+        include: {
+          packagingMean: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              packagingMeanCategory: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   },
   "high-bay-rack": {
@@ -92,6 +152,18 @@ export const storageMeanRegistry = {
       supplier: true,
       flows: { include: { flow: true } },
       staffingLines: true,
+      packagingLinks: {
+        include: {
+          packagingMean: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              packagingMeanCategory: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   },
   arsr: {
@@ -106,6 +178,18 @@ export const storageMeanRegistry = {
       supplier: true,
       flows: { include: { flow: true } },
       staffingLines: true,
+      packagingLinks: {
+        include: {
+          packagingMean: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              packagingMeanCategory: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   },
 } satisfies Record<string, StorageMeanRegistryEntry>;
