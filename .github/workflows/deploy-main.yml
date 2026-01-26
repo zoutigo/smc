@@ -38,7 +38,7 @@ jobs:
       - name: Build (standalone)
         env:
           SKIP_DB_ON_BUILD: "1"
-          NODE_OPTIONS: "--max-old-space-size=384"
+          NODE_OPTIONS: "--max-old-space-size=2048"
         run: npm run build
 
       - name: Prepare deploy artifact (standalone only)

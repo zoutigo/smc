@@ -67,4 +67,6 @@ jobs:
         run: npm test -- --runInBand
 
       - name: Build
+        env:
+          NODE_OPTIONS: "--max-old-space-size=2048"
         run: npm run build
