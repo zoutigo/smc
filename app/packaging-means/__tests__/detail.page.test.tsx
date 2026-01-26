@@ -74,13 +74,16 @@ describe("Packaging detail page", () => {
     // Metrics
     expect(screen.getByText(/Dimensions/i)).toBeInTheDocument();
     expect(screen.getByText(/100 × 200 × 300/)).toBeInTheDocument();
-    expect(screen.getByText(/Total packagings/i)).toBeInTheDocument();
+    expect(screen.getByText(/Units/i)).toBeInTheDocument();
     expect(screen.getAllByText("2").length).toBeGreaterThan(0);
     expect(screen.getByText(/Price/i)).toBeInTheDocument();
     expect(screen.getByText("$10")).toBeInTheDocument();
     expect(screen.getByText(/Plant A/)).toBeInTheDocument();
-    expect(screen.getByText(/flow-a/)).toBeInTheDocument();
+    expect(screen.getAllByText(/flow-a/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Supplier A/)).toBeInTheDocument();
+    expect(screen.getByText(/Updated/)).toBeInTheDocument();
+    expect(screen.getByText(/SOP/)).toBeInTheDocument();
+    expect(screen.getByText(/EOP/)).toBeInTheDocument();
 
     // Parts section
     expect(screen.getByText(/Parts/)).toBeInTheDocument();
@@ -98,17 +101,5 @@ describe("Packaging detail page", () => {
     expect(screen.getByText(/AccSupplier/)).toBeInTheDocument();
     expect(screen.getAllByText(/Qty\/pack/i).length).toBeGreaterThan(0);
 
-    // Part accessories
-    expect(screen.getByText(/Part Accessories/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Bolt/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/BoltCo/)).toBeInTheDocument();
-    expect(screen.getByText(/Qty\/part/i)).toBeInTheDocument();
-
-    // Meta
-    expect(screen.getByText(/Meta/)).toBeInTheDocument();
-    expect(screen.getByText(/Created/)).toBeInTheDocument();
-    expect(screen.getByText(/Updated/)).toBeInTheDocument();
-    expect(screen.getByText(/Status/)).toBeInTheDocument();
-    expect(screen.getByText(/Category/)).toBeInTheDocument();
   });
 });

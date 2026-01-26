@@ -11,9 +11,10 @@ type Props = {
   flowId: string;
   plants: Array<Option>;
   flows: Array<Option>;
+  basePath?: string;
 };
 
-export function CategoryControls({ showHero, plantId, flowId, plants, flows }: Props) {
+export function CategoryControls({ showHero, plantId, flowId, plants, flows, basePath = "/packaging-means" }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -47,7 +48,7 @@ export function CategoryControls({ showHero, plantId, flowId, plants, flows }: P
   return (
     <div className="flex flex-wrap items-center gap-3">
       <Link
-        href="/packaging-means"
+        href={basePath}
         className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
       >
         Back

@@ -1,14 +1,12 @@
 import Image from "next/image";
-import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { buttonVariants } from "@/components/ui/button";
 import { CustomButton } from "@/components/ui/custom-button";
-import { cn } from "@/lib/utils";
 import { getPrisma } from "@/lib/prisma";
 import { getStorageMeanCategoryBySlug } from "../actions";
 import { findStorageMeanCategoryFallbackBySlug } from "../fallback-data";
+import { MeanCardsGrid } from "@/components/commonModule/MeanCardsGrid";
 
 export const revalidate = 60;
 
@@ -54,6 +52,8 @@ export default async function StorageMeanCategoryPage({ params }: StorageMeanCat
       name: true,
       description: true,
       sop: true,
+      eop: true,
+      updatedAt: true,
       plant: { select: { name: true } },
       flows: { include: { flow: true }, orderBy: { sortOrder: "asc" } },
     },
@@ -65,16 +65,7 @@ export default async function StorageMeanCategoryPage({ params }: StorageMeanCat
   return (
     <main className="space-y-5 px-8 py-6">
       <div className="flex items-center gap-3 text-sm text-smc-primary">
-        <Link
-          href="/storage-means"
-          className={cn(
-            buttonVariants({ variant: "ghost", size: "sm" }),
-            "group inline-flex items-center gap-2 rounded-full border border-smc-border/60 bg-white/70 px-3 py-1 text-sm font-semibold text-smc-primary shadow-soft backdrop-blur hover:border-smc-primary/40 hover:bg-white"
-          )}
-        >
-          <span className="transition group-hover:-translate-x-0.5">←</span>
-          Back to storage means
-        </Link>
+        <CustomButton href="/storage-means" text="Back to storage means" variant="secondary" size="sm" />
         <span className="text-sm text-smc-text-muted">Category detail</span>
       </div>
 
@@ -119,31 +110,22 @@ export default async function StorageMeanCategoryPage({ params }: StorageMeanCat
           />
         </div>
 
-        {storageMeans.length === 0 ? (
-          <p className="text-sm text-smc-text-muted">No storage means yet.</p>
-        ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {storageMeans.map((sm) => (
-              <li key={sm.id} className="rounded-xl border border-smc-border/70 bg-smc-bg/40 p-4 shadow-soft space-y-2">
-                <h3 className="text-base font-semibold text-smc-text">{sm.name}</h3>
-                <p className="mt-1 line-clamp-3 text-sm text-smc-text-muted">{sm.description}</p>
-                <div className="text-xs text-smc-text-muted">
-                  {sm.plant?.name ? <p><span className="font-semibold text-smc-text">Plant:</span> {sm.plant.name}</p> : null}
-                  {sm.flows?.length ? (
-                    <p>
-                      <span className="font-semibold text-smc-text">Flows:</span>{" "}
-                      {sm.flows.map((f) => `${f.flow.from} → ${f.flow.to}`).join(", ")}
-                    </p>
-                  ) : null}
-                  <p><span className="font-semibold text-smc-text">SOP:</span> {sm.sop.toLocaleDateString?.() ?? new Date(sm.sop).toLocaleDateString()}</p>
-                </div>
-                <Link href={`/storage-means/${slug}/${sm.id}`} className="mt-2 inline-flex text-sm font-semibold text-smc-primary hover:underline">
-                  View
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <MeanCardsGrid
+          items={storageMeans.map((sm) => ({
+            id: sm.id,
+            name: sm.name,
+            description: sm.description,
+            label: "STORAGE",
+            plantName: sm.plant?.name ?? "—",
+            flowSlug: sm.flows?.[0]?.flow?.slug ?? undefined,
+            sop: sm.sop ? new Date(sm.sop).toLocaleDateString() : undefined,
+            eop: sm.eop ? new Date(sm.eop).toLocaleDateString() : undefined,
+            updatedAt: sm.updatedAt ? new Date(sm.updatedAt).toLocaleDateString() : undefined,
+            viewHref: `/storage-means/${slug}/${sm.id}`,
+            editHref: `/storage-means/${slug}/${sm.id}/edit`,
+          }))}
+          emptyMessage="No storage means yet."
+        />
       </section>
     </main>
   );

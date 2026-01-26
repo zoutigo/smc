@@ -45,6 +45,7 @@ type DashboardClientProps = {
   capacityByPlant: Array<{ name: string; value: number }>;
   packagingByCategory: Array<{ name: string; value: number }>;
   volumeByCategory: Array<{ name: string; value: number }>;
+  storageOccupancyByPlant: Array<{ name: string; occupancyPct: number; qty: number; maxQty: number }>;
   topPackaging: TopPackagingRow[];
   topTransport: TopTransportRow[];
 };
@@ -58,6 +59,7 @@ export function DashboardClient({
   capacityByPlant,
   packagingByCategory,
   volumeByCategory,
+  storageOccupancyByPlant,
   topPackaging,
   topTransport,
 }: DashboardClientProps) {
@@ -66,6 +68,10 @@ export function DashboardClient({
 
   const valueByPlantData = valueByPlant.map((row, idx) => ({ ...row, fill: barColors[idx % barColors.length] }));
   const capacityByPlantData = capacityByPlant.map((row, idx) => ({ ...row, fill: barColors[(idx + 2) % barColors.length] }));
+  const occupancyByPlantData = storageOccupancyByPlant.map((row, idx) => ({
+    ...row,
+    fill: barColors[(idx + 1) % barColors.length],
+  }));
 
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-6">
@@ -91,7 +97,7 @@ export function DashboardClient({
         ))}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section className="grid gap-4 lg:grid-cols-3">
         <ChartCard title="Packaging total value (€) by plant" description="Full value = (price + accessories) × units">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={valueByPlantData}>
@@ -117,6 +123,28 @@ export function DashboardClient({
               <Tooltip formatter={(value) => (typeof value === "number" ? `${numberFmt.format(value)} kg` : "")} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                 {capacityByPlantData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Storage occupancy (%) by plant" description="Σ(qty) / Σ(maxQty)">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={occupancyByPlantData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" tickLine={false} />
+              <YAxis tickFormatter={(v) => `${v.toFixed(0)}%`} tickLine={false} />
+              <Tooltip
+                formatter={(value, _name, props) => {
+                  if (typeof value !== "number") return "";
+                  const row = props?.payload as (typeof occupancyByPlantData)[number] | undefined;
+                  return [`${value.toFixed(1)}%`, `Qty ${row?.qty?.toLocaleString("en-US") ?? 0} / Max ${row?.maxQty?.toLocaleString("en-US") ?? 0}`];
+                }}
+              />
+              <Bar dataKey="occupancyPct" radius={[6, 6, 0, 0]}>
+                {occupancyByPlantData.map((entry) => (
                   <Cell key={entry.name} fill={entry.fill} />
                 ))}
               </Bar>

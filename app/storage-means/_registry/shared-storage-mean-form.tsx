@@ -25,7 +25,7 @@ import { SopInput } from "@/components/forms/SopInput";
 import { MeanMultistepForm, type StepItem } from "@/components/forms/MeanMultistepForm";
 
 type StorageMeanWithRelations = StorageMean & {
-  laneGroups?: Array<{ lanes: Array<{ lengthMm: number; widthMm: number; heightMm: number; numberOfLanes: number }> }>;
+  laneGroups?: Array<{ lanes: Array<{ lengthMm: number; widthMm: number; heightMm: number; numberOfLanes: number; level: number; laneType: "EMPTIES" | "ACCUMULATION" | "EMPTIES_AND_ACCUMULATION" }> }>;
   highBayRack?: {
     numberOfLevels: number;
     numberOfBays: number;
@@ -99,14 +99,14 @@ const lanesSpecSchema = z
   )
   .min(1, "Add at least one lane");
 
-const highBaySpecSchema = z.object({
+const highBayBaySchema = z.object({
   numberOfLevels: z.coerce.number().int().min(1),
-  numberOfBays: z.coerce.number().int().min(1),
   slotLengthMm: z.coerce.number().int().min(1),
   slotWidthMm: z.coerce.number().int().min(1),
   slotHeightMm: z.coerce.number().int().min(1),
   numberOfSlots: z.coerce.number().int().min(1),
 });
+const highBaySpecSchema = z.array(highBayBaySchema).min(1, "Add at least one bay");
 
 const imageSchema = z.array(z.instanceof(File));
 
@@ -176,6 +176,8 @@ export default function SharedStorageMeanForm({
             widthMm: l.widthMm,
             heightMm: l.heightMm,
             numberOfLanes: l.numberOfLanes,
+            level: l.level ?? 0,
+            laneType: l.laneType ?? "ACCUMULATION",
           }))
         ) ?? [];
       const sop = storageMean.sop ? new Date(storageMean.sop).toISOString().slice(0, 10) : "";
@@ -190,16 +192,15 @@ export default function SharedStorageMeanForm({
         flowIds: storageMean.flows?.map((f) => f.flowId) ?? [],
         exists: "existing",
         lanes,
-        highBaySpec: storageMean.highBayRack
-          ? {
-              numberOfLevels: storageMean.highBayRack.numberOfLevels,
-              numberOfBays: storageMean.highBayRack.numberOfBays,
-              slotLengthMm: storageMean.highBayRack.slotLengthMm,
-              slotWidthMm: storageMean.highBayRack.slotWidthMm,
-              slotHeightMm: storageMean.highBayRack.slotHeightMm,
-              numberOfSlots: storageMean.highBayRack.numberOfSlots,
-            }
-          : { numberOfLevels: 0, numberOfBays: 0, slotLengthMm: 0, slotWidthMm: 0, slotHeightMm: 0, numberOfSlots: 0 },
+        highBayBays: storageMean.highBayRack
+          ? Array.from({ length: Math.max(1, storageMean.highBayRack.numberOfBays || 1) }).map(() => ({
+              numberOfLevels: storageMean.highBayRack?.numberOfLevels ?? 0,
+              numberOfSlots: storageMean.highBayRack?.numberOfSlots ?? 0,
+              slotLengthMm: storageMean.highBayRack?.slotLengthMm ?? 0,
+              slotWidthMm: storageMean.highBayRack?.slotWidthMm ?? 0,
+              slotHeightMm: storageMean.highBayRack?.slotHeightMm ?? 0,
+            }))
+          : [{ numberOfLevels: 0, numberOfSlots: 0, slotLengthMm: 0, slotWidthMm: 0, slotHeightMm: 0 }],
         staffingLines:
           storageMean.staffingLines?.map((s) => ({
             shift: s.shift,
@@ -258,7 +259,7 @@ export default function SharedStorageMeanForm({
         return;
       }
     } else {
-      const result = highBaySpecSchema.safeParse(store.highBaySpec);
+      const result = highBaySpecSchema.safeParse(store.highBayBays);
       if (!result.success) {
         setStepError(result.error.issues[0]?.message ?? "Please complete high-bay specs.");
         return;
@@ -297,7 +298,7 @@ export default function SharedStorageMeanForm({
     formData.set("usefulSurfaceM2", String(store.usefulSurfaceM2));
     formData.set("grossSurfaceM2", String(store.grossSurfaceM2));
     formData.set("lanes", JSON.stringify(store.lanes));
-    formData.set("highBaySpec", JSON.stringify(store.highBaySpec));
+    formData.set("highBaySpec", JSON.stringify(store.highBayBays));
     formData.set("staffingLines", JSON.stringify(store.staffingLines));
     if (store.removedImageIds.length) formData.set("removeImageIds", JSON.stringify(store.removedImageIds));
     store.images.forEach((file, idx) => formData.set(`imageFile_${idx}`, file));
@@ -309,10 +310,13 @@ export default function SharedStorageMeanForm({
     });
   };
 
-  const updateHighBay = (field: keyof typeof store.highBaySpec, value: number) =>
-    useCreateStorageMeanStore.setState({ highBaySpec: { ...store.highBaySpec, [field]: value } });
+  const updateHighBay = (idx: number, field: keyof (typeof store.highBayBays)[number], value: number) => {
+    const next = [...store.highBayBays];
+    next[idx] = { ...next[idx], [field]: value };
+    useCreateStorageMeanStore.setState({ highBayBays: next });
+  };
 
-  const updateLane = (idx: number, field: keyof (typeof store.lanes)[number], value: number) => {
+  const updateLane = (idx: number, field: keyof (typeof store.lanes)[number], value: number | string) => {
     const next = [...store.lanes];
     next[idx] = { ...next[idx], [field]: value };
     useCreateStorageMeanStore.setState({ lanes: next });
@@ -498,15 +502,40 @@ export default function SharedStorageMeanForm({
         specType === "highbay" ? (
           <div className="space-y-4">
             {renderStepError("specs")}
-            <div className="grid gap-4 sm:grid-cols-3">
-              <NumberField label="Levels" value={store.highBaySpec.numberOfLevels} onChange={(v) => updateHighBay("numberOfLevels", v)} />
-              <NumberField label="Bays" value={store.highBaySpec.numberOfBays} onChange={(v) => updateHighBay("numberOfBays", v)} />
-              <NumberField label="Slots" value={store.highBaySpec.numberOfSlots} onChange={(v) => updateHighBay("numberOfSlots", v)} />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <NumberField label="Slot length (mm)" value={store.highBaySpec.slotLengthMm} onChange={(v) => updateHighBay("slotLengthMm", v)} />
-              <NumberField label="Slot width (mm)" value={store.highBaySpec.slotWidthMm} onChange={(v) => updateHighBay("slotWidthMm", v)} />
-              <NumberField label="Slot height (mm)" value={store.highBaySpec.slotHeightMm} onChange={(v) => updateHighBay("slotHeightMm", v)} />
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() =>
+                useCreateStorageMeanStore.setState({
+                  highBayBays: [
+                    ...store.highBayBays,
+                    { numberOfLevels: 0, numberOfSlots: 0, slotLengthMm: 0, slotWidthMm: 0, slotHeightMm: 0 },
+                  ],
+                })
+              }
+            >
+              Add bay
+            </Button>
+            {store.highBayBays.length === 0 ? <p className="text-sm text-smc-text-muted">No bays yet.</p> : null}
+            <div className="space-y-3">
+              {store.highBayBays.map((bay, idx) => (
+                <div key={idx} className="space-y-3 rounded-lg border border-smc-border p-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-smc-text">Bay {idx + 1}</h4>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => useCreateStorageMeanStore.setState({ highBayBays: store.highBayBays.filter((_, i) => i !== idx) })}>
+                      Remove
+                    </Button>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <NumberField label="Levels" value={bay.numberOfLevels} onChange={(v) => updateHighBay(idx, "numberOfLevels", v)} />
+                    <NumberField label="Slots" value={bay.numberOfSlots} onChange={(v) => updateHighBay(idx, "numberOfSlots", v)} />
+                    <NumberField label="Slot length (mm)" value={bay.slotLengthMm} onChange={(v) => updateHighBay(idx, "slotLengthMm", v)} />
+                    <NumberField label="Slot width (mm)" value={bay.slotWidthMm} onChange={(v) => updateHighBay(idx, "slotWidthMm", v)} />
+                    <NumberField label="Slot height (mm)" value={bay.slotHeightMm} onChange={(v) => updateHighBay(idx, "slotHeightMm", v)} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ) : (
@@ -516,19 +545,41 @@ export default function SharedStorageMeanForm({
               size="sm"
               variant="outline"
               type="button"
-              onClick={() => store.addLane({ lengthMm: 0, widthMm: 0, heightMm: 0, numberOfLanes: 1 })}
+              onClick={() =>
+                store.addLane({
+                  lengthMm: 0,
+                  widthMm: 0,
+                  heightMm: 0,
+                  numberOfLanes: 1,
+                  level: 0,
+                  laneType: "ACCUMULATION",
+                })
+              }
             >
               Add lane
             </Button>
             {store.lanes.length === 0 ? <p className="text-sm text-smc-text-muted">No lanes yet.</p> : null}
             <div className="space-y-3">
               {store.lanes.map((lane, idx) => (
-                <div key={idx} className="grid gap-3 rounded-lg border border-smc-border p-3 sm:grid-cols-4">
+                <div key={idx} className="grid gap-3 rounded-lg border border-smc-border p-3 sm:grid-cols-6">
                   <NumberField label="Length (mm)" value={lane.lengthMm} onChange={(v) => updateLane(idx, "lengthMm", v)} />
                   <NumberField label="Width (mm)" value={lane.widthMm} onChange={(v) => updateLane(idx, "widthMm", v)} />
                   <NumberField label="Height (mm)" value={lane.heightMm} onChange={(v) => updateLane(idx, "heightMm", v)} />
                   <NumberField label="# Lanes" value={lane.numberOfLanes} onChange={(v) => updateLane(idx, "numberOfLanes", v)} />
-                  <div className="sm:col-span-4 flex justify-end">
+                  <NumberField label="Level" value={lane.level} onChange={(v) => updateLane(idx, "level", v)} />
+                  <div>
+                    <label className="text-sm font-semibold text-smc-text">Lane type</label>
+                    <select
+                      className="mt-1 w-full rounded-md border border-smc-border px-3 py-2 text-sm"
+                      value={lane.laneType}
+                      onChange={(e) => updateLane(idx, "laneType", e.target.value)}
+                    >
+                      <option value="ACCUMULATION">Accumulation</option>
+                      <option value="EMPTIES">Empties</option>
+                      <option value="EMPTIES_AND_ACCUMULATION">Empties & Accumulation</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-6 flex justify-end">
                     <Button type="button" variant="destructive" size="sm" onClick={() => store.removeLane(idx)}>
                       Remove
                     </Button>
@@ -675,25 +726,71 @@ export default function SharedStorageMeanForm({
       label: stepConfigMap.get("summary")?.label ?? "Summary",
       description: stepConfigMap.get("summary")?.description ?? "Review before saving",
       body: (
-        <div className="space-y-2 text-sm text-smc-text">
-          <p>
-            <strong>Name:</strong> {store.name}
-          </p>
-          <p>
-            <strong>Plant:</strong> {plantsList.find((p) => p.id === store.plantId)?.name ?? "n/a"}
-          </p>
-          <p>
-            <strong>Flows:</strong> {flowsList.filter((f) => store.flowIds.includes(f.id)).map((f) => f.slug).join(", ") || "n/a"}
-          </p>
-          <p>
-            <strong>Price:</strong> {store.price}
-          </p>
-          <p>
-            <strong>Lanes:</strong> {store.lanes.length}
-          </p>
-          <p>
-            <strong>Images:</strong> {store.images.length + store.existingImages.length}
-          </p>
+        <div className="space-y-3 text-sm text-smc-text">
+          <div>
+            <p>
+              <strong>Name:</strong> {store.name}
+            </p>
+            <p>
+              <strong>Plant:</strong> {plantsList.find((p) => p.id === store.plantId)?.name ?? "n/a"}
+            </p>
+            <p>
+              <strong>Flows:</strong> {flowsList.filter((f) => store.flowIds.includes(f.id)).map((f) => f.slug).join(", ") || "n/a"}
+            </p>
+            <p>
+              <strong>Price:</strong> {store.price}
+            </p>
+            <p>
+              <strong>Images:</strong> {store.images.length + store.existingImages.length}
+            </p>
+          </div>
+
+          {specType === "lanes" ? (
+            <div>
+              <p className="font-semibold text-smc-text">Lanes</p>
+              {store.lanes.length === 0 ? (
+                <p className="text-smc-text-muted">No lanes.</p>
+              ) : (
+                <ul className="list-disc space-y-1 pl-5">
+                  {store.lanes.map((lane, idx) => (
+                    <li key={idx}>
+                      {lane.numberOfLanes} × {lane.lengthMm}×{lane.widthMm}×{lane.heightMm} mm · Level {lane.level} · {lane.laneType}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <div>
+              <p className="font-semibold text-smc-text">High-bay rack bays</p>
+              {store.highBayBays.length === 0 ? (
+                <p className="text-smc-text-muted">No bays.</p>
+              ) : (
+                <ul className="list-disc space-y-1 pl-5">
+                  {store.highBayBays.map((bay, idx) => (
+                    <li key={idx}>
+                      Bay {idx + 1}: Levels {bay.numberOfLevels}, Slots {bay.numberOfSlots}, Slot {bay.slotLengthMm}×{bay.slotWidthMm}×{bay.slotHeightMm} mm
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <div>
+            <p className="font-semibold text-smc-text">Staffing</p>
+            {store.staffingLines.length === 0 ? (
+              <p className="text-smc-text-muted">No staffing lines.</p>
+            ) : (
+              <ul className="list-disc space-y-1 pl-5">
+                {store.staffingLines.map((line, idx) => (
+                  <li key={idx}>
+                    {line.role} · {line.shift.replace("_", " ")} · {line.workforceType.toLowerCase()} · Qty {line.qty}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       ),
       footer: (

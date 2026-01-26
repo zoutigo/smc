@@ -176,6 +176,8 @@ function OverviewTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
   const o = data.overview;
   const charts = data.overviewCharts;
   const table = data.overviewTable;
+  const storage = data.storage;
+  const concentrationPct = storage.concentrationTop3.reduce((sum, row) => sum + row.pct, 0);
   return (
     <div className="space-y-5">
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
@@ -185,6 +187,21 @@ function OverviewTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
         <MetricTile label="Total volume (m³)" value={o.totalVolume.toFixed(2)} />
         <MetricTile label="Total capacity" value={formatNumber(o.totalCapacity)} />
         <MetricTile label="Avg €/capacity" value={o.avgEuroPerCapacity.toFixed(0)} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <MetricTile label="# Storage means" value={formatNumber(storage.storageMeansHosting)} helper="Hébergent cette catégorie" />
+        <MetricTile label="Qty stockée" value={formatNumber(storage.totalQtyStored)} />
+        <MetricTile
+          label="Top plant (qty)"
+          value={storage.topPlants[0]?.plant ?? "—"}
+          helper={storage.topPlants[0] ? formatNumber(storage.topPlants[0].qty) : undefined}
+        />
+        <MetricTile
+          label="Concentration Top3"
+          value={`${concentrationPct.toFixed(1)}%`}
+          helper={storage.concentrationTop3.map((c) => c.storageMean).join(", ") || undefined}
+        />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
@@ -197,6 +214,22 @@ function OverviewTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
                 <YAxis />
                 <Tooltip formatter={(value: number | string | undefined) => formatCurrency(typeof value === "number" ? value : Number(value ?? 0))} />
                 <Bar dataKey="fullValue" fill="rgb(var(--smc-secondary))" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState label={loading ? "Loading..." : "No data"} />
+          )}
+        </ChartCard>
+
+        <ChartCard title="Stocked qty by plant" description="Où est stockée cette catégorie">
+          {storage.topPlants.length ? (
+            <ResponsiveContainer>
+              <BarChart data={storage.topPlants}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="plant" />
+                <YAxis />
+                <Tooltip formatter={(value: number | string | undefined) => formatNumber(typeof value === "number" ? value : Number(value ?? 0))} />
+                <Bar dataKey="qty" fill="rgb(var(--smc-secondary))" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (

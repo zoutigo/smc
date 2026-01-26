@@ -22,12 +22,16 @@ export default async function DashboardPage() {
     totalTransportCapacity,
     avgMaxSpeed,
     valueByPlant,
-    capacityByPlant,
-    packagingByCategory,
-    volumeByCategory,
-    topPackaging,
-    topTransport,
-  } = await getDashboardData();
+  capacityByPlant,
+  packagingByCategory,
+  volumeByCategory,
+  topPackaging,
+  topTransport,
+  storedPackagingQty,
+  storedPackagingValue,
+  overCapacityStorageMeans,
+  storageOccupancyByPlant,
+} = await getDashboardData();
 
   const metrics = [
     { label: "Plants", value: plants.toString(), helper: `${suppliers} suppliers • ${flows} flows` },
@@ -36,6 +40,9 @@ export default async function DashboardPage() {
     { label: "Transport means", value: transportMeans.toString(), helper: `Avg max speed ${avgMaxSpeed.toFixed(1)} km/h` },
     { label: "Packaging fleet value", value: currency.format(totalPackagingValue || 0) },
     { label: "Transport capacity (kg)", value: totalTransportCapacity.toLocaleString("en-US") },
+    { label: "Stored packaging qty", value: storedPackagingQty.toLocaleString("en-US") },
+    { label: "Stored packaging value", value: currency.format(storedPackagingValue || 0) },
+    { label: "Storage over capacity", value: overCapacityStorageMeans.toString(), helper: "qty > maxQty" },
   ];
 
   return (
@@ -46,6 +53,7 @@ export default async function DashboardPage() {
         capacityByPlant={capacityByPlant}
         packagingByCategory={packagingByCategory}
         volumeByCategory={volumeByCategory}
+        storageOccupancyByPlant={storageOccupancyByPlant}
         topPackaging={topPackaging}
         topTransport={topTransport}
       />

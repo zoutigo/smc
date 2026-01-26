@@ -4,10 +4,10 @@ import { create } from "zustand";
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
-type Lane = { lengthMm: number; widthMm: number; heightMm: number; numberOfLanes: number };
+type Lane = { lengthMm: number; widthMm: number; heightMm: number; numberOfLanes: number; level: number; laneType: "EMPTIES" | "ACCUMULATION" | "EMPTIES_AND_ACCUMULATION" };
+type HighBayBay = { numberOfLevels: number; numberOfSlots: number; slotLengthMm: number; slotWidthMm: number; slotHeightMm: number };
 type ExistingImage = { id: string; url: string };
 type StaffingLine = { shift: "SHIFT_1" | "SHIFT_2" | "SHIFT_3"; workforceType: "DIRECT" | "INDIRECT"; qty: number; role: string; description?: string };
-type HighBaySpec = { numberOfLevels: number; numberOfBays: number; slotLengthMm: number; slotWidthMm: number; slotHeightMm: number; numberOfSlots: number };
 
 type State = {
   step: Step;
@@ -20,7 +20,7 @@ type State = {
   supplierId?: string;
   exists: "existing" | "project";
   lanes: Lane[];
-  highBaySpec: HighBaySpec;
+  highBayBays: HighBayBay[];
   staffingLines: StaffingLine[];
   heightMm: number;
   usefulSurfaceM2: number;
@@ -38,7 +38,7 @@ type Actions = {
   addLane: (lane: Lane) => void;
   removeLane: (index: number) => void;
   setLanes: (lanes: Lane[]) => void;
-  setHighBaySpec: (spec: Partial<HighBaySpec>) => void;
+  setHighBayBays: (bays: HighBayBay[]) => void;
   setStaffingLines: (lines: StaffingLine[]) => void;
   setImages: (files: File[]) => void;
   setExistingImages: (list: ExistingImage[]) => void;
@@ -57,7 +57,7 @@ const initialState: State = {
   supplierId: "",
   exists: "existing",
   lanes: [],
-  highBaySpec: { numberOfLevels: 0, numberOfBays: 0, slotLengthMm: 0, slotWidthMm: 0, slotHeightMm: 0, numberOfSlots: 0 },
+  highBayBays: [{ numberOfLevels: 0, numberOfSlots: 0, slotLengthMm: 0, slotWidthMm: 0, slotHeightMm: 0 }],
   staffingLines: [],
   heightMm: 0,
   usefulSurfaceM2: 0,
@@ -76,7 +76,7 @@ export const useCreateStorageMeanStore = create<State & Actions>((set) => ({
   addLane: (lane) => set((s) => ({ lanes: [...s.lanes, lane] })),
   removeLane: (index) => set((s) => ({ lanes: s.lanes.filter((_, i) => i !== index) })),
   setLanes: (lanes) => set({ lanes }),
-  setHighBaySpec: (spec) => set((s) => ({ highBaySpec: { ...s.highBaySpec, ...spec } })),
+  setHighBayBays: (bays) => set({ highBayBays: bays }),
   setStaffingLines: (lines) => set({ staffingLines: lines }),
   setImages: (files) => set({ images: files }),
   setExistingImages: (list) => set({ existingImages: list }),

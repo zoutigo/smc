@@ -33,6 +33,9 @@ model PackagingMean {
   // transport association
   transportLinks TransportMeanPackagingMean[]
 
+  // ✅ storage means où ce packaging est hébergé
+  storageLinks StorageMeanPackagingMean[]
+
   @@unique([plantId, name, packagingMeanCategoryId])
   @@index([plantId])
   @@index([flowId])

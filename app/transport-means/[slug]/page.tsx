@@ -4,6 +4,7 @@ import { CustomButton } from "@/components/ui/custom-button";
 import { getTransportMeanCategoryBySlug, getTransportMeansByCategorySlug } from "../actions";
 import { getPrisma } from "@/lib/prisma";
 import type { TransportMean, TransportMeanCategory } from "@prisma/client";
+import { MeanCardsGrid, type MeanCardItem } from "@/components/commonModule/MeanCardsGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,23 @@ export default async function TransportMeanCategoryPage({ params, searchParams }
     const qs = params.toString();
     return qs ? `?${qs}` : "";
   };
+
+  const meanItems: MeanCardItem[] = means.map((m) => ({
+    id: m.id,
+    name: m.name,
+    description: m.description,
+    label: "TRANSPORT",
+    plantName: m.plant?.name ?? "—",
+    flowSlug: m.flow?.slug ?? "—",
+    unitsLabel: m.units?.toString(),
+    statusLabel: undefined,
+    variantsLabel: undefined,
+    updatedAt: m.updatedAt.toLocaleDateString(),
+    sop: m.sop.toLocaleDateString(),
+    eop: m.eop.toLocaleDateString(),
+    viewHref: `/transport-means/${slug}/${m.id}`,
+    editHref: `/transport-means/${slug}/${m.id}/edit`,
+  }));
 
   return (
     <main className="px-8 pt-0 pb-6 space-y-4">
@@ -165,48 +183,7 @@ export default async function TransportMeanCategoryPage({ params, searchParams }
           <CustomButton href={`/transport-means/${slug}/new`} text={`Create ${category.name}`} />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {means.map((m) => (
-            <article key={m.id} className="rounded-2xl border border-smc-border/70 bg-white p-4 shadow-soft flex flex-col">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-smc-text">{m.name}</h3>
-                  <p className="text-xs uppercase text-smc-text-muted">{category.name}</p>
-                  <p className="text-xs text-smc-text-muted">Plant: {m.plant?.name ?? "—"}</p>
-                </div>
-              </div>
-              <p className="mt-1 text-sm text-smc-text-muted line-clamp-2">{m.description ?? "No description."}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-smc-text">
-                <div>
-                  <p className="font-semibold text-smc-text-muted">Supplier</p>
-                  <p>{m.supplier?.name ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-smc-text-muted">Flow</p>
-                  <p>{m.flow?.slug ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-smc-text-muted">Units</p>
-                  <p>{m.units ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-smc-text-muted">Load capacity</p>
-                  <p>{m.loadCapacityKg ?? "—"} kg</p>
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-smc-text-muted">
-                <p><span className="font-semibold text-smc-text">Updated:</span> {m.updatedAt.toLocaleDateString()}</p>
-                <p><span className="font-semibold text-smc-text">SOP:</span> {m.sop.toLocaleDateString()}</p>
-                <p><span className="font-semibold text-smc-text">EOP:</span> {m.eop.toLocaleDateString()}</p>
-              </div>
-              <div className="mt-4 rounded-lg bg-smc-secondary/20 px-3 py-2 flex justify-end gap-2">
-                <CustomButton href={`/transport-means/${slug}/${m.id}`} text="View" size="sm" />
-                <CustomButton href={`/transport-means/${slug}/${m.id}/edit`} text="Edit" size="sm" variant="secondary" />
-              </div>
-            </article>
-          ))}
-          {means.length === 0 ? <p className="text-sm text-smc-text-muted">No transport means in this category.</p> : null}
-        </div>
+        <MeanCardsGrid items={meanItems} emptyMessage="No transport means in this category." />
       </section>
     </main>
   );

@@ -2,7 +2,9 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { NoteTargetType } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { slugifyValue } from "@/lib/utils";
 import { persistUploadFile, deleteUploadFileByUrl } from "@/lib/uploads";
@@ -15,6 +17,13 @@ export type StorageMeanCategoryState = {
   fieldErrors?: Record<string, string>;
 };
 
+export type NoteActionState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+  fieldErrors?: Record<string, string>;
+  note?: { id: string; title?: string | null; content: string; createdAt: string };
+};
+
 type PrismaLikeError = { code?: string };
 const isPrismaError = (error: unknown): error is PrismaLikeError => typeof error === "object" && error !== null && "code" in error;
 
@@ -24,6 +33,17 @@ const extractString = (value: FormDataEntryValue | null) => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : undefined;
+};
+
+const mapFieldErrors = (issues: z.ZodIssue[]) => {
+  const errors: Record<string, string> = {};
+  issues.forEach((issue) => {
+    const key = issue.path[0];
+    if (typeof key === "string" && !errors[key]) {
+      errors[key] = issue.message;
+    }
+  });
+  return errors;
 };
 
 type StorageMeanCategoryDelegate = PrismaClient["storageMeanCategory"];
@@ -325,5 +345,61 @@ export async function deleteStorageMeanCategoryAction(_: StorageMeanCategoryStat
       }
     }
     return { status: "error", message: "Unable to delete storage mean category" };
+  }
+}
+
+const noteSchema = z.object({
+  storageMeanId: z.string().uuid(),
+  content: z.string().min(1, "Content is required"),
+  title: z.string().min(1, "Title is required"),
+  slug: z.string().optional(),
+});
+
+export async function createStorageMeanNoteAction(_: NoteActionState, formData: FormData): Promise<NoteActionState> {
+  const payload = {
+    storageMeanId: extractString(formData.get("storageMeanId")),
+    content: extractString(formData.get("content")),
+    title: extractString(formData.get("title")),
+    slug: extractString(formData.get("slug")),
+  };
+
+  const parsed = noteSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { status: "error", fieldErrors: mapFieldErrors(parsed.error.issues) };
+  }
+
+  const prisma = getPrisma() as PrismaClient;
+  try {
+    const noteTargetType = (NoteTargetType?.STORAGE_MEAN ?? "STORAGE_MEAN") as NoteTargetType;
+    const note = await prisma.note.create({
+      data: {
+        title: parsed.data.title,
+        content: parsed.data.content!,
+      },
+    });
+
+    await prisma.noteLink.create({
+      data: {
+        noteId: note.id,
+        targetId: parsed.data.storageMeanId!,
+        targetType: noteTargetType,
+      },
+    });
+
+    try {
+      revalidatePath("/storage-means");
+      if (parsed.data.slug) {
+        revalidatePath(`/storage-means/${parsed.data.slug}`);
+        revalidatePath(`/storage-means/${parsed.data.slug}/${parsed.data.storageMeanId}`);
+      }
+    } catch {}
+
+    return {
+      status: "success",
+      note: { id: note.id, title: note.title, content: note.content, createdAt: note.createdAt.toISOString() },
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unable to add note";
+    return { status: "error", message };
   }
 }

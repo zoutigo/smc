@@ -80,9 +80,11 @@ describe("Packaging category page", () => {
   it("affiche les champs clés de la card (dimensions, totals, dates, actions)", async () => {
     render(await CategoryPage({ params: { slug: "utility-cart" } }));
     expect(screen.getByText("100x200x300 mm")).toBeInTheDocument();
-    expect(screen.getByText("Total packaging")).toBeInTheDocument();
+    expect(screen.getAllByText(/Plant/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Flow/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("Units")).toBeInTheDocument();
     expect(screen.getByText("10")).toBeInTheDocument(); // numberOfPackagings
-    expect(screen.getByText("Part variants")).toBeInTheDocument();
+    expect(screen.getByText("Variants")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument(); // parts length
     expect(screen.getByText(/Updated:/i)).toBeInTheDocument();
     expect(screen.getByText(/SOP:/i)).toBeInTheDocument();

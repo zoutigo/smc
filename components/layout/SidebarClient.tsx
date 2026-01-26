@@ -157,6 +157,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
   const hasTransportCategories = transportCats.length > 0;
   const dashboardLinks = [
     { label: "Packaging means", href: "/dashboard/packaging-means", hasCategories: true },
+    { label: "Storage means", href: "/dashboard/storage-means", hasCategories: true, type: "storage" as const },
     { label: "Transport means", href: "/dashboard/transport-means", hasCategories: true, type: "transport" as const },
   ];
 
@@ -247,11 +248,11 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                     <ChevronIcon open={storageMenuOpen && hasStorageCategories} />
                   </button>
                 ) : null}
-                {isPackagingLink && !sidebarCollapsed ? (
-                  <button
-                    type="button"
-                    aria-label={packagingMenuOpen ? "Hide packaging categories" : "Show packaging categories"}
-                    aria-expanded={renderPackagingSubmenu}
+              {isPackagingLink && !sidebarCollapsed ? (
+                <button
+                  type="button"
+                  aria-label={packagingMenuOpen ? "Hide packaging categories" : "Show packaging categories"}
+                  aria-expanded={renderPackagingSubmenu}
                     className="rounded-lg p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 cursor-pointer disabled:opacity-40"
                     onClick={(event) => {
                       event.preventDefault();
@@ -260,14 +261,14 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                     }}
                     disabled={!hasPackagingCategories}
                   >
-                    <ChevronIcon open={packagingMenuOpen && hasPackagingCategories} />
-                  </button>
-                ) : null}
-                {isTransportLink && !sidebarCollapsed ? (
-                  <button
-                    type="button"
-                    aria-label={transportMenuOpen ? "Hide transport categories" : "Show transport categories"}
-                    aria-expanded={renderTransportSubmenu}
+                  <ChevronIcon open={packagingMenuOpen && hasPackagingCategories} />
+                </button>
+              ) : null}
+              {isTransportLink && !sidebarCollapsed ? (
+                <button
+                  type="button"
+                  aria-label={transportMenuOpen ? "Hide transport categories" : "Show transport categories"}
+                  aria-expanded={renderTransportSubmenu}
                     className="rounded-lg p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 cursor-pointer disabled:opacity-40"
                     onClick={(event) => {
                       event.preventDefault();
@@ -276,10 +277,10 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                     }}
                     disabled={!hasTransportCategories}
                   >
-                    <ChevronIcon open={transportMenuOpen && hasTransportCategories} />
-                  </button>
-                ) : null}
-              </div>
+                  <ChevronIcon open={transportMenuOpen && hasTransportCategories} />
+                </button>
+              ) : null}
+            </div>
               {isDashboardLink && renderDashboardSubmenu ? (
                 <div
                   className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur"
@@ -288,7 +289,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                 >
                   {dashboardLinks.map((link) => {
                     const showChildToggle =
-                      link.hasCategories && (link.type === "transport" ? hasTransportCategories : hasPackagingCategories);
+                      link.hasCategories && (link.type === "transport" ? hasTransportCategories : link.type === "storage" ? hasStorageCategories : hasPackagingCategories);
                     return (
                       <div key={link.href} className="flex flex-col">
                         <div className="flex items-center gap-1">
@@ -316,19 +317,33 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                                 event.preventDefault();
                                 event.stopPropagation();
                                 if (link.type === "transport") setDashboardTransportOpen((open) => !open);
+                                else if (link.type === "storage") setDashboardMenuOpen((open) => !open);
                                 else setDashboardPackagingOpen((open) => !open);
                               }}
                             >
-                              <ChevronIcon open={link.type === "transport" ? dashboardTransportOpen : dashboardPackagingOpen} />
+                              <ChevronIcon
+                                open={
+                                  link.type === "transport"
+                                    ? dashboardTransportOpen
+                                    : link.type === "storage"
+                                    ? dashboardMenuOpen
+                                    : dashboardPackagingOpen
+                                }
+                              />
                             </button>
                           ) : null}
                         </div>
-                        {showChildToggle && ((link.type === "transport" && dashboardTransportOpen) || (!link.type && dashboardPackagingOpen)) ? (
+                        {showChildToggle && ((link.type === "transport" && dashboardTransportOpen) || (link.type === "storage" && dashboardMenuOpen) || (!link.type && dashboardPackagingOpen)) ? (
                           <div className="mt-1 ml-3 space-y-1 rounded-md bg-white/5 px-2 py-2 text-sm text-white/80 ring-1 ring-white/10">
-                            {(link.type === "transport" ? transportCategories : packagingCategories).map((category) => (
+                            {(link.type === "transport"
+                              ? transportCategories
+                              : link.type === "storage"
+                              ? storageCategories
+                              : packagingCategories
+                            ).map((category) => (
                               <Link
                                 key={category.id}
-                                href={`/dashboard/${link.type === "transport" ? "transport-means" : "packaging-means"}/${category.slug}`}
+                                href={`/dashboard/${link.type === "transport" ? "transport-means" : link.type === "storage" ? "storage-means" : "packaging-means"}/${category.slug}`}
                                 className="block cursor-pointer rounded-md px-2 py-1 transition hover:bg-white/10 hover:text-white"
                               >
                                 {category.name}
@@ -342,7 +357,11 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                 </div>
               ) : null}
               {isStorageLink && renderStorageSubmenu ? (
-                <div className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Storage mean categories">
+                <div
+                  className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur"
+                  role="group"
+                  aria-label="Storage mean categories"
+                >
                   {storageCats.map((category) => (
                     <Link
                       key={category.id}
@@ -355,7 +374,11 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                 </div>
               ) : null}
               {isPackagingLink && renderPackagingSubmenu ? (
-                <div className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Packaging categories">
+                <div
+                  className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur"
+                  role="group"
+                  aria-label="Packaging mean categories"
+                >
                   {packagingCats.map((category) => (
                     <Link
                       key={category.id}
@@ -368,7 +391,11 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                 </div>
               ) : null}
               {isTransportLink && renderTransportSubmenu ? (
-                <div className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur" role="group" aria-label="Transport categories">
+                <div
+                  className="mt-1 ml-3 space-y-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 backdrop-blur"
+                  role="group"
+                  aria-label="Transport categories"
+                >
                   {transportCats.map((category) => (
                     <Link
                       key={category.id}
@@ -383,6 +410,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
             </div>
           );
         })}
+
       </nav>
 
       <div className="mt-auto border-t border-white/10 px-2 pt-4 pb-6">

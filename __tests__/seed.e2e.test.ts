@@ -10,10 +10,14 @@ import { PrismaClient } from "@prisma/client";
 loadEnv({ path: ".env.test" });
 
 const prisma = new PrismaClient();
+const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
+const shouldRunSeedTests = process.env.RUN_DB_SEED_TESTS === "true" && hasDatabaseUrl;
 
 jest.setTimeout(120_000);
 
-describe("database seed", () => {
+const describeDb = shouldRunSeedTests ? describe : describe.skip;
+
+describeDb("database seed", () => {
   beforeAll(() => {
     // Run seed to ensure a fresh, consistent dataset for assertions
     execSync("npx prisma db seed", {

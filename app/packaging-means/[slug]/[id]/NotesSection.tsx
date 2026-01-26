@@ -38,15 +38,16 @@ export default function NotesSection({ packagingMeanId, slug, initialNotes }: No
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty, isSubmitting },
   } = useForm<NoteFormValues>({
     resolver: zodResolver(noteFormSchema),
+    mode: "onChange",
   });
 
-  const sortedNotes = useMemo(
-    () => [...notes].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [notes]
-  );
+  const sortedNotes = useMemo(() => {
+    const safeNotes = Array.isArray(notes) ? notes : [];
+    return [...safeNotes].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [notes]);
 
   return (
     <div className="rounded-xl border border-smc-border/70 bg-white p-4 shadow-inner">
@@ -90,6 +91,7 @@ export default function NotesSection({ packagingMeanId, slug, initialNotes }: No
           <div className="space-y-1">
             <label className="text-xs font-semibold text-smc-text" htmlFor="note-title">
               Title
+              <span className="text-red-600"> *</span>
             </label>
             <input
               id="note-title"
@@ -103,30 +105,36 @@ export default function NotesSection({ packagingMeanId, slug, initialNotes }: No
           <div className="space-y-1">
             <label className="text-xs font-semibold text-smc-text" htmlFor="note-content">
               Note
+              <span className="text-red-600"> *</span>
             </label>
             <textarea
               id="note-content"
               {...register("content")}
               className="w-full rounded-md border border-smc-border/70 px-3 py-2 text-sm"
-              rows={3}
-              placeholder="Add your note..."
-            />
-            {errors.content ? <p className="text-xs text-red-600">{errors.content.message}</p> : null}
-            {state.fieldErrors?.content ? (
-              <p className="text-xs text-red-600">{state.fieldErrors.content}</p>
-            ) : null}
-            {state.fieldErrors?.title ? (
-              <p className="text-xs text-red-600">{state.fieldErrors.title}</p>
-            ) : null}
-          </div>
-          <div className="flex justify-end gap-2">
-            <CustomButton text="Cancel" variant="ghost" size="sm" onClick={() => setShowForm(false)} />
-            <CustomButton text={isPending ? "Saving..." : "Save note"} size="sm" type="submit" disabled={isPending} />
-          </div>
-        </form>
-      ) : null}
+            rows={3}
+            placeholder="Add your note..."
+          />
+          {errors.content ? <p className="text-xs text-red-600">{errors.content.message}</p> : null}
+          {state.fieldErrors?.content ? (
+            <p className="text-xs text-red-600">{state.fieldErrors.content}</p>
+          ) : null}
+          {state.fieldErrors?.title ? (
+            <p className="text-xs text-red-600">{state.fieldErrors.title}</p>
+          ) : null}
+        </div>
+        <div className="flex justify-end gap-2">
+          <CustomButton text="Cancel" variant="ghost" size="sm" onClick={() => setShowForm(false)} />
+          <CustomButton
+            text={isPending ? "Saving..." : "Save note"}
+            size="sm"
+            type="submit"
+            disabled={!isDirty || isSubmitting || isPending || Object.keys(errors).length > 0}
+          />
+        </div>
+      </form>
+    ) : null}
 
-      <div className="mt-3 space-y-3">
+    <div className="mt-3 space-y-3">
         {sortedNotes.map((note) => (
           <div key={note.id} className="rounded-lg border border-smc-border/60 bg-smc-bg/30 p-3">
             {note.title ? <p className="text-sm font-semibold text-smc-text">{note.title}</p> : null}
