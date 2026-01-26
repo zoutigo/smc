@@ -119,6 +119,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
   const [dashboardMenuOpen, setDashboardMenuOpen] = useState(false);
   const [dashboardPackagingOpen, setDashboardPackagingOpen] = useState(false);
   const [dashboardTransportOpen, setDashboardTransportOpen] = useState(false);
+  const [dashboardStorageOpen, setDashboardStorageOpen] = useState(false);
   const [storageMenuOpen, setStorageMenuOpen] = useState(false);
   const [packagingMenuOpen, setPackagingMenuOpen] = useState(false);
   const [transportMenuOpen, setTransportMenuOpen] = useState(false);
@@ -317,7 +318,7 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                                 event.preventDefault();
                                 event.stopPropagation();
                                 if (link.type === "transport") setDashboardTransportOpen((open) => !open);
-                                else if (link.type === "storage") setDashboardMenuOpen((open) => !open);
+                                else if (link.type === "storage") setDashboardStorageOpen((open) => !open);
                                 else setDashboardPackagingOpen((open) => !open);
                               }}
                             >
@@ -326,14 +327,14 @@ export default function SidebarClient({ storageCategories, packagingCategories, 
                                   link.type === "transport"
                                     ? dashboardTransportOpen
                                     : link.type === "storage"
-                                    ? dashboardMenuOpen
+                                    ? dashboardStorageOpen
                                     : dashboardPackagingOpen
                                 }
                               />
                             </button>
                           ) : null}
                         </div>
-                        {showChildToggle && ((link.type === "transport" && dashboardTransportOpen) || (link.type === "storage" && dashboardMenuOpen) || (!link.type && dashboardPackagingOpen)) ? (
+                        {showChildToggle && ((link.type === "transport" && dashboardTransportOpen) || (link.type === "storage" && dashboardStorageOpen) || (!link.type && dashboardPackagingOpen)) ? (
                           <div className="mt-1 ml-3 space-y-1 rounded-md bg-white/5 px-2 py-2 text-sm text-white/80 ring-1 ring-white/10">
                             {(link.type === "transport"
                               ? transportCategories

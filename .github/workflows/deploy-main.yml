@@ -38,6 +38,7 @@ jobs:
       - name: Build (standalone)
         env:
           SKIP_DB_ON_BUILD: "1"
+          NODE_OPTIONS: "--max-old-space-size=384"
         run: npm run build
 
       - name: Prepare deploy artifact (standalone only)
@@ -301,6 +302,10 @@ jobs:
           SSH_OPTS="-4 -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           rsync -az --delete \
             --exclude 'files/' \
+            --exclude '__tests__/' \
+            --exclude '__trash/' \
+            --exclude '.git/' \
+            --exclude '.next/cache/' \
             --filter='protect files/**' \
             --filter='protect passenger.log' \
             -e "ssh $SSH_OPTS -p ${O2_SSH_PORT}" \
@@ -376,14 +381,20 @@ jobs:
             p.\$queryRaw\`SELECT 1\`.then(() => { console.log('DB OK'); }).catch(e => { console.error(e); process.exit(1); }).finally(() => p.\$disconnect());
           "
 
-          echo "Resetting database (drop + recreate) ..."
-          npx --no-install prisma migrate reset --force --skip-seed
+          echo "Truncating database tables (FK checks off) ..."
+          node prisma/truncate-db.cjs
+
+          echo "Pause 5s before migrations..."
+          sleep 5
 
           echo "Applying migrations..."
-          npx --no-install prisma migrate deploy
+          NODE_OPTIONS="--max-old-space-size=384" npx --no-install prisma migrate deploy
 
-          echo "Seeding database..."
-          npx --no-install prisma db seed
+          echo "Pause 5s before seed..."
+          sleep 5
+
+          echo "Seeding database (bounded memory)..."
+          NODE_OPTIONS="--max-old-space-size=256" npx --no-install prisma db seed
 
           mkdir -p tmp
           touch tmp/restart.txt

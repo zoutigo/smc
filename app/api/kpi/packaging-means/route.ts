@@ -3,6 +3,8 @@ import { ZodError } from "zod";
 
 import { getPackagingMeansKpis, parsePackagingKpiFilters } from "@/lib/kpi/packaging-means";
 
+export const revalidate = 300;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 

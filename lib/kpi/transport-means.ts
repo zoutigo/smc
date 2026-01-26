@@ -1,10 +1,11 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
 import { z } from "zod";
 
 import { getPrisma } from "@/lib/prisma";
 
 const KPI_TTL_MS = 1000 * 60 * 5;
-let cachedTransportKpi: { data: TransportKpiResponse; key: string; expiresAt: number } | null = null;
+const MAX_ITEMS = 200;
+const transportCache = new Map<string, { data: TransportKpiResponse; expiresAt: number }>();
 
 export const transportKpiFiltersSchema = z.object({
   plantId: z.string().uuid().optional(),
@@ -81,13 +82,27 @@ export type TransportKpiResponse = {
   }[];
 };
 
+function buildWhereSql(filters: TransportKpiFilters, alias: "tm" | "cat" = "tm") {
+  const conditions: Prisma.Sql[] = [];
+  if (filters.plantId) {
+    const col = `${alias}.plantId`;
+    conditions.push(Prisma.sql`${Prisma.raw(col)} = ${filters.plantId}`);
+  }
+  if (filters.categorySlug) {
+    conditions.push(Prisma.sql`cat.slug = ${filters.categorySlug}`);
+  }
+  if (!conditions.length) return Prisma.empty;
+  if (conditions.length === 1) return Prisma.sql`WHERE ${conditions[0]}`;
+  return Prisma.sql`WHERE ${conditions[0]} AND ${conditions[1]}`;
+}
+
 export async function getTransportMeansKpis(filters: TransportKpiFilters): Promise<TransportKpiResponse> {
+  const start = Date.now();
   const prisma = getPrisma();
   const cacheKey = JSON.stringify(filters);
   const now = Date.now();
-  if (cachedTransportKpi && cachedTransportKpi.key === cacheKey && cachedTransportKpi.expiresAt > now) {
-    return cachedTransportKpi.data;
-  }
+  const cached = transportCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) return cached.data;
   const empty: TransportKpiResponse = {
     overview: {
       countTransportMeans: 0,
@@ -109,34 +124,121 @@ export async function getTransportMeansKpis(filters: TransportKpiFilters): Promi
     table: [],
   };
 
-  const where: Prisma.TransportMeanWhereInput = {};
+  const where: PrismaTypes.TransportMeanWhereInput = {};
   if (filters.plantId) where.plantId = filters.plantId;
   if (filters.categorySlug) where.transportMeanCategory = { slug: filters.categorySlug };
 
   let transportMeans: Prisma.TransportMeanGetPayload<{
-    include: {
+    select: {
+      id: true;
+      name: true;
+      transportMeanCategoryId: true;
       transportMeanCategory: { select: { id: true; name: true; slug: true } };
+      plantId: true;
       plant: { select: { id: true; name: true } };
       supplier: { select: { name: true } };
-      packagingLinks: { select: { packagingMeanId: true } };
-      flows: { select: { flowId: true } };
+      loadCapacityKg: true;
+      units: true;
+      maxSpeedKmh: true;
+      updatedAt: true;
     };
   }>[] = [];
 
   try {
     transportMeans = await prisma.transportMean.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        transportMeanCategoryId: true,
         transportMeanCategory: { select: { id: true, name: true, slug: true } },
+        plantId: true,
         plant: { select: { id: true, name: true } },
         supplier: { select: { name: true } },
-        packagingLinks: { select: { packagingMeanId: true } },
-        flows: { select: { flowId: true } },
+        loadCapacityKg: true,
+        units: true,
+        maxSpeedKmh: true,
+        updatedAt: true,
       },
+      orderBy: { updatedAt: "desc" },
+      take: MAX_ITEMS,
     });
   } catch (error) {
     console.error("[getTransportMeansKpis] query failed, returning empty KPIs", error);
     return empty;
+  }
+
+  // DB-side aggregates to avoid iterating large collections in JS
+  const whereSql = buildWhereSql(filters);
+  let packagingCoverage = 0;
+  let flowsCoverage = 0;
+  let multiFlowCount = 0;
+  let totalLoadCapacityKg = 0;
+  let weightedSpeed = 0;
+let totalUnits = 0;
+  let countCategories = 0;
+  let countPlants = 0;
+
+  try {
+    const [coverageRow, flowCovRow, multiFlowRow, loadRow, catCountRow, plantCountRow] = await Promise.all([
+      prisma.$queryRaw<{ cnt: bigint | number }[]>(Prisma.sql`
+        SELECT COUNT(DISTINCT tmpm.packagingMeanId) AS cnt
+        FROM TransportMeanPackagingMean tmpm
+        JOIN TransportMean tm ON tm.id = tmpm.transportMeanId
+        JOIN TransportMeanCategory cat ON cat.id = tm.transportMeanCategoryId
+        ${whereSql}
+      `),
+      prisma.$queryRaw<{ cnt: bigint | number }[]>(Prisma.sql`
+        SELECT COUNT(DISTINCT tmf.flowId) AS cnt
+        FROM TransportMeanFlow tmf
+        JOIN TransportMean tm ON tm.id = tmf.transportMeanId
+        JOIN TransportMeanCategory cat ON cat.id = tm.transportMeanCategoryId
+        ${whereSql}
+      `),
+      prisma.$queryRaw<{ cnt: bigint | number }[]>(Prisma.sql`
+        SELECT COUNT(*) AS cnt FROM (
+          SELECT tmf.transportMeanId, COUNT(*) AS c
+          FROM TransportMeanFlow tmf
+          JOIN TransportMean tm ON tm.id = tmf.transportMeanId
+          JOIN TransportMeanCategory cat ON cat.id = tm.transportMeanCategoryId
+          ${whereSql}
+          GROUP BY tmf.transportMeanId
+          HAVING COUNT(*) > 1
+        ) sub
+      `),
+      prisma.$queryRaw<{ totalLoad: bigint | number; weightedSpeed: bigint | number; totalUnits: bigint | number }[]>(Prisma.sql`
+        SELECT
+          COALESCE(SUM(tm.loadCapacityKg * tm.units), 0)        AS totalLoad,
+          COALESCE(SUM(tm.maxSpeedKmh * tm.units), 0)          AS weightedSpeed,
+          COALESCE(SUM(tm.units), 0)                           AS totalUnits
+        FROM TransportMean tm
+        JOIN TransportMeanCategory cat ON cat.id = tm.transportMeanCategoryId
+        ${whereSql}
+      `),
+      prisma.$queryRaw<{ cnt: bigint | number }[]>(Prisma.sql`
+        SELECT COUNT(DISTINCT cat.id) AS cnt
+        FROM TransportMean tm
+        JOIN TransportMeanCategory cat ON cat.id = tm.transportMeanCategoryId
+        ${whereSql}
+      `),
+      prisma.$queryRaw<{ cnt: bigint | number }[]>(Prisma.sql`
+        SELECT COUNT(DISTINCT tm.plantId) AS cnt
+        FROM TransportMean tm
+        JOIN TransportMeanCategory cat ON cat.id = tm.transportMeanCategoryId
+        ${whereSql}
+      `),
+    ]);
+
+    packagingCoverage = Number(coverageRow[0]?.cnt ?? 0);
+    flowsCoverage = Number(flowCovRow[0]?.cnt ?? 0);
+    multiFlowCount = Number(multiFlowRow[0]?.cnt ?? 0);
+    totalLoadCapacityKg = Number(loadRow[0]?.totalLoad ?? 0);
+    weightedSpeed = Number(loadRow[0]?.weightedSpeed ?? 0);
+    totalUnits = Number(loadRow[0]?.totalUnits ?? 0);
+    countCategories = Number(catCountRow[0]?.cnt ?? 0);
+    countPlants = Number(plantCountRow[0]?.cnt ?? 0);
+  } catch (error) {
+    console.error("[getTransportMeansKpis] aggregate queries failed", error);
   }
 
   const computed: TransportComputed[] = transportMeans.map((tm) => ({
@@ -152,28 +254,25 @@ export async function getTransportMeansKpis(filters: TransportKpiFilters): Promi
     units: tm.units,
     maxSpeedKmh: tm.maxSpeedKmh,
     loadTotal: tm.loadCapacityKg * tm.units,
-    packagingMeanIds: tm.packagingLinks.map((l) => l.packagingMeanId),
-    packagingCount: new Set(tm.packagingLinks.map((l) => l.packagingMeanId)).size,
-    flowIds: tm.flows.map((f) => f.flowId),
+    packagingMeanIds: [],
+    packagingCount: 0,
+    flowIds: [],
   }));
 
-  const totalUnits = computed.reduce((sum, tm) => sum + tm.units, 0) || 1;
+  const computedUnits = computed.reduce((sum, tm) => sum + tm.units, 0) || 1;
 
   const overview: TransportKpiResponse["overview"] = {
     countTransportMeans: computed.length,
-    countCategories: new Set(computed.map((c) => c.categoryId)).size,
-    countPlants: new Set(computed.map((c) => c.plantId)).size,
-    totalLoadCapacityKg: computed.reduce((sum, tm) => sum + tm.loadTotal, 0),
-    avgMaxSpeedKmh: computed.reduce((sum, tm) => sum + tm.maxSpeedKmh * tm.units, 0) / totalUnits,
-    packagingCoverage: computed.reduce((set, tm) => {
-      tm.packagingMeanIds.forEach((id) => set.add(id));
-      return set;
-    }, new Set<string>()).size,
-    flowsCoverage: computed.reduce((set, tm) => {
-      tm.flowIds.forEach((id) => id && set.add(id));
-      return set;
-    }, new Set<string>()).size,
-    multiFlowCount: computed.filter((tm) => tm.flowIds.filter(Boolean).length > 1).length,
+    countCategories: countCategories || new Set(computed.map((c) => c.categoryId)).size,
+    countPlants: countPlants || new Set(computed.map((c) => c.plantId)).size,
+    totalLoadCapacityKg: totalLoadCapacityKg || computed.reduce((sum, tm) => sum + tm.loadTotal, 0),
+    avgMaxSpeedKmh:
+      totalUnits > 0
+        ? weightedSpeed / totalUnits
+        : computed.reduce((sum, tm) => sum + tm.maxSpeedKmh * tm.units, 0) / computedUnits,
+    packagingCoverage,
+    flowsCoverage,
+    multiFlowCount,
   };
 
   const countByCategoryMap = new Map<string, { categoryName: string; count: number }>();
@@ -207,18 +306,27 @@ export async function getTransportMeansKpis(filters: TransportKpiFilters): Promi
       categoryName: value.categoryName,
       count: value.count,
     })),
-    capacityByPlant: Array.from(capacityByPlantMap.entries()).map(([plantId, value]) => ({
-      plantId,
-      plantName: value.plantName,
-      loadTotal: value.loadTotal,
-    })),
-    capacityByCategory: Array.from(capacityByCategoryMap.entries()).map(([categoryId, value]) => ({
-      categoryId,
-      categoryName: value.categoryName,
-      loadTotal: value.loadTotal,
-    })),
-    supplierDonut: Array.from(supplierDonutMap.entries()).map(([supplierName, count]) => ({ supplierName, count })),
-    capacitySpeedScatter: computed.map((tm) => ({
+    capacityByPlant: Array.from(capacityByPlantMap.entries())
+      .map(([plantId, value]) => ({
+        plantId,
+        plantName: value.plantName,
+        loadTotal: value.loadTotal,
+      }))
+      .sort((a, b) => b.loadTotal - a.loadTotal)
+      .slice(0, 15),
+    capacityByCategory: Array.from(capacityByCategoryMap.entries())
+      .map(([categoryId, value]) => ({
+        categoryId,
+        categoryName: value.categoryName,
+        loadTotal: value.loadTotal,
+      }))
+      .sort((a, b) => b.loadTotal - a.loadTotal)
+      .slice(0, 15),
+    supplierDonut: Array.from(supplierDonutMap.entries())
+      .map(([supplierName, count]) => ({ supplierName, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10),
+    capacitySpeedScatter: (computed.length > 80 ? computed.slice(0, 80) : computed).map((tm) => ({
       id: tm.id,
       name: tm.name,
       categoryName: tm.categoryName,
@@ -249,6 +357,9 @@ export async function getTransportMeansKpis(filters: TransportKpiFilters): Promi
     table,
   };
 
-  cachedTransportKpi = { data: result, key: cacheKey, expiresAt: now + KPI_TTL_MS };
+  transportCache.set(cacheKey, { data: result, expiresAt: now + KPI_TTL_MS });
+  if (process.env.DASHBOARD_DEBUG) {
+    console.debug?.("[getTransportMeansKpis] duration(ms)", Date.now() - start, "items", transportMeans.length);
+  }
   return result;
 }

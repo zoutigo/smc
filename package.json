@@ -13,7 +13,8 @@
     "prisma": "prisma",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "node prisma/seed.js"
+    "db:seed": "node prisma/seed.js",
+    "db:truncate": "node prisma/truncate-db.cjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

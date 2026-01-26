@@ -7,7 +7,7 @@ export const metadata = {
   description: "KPI overview for all transport means and categories.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function TransportMeansDashboardPage() {
   let plantOptions: { value: string; label: string }[] = [];

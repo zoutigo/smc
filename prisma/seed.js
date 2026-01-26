@@ -1754,6 +1754,56 @@ var slugifyValue = (value) => value.toLowerCase().trim().replace(/[^a-z0-9\s-]/g
 
 // prisma/seed.ts
 var prisma = new import_client.PrismaClient();
+async function resetDatabase() {
+  console.info("Resetting database: truncating all tables...");
+  const tables = [
+    "NoteLink",
+    "Note",
+    "StorageMeanPackagingMean",
+    "TransportMeanPackagingMean",
+    "PackagingMeanImage",
+    "StorageMeanImage",
+    "TransportMeanImage",
+    "PlantImage",
+    "StorageMeanCategoryImage",
+    "PackagingMeanCategoryImage",
+    "TransportMeanCategoryImage",
+    "StorageMeanFlow",
+    "TransportMeanFlow",
+    "StaffingLine",
+    "Lane",
+    "LaneGroup",
+    "HighBayRackSpec",
+    "PackagingMeanAccessory",
+    "PartAccessory",
+    "PackagingMeanPart",
+    "Accessory",
+    "TransportMean",
+    "PackagingMean",
+    "StorageMean",
+    "TransportMeanCategory",
+    "PackagingMeanCategory",
+    "StorageMeanCategory",
+    "Part",
+    "PartFamily",
+    "Project",
+    "Flow",
+    "Supplier",
+    "Plant",
+    "Address",
+    "Country",
+    "Image",
+    "Account",
+    "Session",
+    "VerificationToken",
+    "User"
+  ];
+  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS=0;");
+  for (const table of tables) {
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${table}\`;`);
+  }
+  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS=1;");
+}
 async function retry(fn, attempts = 3, delayMs = 500) {
   let lastError;
   for (let i = 0; i < attempts; i++) {
@@ -3158,6 +3208,56 @@ async function seedTransportMeans() {
   }
   console.info(`Seeded ${created} transport means.`);
 }
+async function linkPackagingToStorageMeans() {
+  const storageMeans = await prisma.storageMean.findMany({ select: { id: true, plantId: true, storageMeanCategoryId: true, name: true } });
+  const packagingMeans = await prisma.packagingMean.findMany({
+    select: { id: true, plantId: true, name: true, numberOfPackagings: true, price: true }
+  });
+  if (!storageMeans.length || !packagingMeans.length) {
+    console.info("Skipping packaging-storage linking; missing data.");
+    return;
+  }
+  const packagingByPlant = /* @__PURE__ */ new Map();
+  for (const pm of packagingMeans) {
+    const list = packagingByPlant.get(pm.plantId) ?? [];
+    list.push(pm);
+    packagingByPlant.set(pm.plantId, list);
+  }
+  const rows = [];
+  storageMeans.forEach((sm, idx) => {
+    const pool = packagingByPlant.get(sm.plantId) ?? packagingMeans;
+    if (!pool.length)
+      return;
+    const take = Math.min(6, Math.max(3, pool.length));
+    const used = /* @__PURE__ */ new Set();
+    for (let i = 0; i < take; i++) {
+      const pick = pool[(idx + i * 2) % pool.length];
+      if (used.has(pick.id))
+        continue;
+      used.add(pick.id);
+      const base = Math.max(1, pick.numberOfPackagings ?? 1);
+      const qty = base * (2 + (idx + i) % 4);
+      const maxQty = qty + Math.max(2, Math.round(qty * 0.5));
+      rows.push({
+        storageMeanId: sm.id,
+        packagingMeanId: pick.id,
+        qty,
+        maxQty,
+        notes: `Seeded ${pick.name} in ${sm.name}`
+      });
+    }
+  });
+  if (!rows.length) {
+    console.warn("No storage-packaging link rows generated.");
+    return;
+  }
+  const chunkSize = 100;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const slice = rows.slice(i, i + chunkSize);
+    await prisma.storageMeanPackagingMean.createMany({ data: slice, skipDuplicates: true });
+  }
+  console.info(`Linked ${rows.length} storage-packaging records across ${storageMeans.length} storage means.`);
+}
 async function seedStorageMeanCategories() {
   for (const category of storageMeanCategoriesSeedData) {
     const slug = buildSlug(category.name, "storage");
@@ -3431,8 +3531,13 @@ async function seedProjects() {
 }
 async function seedCountries() {
   try {
-    await prisma.country.createMany({ data: countriesSeedData, skipDuplicates: true });
-    console.info(`Seeded ${countriesSeedData.length} countries.`);
+    const existing = await prisma.country.findMany({ select: { code: true } });
+    const existingCodes = new Set(existing.map((c) => c.code));
+    const toInsert = countriesSeedData.filter((c) => !existingCodes.has(c.code));
+    if (toInsert.length) {
+      await prisma.country.createMany({ data: toInsert, skipDuplicates: true });
+    }
+    console.info(`Seeded ${toInsert.length} countries (skipped ${existingCodes.size}).`);
   } catch (error) {
     if (error instanceof import_library.PrismaClientKnownRequestError && error.code === "P2021" || error && error.code === "P2021") {
       console.warn("Skipping country seeds; Country table missing.");
@@ -3442,6 +3547,11 @@ async function seedCountries() {
   }
 }
 async function main() {
+  try {
+    await resetDatabase();
+  } catch (error) {
+    console.warn("Database reset skipped:", error?.message ?? error);
+  }
   await seedCountries();
   await seedPlants();
   await seedSuppliers();
@@ -3454,6 +3564,7 @@ async function main() {
   await seedPartFamilies();
   await seedAccessories();
   await seedPackagingMeans();
+  await linkPackagingToStorageMeans();
   await seedTransportMeanCategories();
   await seedTransportMeans();
 }

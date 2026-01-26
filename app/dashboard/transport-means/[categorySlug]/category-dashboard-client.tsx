@@ -103,11 +103,14 @@ export function CategoryDashboardClient({ category, plants }: Props) {
             <Link
               key={tab.slug}
               href={href}
-              className={`cursor-pointer rounded-md px-4 py-2 text-sm font-medium ${
-                active ? "bg-smc-primary text-white" : "bg-white text-smc-text hover:bg-slate-100"
+              className={`relative cursor-pointer rounded-md px-4 py-2 text-sm font-semibold transition ${
+                active
+                  ? "border border-smc-primary bg-white text-smc-primary shadow-sm shadow-smc-primary/30"
+                  : "border border-transparent bg-slate-100 text-smc-text/80 hover:border-smc-primary/40 hover:text-smc-primary"
               }`}
             >
               {tab.label}
+              {active ? <span className="absolute inset-x-2 -bottom-1 block h-0.5 rounded-full bg-smc-primary/70" aria-hidden /> : null}
             </Link>
           );
         })}

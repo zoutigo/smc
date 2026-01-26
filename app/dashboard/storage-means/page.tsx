@@ -1,7 +1,7 @@
 import { StorageMeansDashboardClient } from "./storage-means-dashboard-client";
 import { getStorageDashboardData } from "@/lib/storage-dashboard-data";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 export const metadata = {
   title: "Storage means dashboard",
   description: "Surfaces, lanes, workforce, and value for storage means.",

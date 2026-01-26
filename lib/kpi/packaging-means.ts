@@ -4,7 +4,8 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 
 const KPI_TTL_MS = 1000 * 60 * 5;
-let cachedPackagingKpi: { data: PackagingKpiResponse; key: string; expiresAt: number } | null = null;
+const MAX_ITEMS = 200;
+const packagingCache = new Map<string, { data: PackagingKpiResponse; expiresAt: number }>();
 
 export const packagingKpiFiltersSchema = z.object({
   plantId: z.string().uuid().optional(),
@@ -94,12 +95,12 @@ export type PackagingKpiResponse = {
 };
 
 export async function getPackagingMeansKpis(filters: PackagingKpiFilters): Promise<PackagingKpiResponse> {
+  const start = Date.now();
   const prisma = getPrisma();
   const cacheKey = JSON.stringify(filters);
   const now = Date.now();
-  if (cachedPackagingKpi && cachedPackagingKpi.key === cacheKey && cachedPackagingKpi.expiresAt > now) {
-    return cachedPackagingKpi.data;
-  }
+  const cached = packagingCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) return cached.data;
   const empty: PackagingKpiResponse = {
     overview: {
       countPackagingMeans: 0,
@@ -133,25 +134,41 @@ export async function getPackagingMeansKpis(filters: PackagingKpiFilters): Promi
   }
 
   let packagingMeans: Prisma.PackagingMeanGetPayload<{
-    include: {
+    select: {
+      id: true;
+      name: true;
+      price: true;
+      width: true;
+      length: true;
+      height: true;
+      numberOfPackagings: true;
+      status: true;
+      updatedAt: true;
       packagingMeanCategory: { select: { id: true; name: true; slug: true } };
-      accessories: { include: { accessory: { select: { unitPrice: true } } } };
-      parts: true;
+      accessories: { select: { qtyPerPackaging: true; unitPriceOverride: true; accessory: { select: { unitPrice: true } } } };
+      parts: { select: { partsPerPackaging: true } };
     };
   }>[] = [];
 
   try {
     packagingMeans = await prisma.packagingMean.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        width: true,
+        length: true,
+        height: true,
+        numberOfPackagings: true,
+        status: true,
+        updatedAt: true,
         packagingMeanCategory: { select: { id: true, name: true, slug: true } },
-        accessories: {
-          include: {
-            accessory: { select: { unitPrice: true } },
-          },
-        },
-        parts: true,
+        accessories: { select: { qtyPerPackaging: true, unitPriceOverride: true, accessory: { select: { unitPrice: true } } } },
+        parts: { select: { partsPerPackaging: true } },
       },
+      orderBy: { updatedAt: "desc" },
+      take: MAX_ITEMS,
     });
   } catch (error) {
     console.error("[getPackagingMeansKpis] query failed, returning empty KPIs", error);
@@ -190,6 +207,9 @@ export async function getPackagingMeansKpis(filters: PackagingKpiFilters): Promi
       capacityPark: capacityUnit * pm.numberOfPackagings,
     };
   }).filter(Boolean);
+
+  // Limit scatter size to avoid rendering very large datasets
+  const maxScatterPoints = 80;
 
   const overview = computed.reduce(
     (acc, item) => {
@@ -284,7 +304,7 @@ export async function getPackagingMeansKpis(filters: PackagingKpiFilters): Promi
     charts: {
       valueByCategory,
       volumeByCategory,
-      priceVolumeScatter: computed.map((item) => ({
+      priceVolumeScatter: (computed.length > maxScatterPoints ? computed.slice(0, maxScatterPoints) : computed).map((item) => ({
         id: item.id,
         name: item.name,
         categoryName: item.categoryName,
@@ -296,6 +316,9 @@ export async function getPackagingMeansKpis(filters: PackagingKpiFilters): Promi
     categories,
   };
 
-  cachedPackagingKpi = { data: result, key: cacheKey, expiresAt: now + KPI_TTL_MS };
+  packagingCache.set(cacheKey, { data: result, expiresAt: now + KPI_TTL_MS });
+  if (process.env.DASHBOARD_DEBUG) {
+    console.debug?.("[getPackagingMeansKpis] duration(ms)", Date.now() - start, "items", packagingMeans.length);
+  }
   return result;
 }

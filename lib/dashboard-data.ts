@@ -49,40 +49,70 @@ const TTL_MS = 1000 * 60 * 5; // 5 minutes
 let cache: { data: DashboardData; expiresAt: number } | null = null;
 
 async function computeDashboardData(): Promise<DashboardData> {
+  const start = Date.now();
   const prisma = getPrisma();
 
-  let plants: Array<{ id: string; name: string }> = [];
-  let suppliers: Array<{ id: string; name: string }> = [];
-  let flows: Array<{ id: string; slug: string }> = [];
+  let plants: Array<{ id: string }> = [];
+  let suppliers: Array<{ id: string }> = [];
+  let flows: Array<{ id: string }> = [];
   let packagingMeans: Prisma.PackagingMeanGetPayload<{
-    include: {
-      plant: true;
-      packagingMeanCategory: true;
-      supplier: true;
-      accessories: { include: { accessory: true } };
+    select: {
+      id: true;
+      name: true;
+      price: true;
+      width: true;
+      length: true;
+      height: true;
+      numberOfPackagings: true;
+      status: true;
+      plant: { select: { name: true } };
+      packagingMeanCategory: { select: { name: true } };
+      supplier: { select: { name: true } };
+      accessories: { select: { qtyPerPackaging: true; unitPriceOverride: true; accessory: { select: { unitPrice: true } } } };
     };
   }>[] = [];
   let storageMeansCount = 0;
   let transportMeans: Prisma.TransportMeanGetPayload<{
-    include: { plant: true; transportMeanCategory: true; supplier: true };
+    select: { id: true; name: true; plant: { select: { name: true } }; transportMeanCategory: { select: { name: true } }; supplier: { select: { name: true } }; units: true; loadCapacityKg: true; maxSpeedKmh: true };
   }>[] = [];
   let storageDashboard: StorageDashboardData | null = null;
 
   try {
     [plants, suppliers, flows, packagingMeans, storageMeansCount, transportMeans, storageDashboard] = await Promise.all([
-      prisma.plant.findMany({ select: { id: true, name: true } }),
-      prisma.supplier.findMany({ select: { id: true, name: true } }),
-      prisma.flow.findMany({ select: { id: true, slug: true } }),
+      prisma.plant.findMany({ select: { id: true } }),
+      prisma.supplier.findMany({ select: { id: true } }),
+      prisma.flow.findMany({ select: { id: true } }),
       prisma.packagingMean.findMany({
-        include: {
-          plant: true,
-          packagingMeanCategory: true,
-          supplier: true,
-          accessories: { include: { accessory: true } },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          width: true,
+          length: true,
+          height: true,
+          numberOfPackagings: true,
+          status: true,
+          plant: { select: { name: true } },
+          packagingMeanCategory: { select: { name: true } },
+          supplier: { select: { name: true } },
+          accessories: { select: { qtyPerPackaging: true, unitPriceOverride: true, accessory: { select: { unitPrice: true } } } },
         },
+        orderBy: { updatedAt: "desc" },
       }),
       prisma.storageMean.count(),
-      prisma.transportMean.findMany({ include: { plant: true, transportMeanCategory: true, supplier: true } }),
+      prisma.transportMean.findMany({
+        select: {
+          id: true,
+          name: true,
+          units: true,
+          loadCapacityKg: true,
+          maxSpeedKmh: true,
+          plant: { select: { name: true } },
+          transportMeanCategory: { select: { name: true } },
+          supplier: { select: { name: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+      }),
       getStorageDashboardData(),
     ]);
   } catch (err) {
@@ -171,7 +201,7 @@ async function computeDashboardData(): Promise<DashboardData> {
   const topPackaging = packagingTotals.slice().sort((a, b) => b.totalValueFull - a.totalValueFull).slice(0, 10);
   const topTransport = transportTotals.slice().sort((a, b) => b.totalCapacityKg - a.totalCapacityKg).slice(0, 10);
 
-  return {
+  const result: DashboardData = {
     plants: plants.length,
     suppliers: suppliers.length,
     flows: flows.length,
@@ -193,6 +223,11 @@ async function computeDashboardData(): Promise<DashboardData> {
     topPackaging,
     topTransport,
   };
+
+  if (process.env.DASHBOARD_DEBUG) {
+    console.debug?.("[dashboard-data] duration(ms)", Date.now() - start);
+  }
+  return result;
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
