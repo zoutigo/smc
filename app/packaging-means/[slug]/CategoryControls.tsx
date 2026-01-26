@@ -37,7 +37,7 @@ export function CategoryControls({ showHero, plantId, flowId, plants, flows, bas
         params.set("flowId", partial.flowId);
       }
     }
-    if (partial.showHero !== undefined) {
+    if ("showHero" in partial) {
       if (partial.showHero === "1") params.set("showHero", "1");
       else params.delete("showHero");
     }
@@ -56,7 +56,7 @@ export function CategoryControls({ showHero, plantId, flowId, plants, flows, bas
       <button
         type="button"
         className="rounded-md border border-secondary bg-secondary px-3 py-2 text-sm font-semibold text-white hover:bg-secondary/80"
-        onClick={() => router.push(buildUrl({ showHero: showHero ? undefined : "1" }))}
+        onClick={() => router.push(buildUrl({ showHero: showHero ? "" : "1" }))}
       >
         {showHero ? "Close hero" : "Show hero"}
       </button>

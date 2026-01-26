@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: "Smart management console",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

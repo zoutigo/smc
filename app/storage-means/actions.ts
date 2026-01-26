@@ -27,7 +27,7 @@ export type NoteActionState = {
 type PrismaLikeError = { code?: string };
 const isPrismaError = (error: unknown): error is PrismaLikeError => typeof error === "object" && error !== null && "code" in error;
 
-const SKIP_DB = process.env.SKIP_DB_ON_BUILD === "1";
+const SKIP_DB = process.env.SKIP_DB_ON_BUILD === "1" && process.env.NEXT_PHASE === "phase-production-build";
 
 const extractString = (value: FormDataEntryValue | null) => {
   if (typeof value !== "string") return undefined;

@@ -8,7 +8,7 @@ import { slugifyValue } from "@/lib/utils";
 import { deleteUploadFileByUrl, persistUploadFile } from "@/lib/uploads";
 import { createTransportMeanCategorySchema, updateTransportMeanCategorySchema, type UpdateTransportMeanCategoryInput } from "./schema";
 
-const SKIP_DB = process.env.SKIP_DB_ON_BUILD === "1";
+const SKIP_DB = process.env.SKIP_DB_ON_BUILD === "1" && process.env.NEXT_PHASE === "phase-production-build";
 
 export type TransportMeanCategoryState = {
   status: "idle" | "error" | "success";

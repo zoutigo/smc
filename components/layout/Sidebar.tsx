@@ -6,10 +6,11 @@ import { getTransportMeanCategories } from "@/app/transport-means/actions";
 
 import SidebarClient, { type SidebarClientCategory } from "./SidebarClient";
 
+export const dynamic = "force-dynamic";
+
 const safeFetch = async <T,>(fetcher: () => Promise<T>): Promise<T> => {
-  if (process.env.SKIP_DB_ON_BUILD === "1") {
-    return [] as unknown as T;
-  }
+  const skipping = process.env.SKIP_DB_ON_BUILD === "1" && process.env.NEXT_PHASE === "phase-production-build";
+  if (skipping) return [] as unknown as T;
   try {
     return await fetcher();
   } catch (error) {

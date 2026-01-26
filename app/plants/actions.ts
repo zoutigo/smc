@@ -11,7 +11,7 @@ export type PlantState = { status: "idle" | "error" | "success"; message?: strin
 type PrismaLikeError = { code?: string };
 const isPrismaError = (error: unknown): error is PrismaLikeError => typeof error === "object" && error !== null && "code" in error;
 
-const SKIP_DB = process.env.SKIP_DB_ON_BUILD === "1";
+const SKIP_DB = process.env.SKIP_DB_ON_BUILD === "1" && process.env.NEXT_PHASE === "phase-production-build";
 
 export async function getPlants() {
   if (SKIP_DB) return [];
