@@ -18,7 +18,7 @@ export default async function PackagingMeansDashboardPage() {
     plantOptions = filters.plants;
     flowOptions = filters.flows;
   } catch (err) {
-    console.error("Packaging dashboard filters failed, using empty filters", err);
+    console.error("Packaging dashboard filters failed, using empty filterss", err);
   }
 
   return (
