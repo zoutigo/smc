@@ -2,8 +2,11 @@
 FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
+# Copy package manifests and Prisma schema so @prisma/client can generate correctly
 COPY package*.json ./
+COPY prisma ./prisma
 RUN npm ci
+RUN npx prisma generate
 
 # ---- builder ----
 FROM node:22-alpine AS builder
@@ -11,6 +14,8 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Ensure Prisma client is present (safety)
+RUN npx prisma generate
 RUN npm run build
 
 # ---- runner ----
