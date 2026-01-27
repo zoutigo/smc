@@ -108,5 +108,11 @@ jobs:
             docker compose down --remove-orphans
             docker compose up -d --build
 
+            echo "==> Run migrations in app container"
+            docker compose exec -T smc npx prisma migrate deploy
+
+            echo "==> Seed database (idempotent)"
+            docker compose exec -T smc npx prisma db seed
+
             echo "==> Status"
             docker ps | grep -E "smc|nginx-proxy" || true

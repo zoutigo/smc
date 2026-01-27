@@ -16,6 +16,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Ensure Prisma client is present (safety)
 RUN npx prisma generate
+# Avoid hitting DB during build (pages guard on SKIP_DB_ON_BUILD)
+ENV SKIP_DB_ON_BUILD=1
 RUN npm run build
 
 # ---- runner ----
