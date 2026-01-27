@@ -45,20 +45,36 @@ export default async function StorageMeanCategoryPage({ params }: StorageMeanCat
   }
 
   const prisma = getPrisma();
-  const storageMeans = await prisma.storageMean.findMany({
-    where: { storageMeanCategory: { slug } },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      sop: true,
-      eop: true,
-      updatedAt: true,
-      plant: { select: { name: true } },
-      flows: { include: { flow: true }, orderBy: { sortOrder: "asc" } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  let storageMeans: {
+    id: string;
+    name: string;
+    description: string | null;
+    sop: Date | null;
+    eop: Date | null;
+    updatedAt: Date;
+    plant: { name: string } | null;
+    flows: { flow: { slug: string } | null }[];
+  }[] = [];
+
+  try {
+    storageMeans = await prisma.storageMean.findMany({
+      where: { storageMeanCategory: { slug } },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        sop: true,
+        eop: true,
+        updatedAt: true,
+        plant: { select: { name: true } },
+        flows: { include: { flow: true }, orderBy: { sortOrder: "asc" } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("[storage-means][slug] failed to fetch storage means", { slug, error });
+    notFound();
+  }
 
   const fallbackText = resolvedCategory.name.slice(0, 2).toUpperCase();
 

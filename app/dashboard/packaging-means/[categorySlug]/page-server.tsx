@@ -25,7 +25,10 @@ export async function renderCategoryDashboard({ params }: ServerPageProps) {
   ]);
 
   const plantOptions = plants.map((plant) => ({ value: plant.id, label: plant.name }));
-  const flowOptions = flows.map((flow) => ({ value: flow.id, label: `${flow.from.toLowerCase()} → ${flow.to.toLowerCase()}` }));
+  const flowOptions = flows.map((flow: { id: string; from: string; to: string }) => ({
+    value: flow.id,
+    label: `${flow.from.toLowerCase()} → ${flow.to.toLowerCase()}`,
+  }));
 
   return (
     <main className="min-h-screen bg-smc-bg px-6 pb-10 pt-6">

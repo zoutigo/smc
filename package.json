@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "PRISMA_CLIENT_ENGINE_TYPE=binary PRISMA_QUERY_ENGINE_TYPE=binary next dev -p 3001",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "PRISMA_CLIENT_ENGINE_TYPE=binary PRISMA_QUERY_ENGINE_TYPE=binary next start",
     "lint": "eslint",
     "test": "jest",

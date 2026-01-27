@@ -78,7 +78,7 @@ async function computeDashboardData(): Promise<DashboardData> {
   let storageDashboard: StorageDashboardData | null = null;
 
   try {
-    [plants, suppliers, flows, packagingMeans, storageMeansCount, transportMeans, storageDashboard] = await Promise.all([
+    [plants, suppliers, flows, packagingMeans, storageMeansCount, transportMeans] = await Promise.all([
       prisma.plant.findMany({ select: { id: true } }),
       prisma.supplier.findMany({ select: { id: true } }),
       prisma.flow.findMany({ select: { id: true } }),
@@ -113,10 +113,9 @@ async function computeDashboardData(): Promise<DashboardData> {
         },
         orderBy: { updatedAt: "desc" },
       }),
-      getStorageDashboardData(),
     ]);
   } catch (err) {
-    console.error("[computeDashboardData] failed to load from DB, returning empty cache", err);
+    console.error("[computeDashboardData] failed to load core data, returning empty cache", err);
     return {
       plants: 0,
       suppliers: 0,
@@ -139,6 +138,14 @@ async function computeDashboardData(): Promise<DashboardData> {
       topPackaging: [],
       topTransport: [],
     };
+  }
+
+  // Fetch storage dashboard separately so a failure there n'anéantit pas le reste
+  try {
+    storageDashboard = await getStorageDashboardData();
+  } catch (err) {
+    console.error("[computeDashboardData] storage dashboard fetch failed, continuing with null", err);
+    storageDashboard = null;
   }
 
   const packagingTotals = packagingMeans.map((pm) => {

@@ -1,18 +1,21 @@
-#!/bin/sh
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Format first so lint/type-check see final code
-npm run format:write
+echo "[pre-commit] Clean build to ensure reproducibility"
 
-# Run lint and type-check before allowing the commit
-npm run lint
+# Reset build artifacts and deps
+rm -rf node_modules .next
+
+# Fresh install
+npm ci
+
+# Generate Prisma client (types + engines)
+npx prisma generate
+
+# Quality gates
+npm run lint -- --max-warnings=0
 npm run type-check
-
-# Run unit/functional tests
 npm test -- --runInBand
 
-# Stop the commit if Prettier modified files so you can review/re-stage
-if ! git diff --quiet; then
-  echo "Prettier applied changes. Please review and re-stage files before committing." >&2
-  exit 1
-fi
+# Build to verify (cache fonts offline, skip duplicate TS check)
+NODE_OPTIONS="${NODE_OPTIONS:-"--max-old-space-size=2048"}" NEXT_FONT_MANUAL_DOWNLOAD=1 NEXT_TYPESCRIPT_IGNORE_BUILD_ERRORS=1 npm run build

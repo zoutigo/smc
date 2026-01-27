@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
@@ -7,8 +6,9 @@ import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/components/providers/session-provider";
 import { ConfirmProvider } from "@/components/ui/confirm-message";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
+// Use system stacks to avoid remote font downloads during offline/CI builds.
+const inter = { variable: "font-sans" };
+const mono = { variable: "font-mono" };
 
 export const metadata: Metadata = {
   title: "SMC",
