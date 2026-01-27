@@ -1,13 +1,13 @@
-name: CI (checks)
+name: Dev Checks
 
 on:
   push:
-    branches: ["none"]
+    branches: ["main"]
   pull_request:
-    branches: ["none"]
+    branches: ["main"]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -26,6 +26,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,8 +37,32 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install deps
+      - name: Install MySQL client
+        run: sudo apt-get update && sudo apt-get install -y mysql-client
+
+      - name: Wait for MySQL and create shadow DB
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+              break
+            fi
+            sleep 2
+          done
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS lisaweb_shadow;"
+
+      - name: Set env for Prisma
+        run: |
+          echo "DATABASE_URL=mysql://root:root@127.0.0.1:3306/lisaweb" >> $GITHUB_ENV
+          echo "SHADOW_DATABASE_URL=mysql://root:root@127.0.0.1:3306/lisaweb_shadow" >> $GITHUB_ENV
+
+      - name: Install dependencies
         run: npm ci
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed database
+        run: npx prisma db seed
 
       - name: Lint
         run: npm run lint
@@ -45,11 +70,43 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Unit tests
-        run: npm test --if-present
+      - name: Tests
+        run: npm test -- --runInBand
 
-      # Le plus important (reproduit ton erreur VPS si elle existe)
       - name: Build
         env:
+          NODE_OPTIONS: "--max-old-space-size=2048"
           NEXT_TELEMETRY_DISABLED: "1"
         run: npm run build
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+
+            echo "==> Update repo"
+            cd ~/apps/smc-src
+            git fetch --all --prune
+            git checkout main
+            git reset --hard origin/main
+
+            echo "==> Rebuild & restart container"
+            cd ~/apps/smc
+            docker compose down --remove-orphans
+            docker compose up -d --build
+
+            echo "==> Status"
+            docker ps | grep -E "smc|nginx-proxy" || true
