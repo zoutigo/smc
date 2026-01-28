@@ -29,11 +29,17 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Keep the exact node_modules (includes Prisma CLI v6.19.0 and engines) to avoid
+# npm exec auto-installing latest Prisma in the runner.
+COPY --from=builder /app/node_modules ./node_modules
+
+# App assets
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+
+# Prisma config & schema for runtime migrations
 COPY --from=builder /app/prisma.config.js ./prisma.config.js
-# Prisma schema for runtime migrations
 COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
