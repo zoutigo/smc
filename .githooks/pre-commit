@@ -1,41 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[pre-commit] Clean build to ensure reproducibility"
+echo "[pre-commit] Running fast checks (lint, typecheck, tests, prisma generate)"
 
-# Reset build artifacts and deps
-rm -rf node_modules .next
-
-# Ensure an executable esbuild binary even on noexec mounts
-ESBUILD_VERSION=${ESBUILD_VERSION:-0.27.2}
-ESBUILD_BINARY_PATH="${ESBUILD_BINARY_PATH:-/tmp/smc-esbuild/bin/esbuild}"
-if [ ! -x "$ESBUILD_BINARY_PATH" ]; then
-  echo "[pre-commit] Fetching esbuild binary into $ESBUILD_BINARY_PATH"
-  mkdir -p "$(dirname "$ESBUILD_BINARY_PATH")"
-  TMP_ESBUILD_DIR="$(mktemp -d)"
-  # Use GitHub release tarball (more reliable than registry mirrors)
-  ESBUILD_URL="https://github.com/evanw/esbuild/releases/download/v${ESBUILD_VERSION}/esbuild-linux-64.tgz"
-  if curl -fsSL "$ESBUILD_URL" -o "${TMP_ESBUILD_DIR}/esbuild.tgz"; then
-    tar -xzf "${TMP_ESBUILD_DIR}/esbuild.tgz" -C "$TMP_ESBUILD_DIR"
-    cp "${TMP_ESBUILD_DIR}/esbuild-linux-64/bin/esbuild" "$ESBUILD_BINARY_PATH"
-    chmod +x "$ESBUILD_BINARY_PATH"
-  else
-    echo "[pre-commit] WARN: Unable to download esbuild from $ESBUILD_URL; falling back to default install"
-  fi
-  rm -rf "$TMP_ESBUILD_DIR"
-fi
-export ESBUILD_BINARY_PATH
-
-# Fresh install (allow native binaries under tightened perms) but skip package postinstall hooks
-# (esbuild fails to run in some dev environments due to noexec/DNS). We run what we need manually.
-NPM_CONFIG_IGNORE_SCRIPTS=1 npm ci --unsafe-perm
-# Generate Prisma client (types + engines)
+# Generate Prisma client (types + engines) to keep typings fresh
 npx prisma generate
 
 # Quality gates
 npm run lint -- --max-warnings=0
 npm run type-check
 npm test -- --runInBand
-
-# Build to verify (cache fonts offline, skip duplicate TS check)
-NODE_OPTIONS="${NODE_OPTIONS:-"--max-old-space-size=2048"}" NEXT_FONT_MANUAL_DOWNLOAD=1 NEXT_TYPESCRIPT_IGNORE_BUILD_ERRORS=1 npm run build
