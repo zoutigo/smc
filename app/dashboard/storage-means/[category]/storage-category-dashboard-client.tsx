@@ -99,7 +99,7 @@ function LanesTab({ data }: { data: StorageDashboardData }) {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Qty vs lanes par plant" description="Comparaison capacité / lanes">
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={lanesVsQty}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
@@ -112,7 +112,7 @@ function LanesTab({ data }: { data: StorageDashboardData }) {
         </ChartCard>
 
         <ChartCard title="Lanes par plant" description="Σ(numberOfLanes)">
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={data.lanesByPlant}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
@@ -151,7 +151,7 @@ function OccupancyTab({ data }: { data: StorageDashboardData }) {
 
       <div className="grid gap-5 lg:grid-cols-3">
         <ChartCard title="Occupation (%) par storage mean" description="Top 10 + worst 10">
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={occupancyBars}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
@@ -163,7 +163,7 @@ function OccupancyTab({ data }: { data: StorageDashboardData }) {
         </ChartCard>
 
         <ChartCard title="Slots restants par storage mean">
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={occupancyBars}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
@@ -175,7 +175,7 @@ function OccupancyTab({ data }: { data: StorageDashboardData }) {
         </ChartCard>
 
         <ChartCard title="Valeur hébergée (€) par storage mean">
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={valueBars}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
@@ -188,7 +188,7 @@ function OccupancyTab({ data }: { data: StorageDashboardData }) {
       </div>
 
       <ChartCard title="Top packaging stockés (qty)" description="Top 10">
-        <ResponsiveContainer>
+        <ResponsiveContainer width="100%" height={320}>
           <BarChart data={topPackaging}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />

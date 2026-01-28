@@ -163,7 +163,7 @@ export function PackagingMeansDashboardClient({ plants, flows }: PackagingMeansD
       <section className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Full parc value by category" description="€ full cost per packaging category">
           {charts?.valueByCategory.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.valueByCategory}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="categoryName" />
@@ -183,7 +183,7 @@ export function PackagingMeansDashboardClient({ plants, flows }: PackagingMeansD
 
         <ChartCard title="Volume by category" description="Total parc volume (m³)">
           {charts?.volumeByCategory.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.volumeByCategory}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="categoryName" />
@@ -204,7 +204,7 @@ export function PackagingMeansDashboardClient({ plants, flows }: PackagingMeansD
 
         <ChartCard title="Unit price vs unit volume" description="Each point is a packaging mean">
           {charts?.priceVolumeScatter.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <ScatterChart>
                 <CartesianGrid />
                 <XAxis dataKey="price" name="Price (€)" tickFormatter={(v) => currencyFormatter.format(v).replace("€", "")} />
@@ -227,7 +227,7 @@ export function PackagingMeansDashboardClient({ plants, flows }: PackagingMeansD
 
         <ChartCard title="Status split" description="Packaging means by status">
           {charts?.statusDonut.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <PieChart>
                 <Pie
                   data={charts.statusDonut}

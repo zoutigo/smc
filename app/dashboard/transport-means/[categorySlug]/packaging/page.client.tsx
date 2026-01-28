@@ -49,7 +49,7 @@ export function PackagingClient({ categorySlug, categoryName }: Props) {
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Top packaging (count links)" description="Most supported packaging means">
           {charts?.topPackaging.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.topPackaging}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
@@ -65,7 +65,7 @@ export function PackagingClient({ categorySlug, categoryName }: Props) {
 
         <ChartCard title="Top transport means by carry capacity" description="Σ maxQty per transport mean">
           {charts?.topCapacity.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.topCapacity}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="transportMeanName" />
@@ -81,7 +81,7 @@ export function PackagingClient({ categorySlug, categoryName }: Props) {
 
         <ChartCard title="Links with/without part link" description="PackagingMeanPart presence">
           {charts?.partLinkDonut.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <PieChart>
                 <Pie data={charts.partLinkDonut} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={80} label>
                   {charts.partLinkDonut.map((entry, index) => (

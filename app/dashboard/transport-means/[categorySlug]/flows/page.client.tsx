@@ -47,7 +47,7 @@ export function FlowsClient({ categorySlug, categoryName }: Props) {
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Transport means by main flow" description="Using primary flowId">
           {charts?.countByMainFlow.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.countByMainFlow}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="slug" />
@@ -63,7 +63,7 @@ export function FlowsClient({ categorySlug, categoryName }: Props) {
 
         <ChartCard title="Transport means by pivot flow" description="Using TransportMeanFlow pivot">
           {charts?.countByPivotFlow.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.countByPivotFlow}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="slug" />

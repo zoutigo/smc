@@ -47,7 +47,7 @@ export function CapacityClient({ categorySlug, categoryName }: Props) {
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Load vs Max speed" description="Scatter to detect outliers">
           {charts?.scatter.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <ScatterChart>
                 <CartesianGrid />
                 <XAxis dataKey="loadCapacityKg" name="Load (kg)" />
@@ -63,7 +63,7 @@ export function CapacityClient({ categorySlug, categoryName }: Props) {
 
         <ChartCard title="Avg load by plant" description="Average load capacity per transport mean">
           {charts?.avgLoadByPlant.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.avgLoadByPlant}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="plantName" />
@@ -79,7 +79,7 @@ export function CapacityClient({ categorySlug, categoryName }: Props) {
 
         <ChartCard title="Max speed distribution" description="Histogram of max speed">
           {charts?.speedHistogram.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.speedHistogram}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="bucket" />

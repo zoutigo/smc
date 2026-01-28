@@ -108,7 +108,7 @@ export function TransportMeansDashboardClient({ plants, categories }: Props) {
       <section className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="# transport means by category" description="Count per transport category">
           {charts?.countByCategory.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.countByCategory}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="categoryName" />
@@ -124,7 +124,7 @@ export function TransportMeansDashboardClient({ plants, categories }: Props) {
 
         <ChartCard title="Load capacity by plant (kg)" description="Σ loadCapacityKg * units">
           {charts?.capacityByPlant.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.capacityByPlant}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="plantName" />
@@ -140,7 +140,7 @@ export function TransportMeansDashboardClient({ plants, categories }: Props) {
 
         <ChartCard title="Load capacity by category (kg)" description="Σ loadCapacityKg * units">
           {charts?.capacityByCategory.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.capacityByCategory}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="categoryName" />
@@ -156,7 +156,7 @@ export function TransportMeansDashboardClient({ plants, categories }: Props) {
 
         <ChartCard title="Supplier distribution" description="Share of transport means per supplier">
           {charts?.supplierDonut.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <PieChart>
                 <Pie data={charts.supplierDonut} dataKey="count" nameKey="supplierName" cx="50%" cy="50%" outerRadius={80} label>
                   {charts.supplierDonut.map((entry, index) => (
@@ -173,7 +173,7 @@ export function TransportMeansDashboardClient({ plants, categories }: Props) {
 
         <ChartCard title="Load capacity vs max speed" description="Spot outliers by capacity and speed">
           {charts?.capacitySpeedScatter.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <ScatterChart>
                 <CartesianGrid />
                 <XAxis dataKey="loadCapacityKg" name="Load (kg)" />

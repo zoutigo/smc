@@ -210,7 +210,7 @@ function OverviewTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Full value by plant" description="Packaging + accessories">
           {charts.valueByPlant.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.valueByPlant}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="plantName" />
@@ -226,7 +226,7 @@ function OverviewTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
 
         <ChartCard title="Stocked qty by plant" description="Où est stockée cette catégorie">
           {storage.topPlants.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={storage.topPlants}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="plant" />
@@ -241,7 +241,7 @@ function OverviewTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
         </ChartCard>
         <ChartCard title="Capacity by plant" description="Total parts capacity">
           {charts.capacityByPlant.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.capacityByPlant}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="plantName" />
@@ -256,7 +256,7 @@ function OverviewTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
         </ChartCard>
         <ChartCard title="Unit volume distribution" description="Histogram of unit volumes">
           {charts.volumeHistogram.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.volumeHistogram}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="bucket" />
@@ -335,7 +335,7 @@ function CostTab({ data, loading }: { data: PackagingCategoryKpiResponse; loadin
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Value by plant (stacked)">
           {charts.valueByPlant.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.valueByPlant} stackOffset="none">
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="plantName" />
@@ -351,7 +351,7 @@ function CostTab({ data, loading }: { data: PackagingCategoryKpiResponse; loadin
         </ChartCard>
         <ChartCard title="Value by supplier">
           {charts.valueBySupplier.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.valueBySupplier}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="supplierName" />
@@ -366,7 +366,7 @@ function CostTab({ data, loading }: { data: PackagingCategoryKpiResponse; loadin
         </ChartCard>
         <ChartCard title="Unit cost vs unit capacity">
           {charts.costVsCapacity.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <ScatterChart>
                 <CartesianGrid />
                 <XAxis dataKey="fullUnitCost" name="Full unit cost" tickFormatter={(v) => formatCurrency(v).replace("€", "")} />
@@ -448,7 +448,7 @@ function CapacityTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Top densities">
           {charts.densityTop.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.densityTop}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
@@ -466,7 +466,7 @@ function CapacityTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
         </ChartCard>
         <ChartCard title="Density vs full unit cost">
           {charts.densityVsCost.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <ScatterChart>
                 <CartesianGrid />
                 <XAxis dataKey="density" name="Density" />
@@ -491,7 +491,7 @@ function CapacityTab({ data, loading }: { data: PackagingCategoryKpiResponse; lo
         </ChartCard>
         <ChartCard title="Capacity by plant">
           {charts.capacityByPlant.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.capacityByPlant}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="plantName" />
@@ -564,7 +564,7 @@ function PartsTab({ data, loading }: { data: PackagingCategoryKpiResponse; loadi
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Top parts (by # packaging means)">
           {charts.topParts.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.topParts}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="partName" />
@@ -579,7 +579,7 @@ function PartsTab({ data, loading }: { data: PackagingCategoryKpiResponse; loadi
         </ChartCard>
         <ChartCard title="Top part families">
           {charts.topPartFamilies.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.topPartFamilies}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="partFamily" />
@@ -692,7 +692,7 @@ function AccessoriesTab({ data, loading }: { data: PackagingCategoryKpiResponse;
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Top accessories by value">
           {charts.topAccessories.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.topAccessories}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="accessory" />
@@ -707,7 +707,7 @@ function AccessoriesTab({ data, loading }: { data: PackagingCategoryKpiResponse;
         </ChartCard>
         <ChartCard title="Accessories by supplier">
           {charts.accessoriesBySupplier.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.accessoriesBySupplier}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="supplier" />
@@ -722,7 +722,7 @@ function AccessoriesTab({ data, loading }: { data: PackagingCategoryKpiResponse;
         </ChartCard>
         <ChartCard title="With vs without accessories">
           {charts.donutWithAccessories.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <PieChart>
                 <Pie data={charts.donutWithAccessories} dataKey="count" nameKey="label" innerRadius={50} outerRadius={90} paddingAngle={3}>
                   {charts.donutWithAccessories.map((_, idx) => (

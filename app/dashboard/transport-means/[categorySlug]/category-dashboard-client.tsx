@@ -151,7 +151,7 @@ function OverviewTab({
       <div className="grid gap-5 lg:grid-cols-2">
         <ChartCard title="Load capacity by plant" description="Σ loadCapacityKg * units">
           {charts.loadByPlant.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.loadByPlant}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="plantName" />
@@ -167,7 +167,7 @@ function OverviewTab({
 
         <ChartCard title="Units by plant" description="Total units per plant">
           {charts.unitsByPlant.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.unitsByPlant}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="plantName" />
@@ -183,7 +183,7 @@ function OverviewTab({
 
         <ChartCard title="Packaging compatible (Top 10)" description="Number of packaging per transport mean">
           {charts.packagingPerMean.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.packagingPerMean}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
@@ -199,7 +199,7 @@ function OverviewTab({
 
         <ChartCard title="Load distribution" description="Histogram of load capacity">
           {charts.loadHistogram.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={charts.loadHistogram}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="bucket" />
