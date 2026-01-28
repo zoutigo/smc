@@ -17,7 +17,9 @@ export function getPrisma(): PrismaClient {
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 
-  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = client;
+  // Cache client in all environments to avoid opening a new connection per request
+  // (production was previously instantiating a fresh client and exhausting MySQL).
+  globalForPrisma.prisma = client;
 
   return client;
 }
